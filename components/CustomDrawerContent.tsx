@@ -7,16 +7,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../app/context/AuthContext';
 
 function CustomDrawerContent(props: DrawerContentComponentProps) {
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
+    const { user, signOut } = useAuth();
 
-    const userData = {
-        name: 'Felhasználó',
-        email: 'felhasznalo@email.com',
-        avatar: 'https://via.placeholder.com/60',
-    };
+    const userData = user
+        ? {
+            name: user.user_metadata?.full_name || user.email || 'Felhasználó',
+            email: user.email || '',
+            avatar: user.user_metadata?.avatar_url || 'https://via.placeholder.com/60',
+        }
+        : {
+            name: 'Vendég',
+            email: '',
+            avatar: 'https://via.placeholder.com/60',
+        };
     
     const themeColors = Colors[colorScheme];
     const styles = createStyles(themeColors);
@@ -35,9 +43,8 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
     ];
 
     const handleLogout = () => {
-        console.log('Logout pressed');
         props.navigation.dispatch(DrawerActions.closeDrawer());
-        // ... (logout logic)
+        signOut();
     };
 
     // Navigate with parameters function - with reliable reviews tab handling
@@ -124,8 +131,9 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
                     ))}
                 </DrawerContentScrollView>
 
-                {/* Footer with Enhanced Logout Button */}
+                {/* Footer with Enhanced Logout/Login/Register Button */}
                 <View style={styles.footer}>
+                  {user ? (
                     <Pressable 
                         style={({pressed}) => [
                             styles.logoutButton,
@@ -146,6 +154,40 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
                             Kijelentkezés
                         </Text>
                     </Pressable>
+                  ) : (
+                    <View style={{flexDirection: 'row', gap: 12}}>
+                      <Pressable
+                        style={({pressed}) => [
+                          styles.logoutButton,
+                          pressed && styles.logoutButtonPressed
+                        ]}
+                        onPress={() => console.log('Bejelentkezés')}
+                      >
+                        <Feather name="log-in" size={22} color={colorScheme === 'dark' ? '#4A90E2' : '#1976D2'} style={styles.logoutIcon} />
+                        <Text style={[
+                          styles.logoutText,
+                          {color: colorScheme === 'dark' ? '#4A90E2' : '#1976D2'}
+                        ]}>
+                          Bejelentkezés
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={({pressed}) => [
+                          styles.logoutButton,
+                          pressed && styles.logoutButtonPressed
+                        ]}
+                        onPress={() => console.log('Regisztráció')}
+                      >
+                        <Feather name="user-plus" size={22} color={colorScheme === 'dark' ? '#43A047' : '#388E3C'} style={styles.logoutIcon} />
+                        <Text style={[
+                          styles.logoutText,
+                          {color: colorScheme === 'dark' ? '#43A047' : '#388E3C'}
+                        ]}>
+                          Regisztráció
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
                 </View>
             </View>
         </SafeAreaView>

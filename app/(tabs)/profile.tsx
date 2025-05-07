@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 type ActivityItem = {
   id: string;
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme() ?? 'light';
   const themeColors = Colors[colorScheme];
+  const { user, signOut } = useAuth();
   
   // State for active tab - default to activity
   const [activeTab, setActiveTab] = useState<'activity' | 'reviews'>('activity');
@@ -87,11 +89,16 @@ export default function ProfileScreen() {
     }
   };
   
-  // Mock user data
-  const userData = {
-    name: 'Felhasználó Név',
-    email: 'felhasznalo@email.com',
-  };
+  // Mock user data helyett Supabase user
+  const userData = user
+    ? {
+        name: user.user_metadata?.full_name || user.email || 'Felhasználó Név',
+        email: user.email || '',
+      }
+    : {
+        name: 'Vendég',
+        email: '',
+      };
   
   // Mock activity data
   const activityData: ActivityItem[] = [
@@ -173,7 +180,6 @@ export default function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <Feather name="user" size={32} color={colorScheme === 'dark' ? '#777' : '#8E8E93'} />
           </View>
-          
           <View style={styles.profileInfo}>
             <Text style={styles.userName}>{userData.name}</Text>
             <Text style={styles.userEmail}>{userData.email}</Text>
@@ -189,14 +195,32 @@ export default function ProfileScreen() {
             <Feather name="settings" size={18} color={themeColors.text} style={styles.buttonIcon} />
             <Text style={styles.buttonText}>Beállítások</Text>
           </Pressable>
-          
-          <Pressable 
-            style={styles.logoutButton}
-            onPress={() => console.log('Logout')}
-          >
-            <Feather name="log-out" size={18} color="#FF3B30" style={styles.buttonIcon} />
-            <Text style={styles.logoutButtonText}>Kijelentkezés</Text>
-          </Pressable>
+          {user ? (
+            <Pressable 
+              style={styles.logoutButton}
+              onPress={signOut}
+            >
+              <Feather name="log-out" size={18} color="#FF3B30" style={styles.buttonIcon} />
+              <Text style={styles.logoutButtonText}>Kijelentkezés</Text>
+            </Pressable>
+          ) : (
+            <>
+              <Pressable
+                style={styles.logoutButton}
+                onPress={() => console.log('Bejelentkezés')}
+              >
+                <Feather name="log-in" size={18} color="#1976D2" style={styles.buttonIcon} />
+                <Text style={[styles.logoutButtonText, { color: '#1976D2' }]}>Bejelentkezés</Text>
+              </Pressable>
+              <Pressable
+                style={styles.logoutButton}
+                onPress={() => console.log('Regisztráció')}
+              >
+                <Feather name="user-plus" size={18} color="#388E3C" style={styles.buttonIcon} />
+                <Text style={[styles.logoutButtonText, { color: '#388E3C' }]}>Regisztráció</Text>
+              </Pressable>
+            </>
+          )}
         </View>
 
         {/* Tabs */}
