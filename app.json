@@ -37,6 +37,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b81dbd0d-9ec5-4bf1-845e-a9c464202fe3"
+      }
+    },
+    "owner": "peszaby"
   }
 }
