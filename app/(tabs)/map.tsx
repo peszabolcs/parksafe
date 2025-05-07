@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, TouchableOpacity, useColorScheme, Platform } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { StyleSheet, View, TouchableOpacity, TouchableWithoutFeedback, useColorScheme, Platform, Modal, FlatList } from 'react-native';import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 
@@ -44,6 +43,8 @@ export default function MapScreen() {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedMarker, setSelectedMarker] = useState<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [listViewVisible, setListViewVisible] = useState(false);
+  const [listFilter, setListFilter] = useState('all');
 
   useFocusEffect(
       React.useCallback(() => {
@@ -273,13 +274,140 @@ export default function MapScreen() {
         )}
 
         {/* List view button */}
-        <TouchableOpacity style={[
-          styles.listViewButton,
-          { backgroundColor: colorScheme === 'dark' ? '#222' : 'white' }
-        ]}>
+        <TouchableOpacity
+            style={[
+              styles.listViewButton,
+              { backgroundColor: colorScheme === 'dark' ? '#222' : 'white' }
+            ]}
+            onPress={() => setListViewVisible(true)}
+        >
           <Ionicons name="list" size={20} color={colors.text} />
           <ThemedText style={styles.listViewText}>Lista nézet</ThemedText>
         </TouchableOpacity>
+
+        {/* List View Modal */}
+        <Modal
+            visible={listViewVisible}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setListViewVisible(false)}
+        >
+          <TouchableWithoutFeedback onPress={() => setListViewVisible(false)}>
+            <View style={styles.modalContainer}>
+              <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                <ThemedView style={[
+                  styles.modalContent,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#222' : '#fff',
+                    borderTopColor: colorScheme === 'dark' ? '#333' : '#eee',
+                  }
+                ]}>
+                  <View style={styles.modalHeader}>
+                    <ThemedText style={styles.modalTitle}>Helyek listája</ThemedText>
+                    <TouchableOpacity onPress={() => setListViewVisible(false)}>
+                      <Ionicons name="close" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Filter buttons */}
+                  <View style={styles.modalFilterContainer}>
+                    <TouchableOpacity
+                        style={[
+                          styles.modalFilterButton,
+                          listFilter === 'all' ? { backgroundColor: "azure" } : {}
+                        ]}
+                        onPress={() => setListFilter('all')}
+                    >
+                      <ThemedText style={[
+                        styles.modalFilterText,
+                        listFilter === 'all' ? { color: 'black' } : { color: colors.text }
+                      ]}>Összes</ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                          styles.modalFilterButton,
+                          listFilter === 'storage' ? { backgroundColor: '#4CAF50' } : {}
+                        ]}
+                        onPress={() => setListFilter('storage')}
+                    >
+                      <Ionicons name="bicycle" size={16} color={listFilter === 'storage' ? 'white' : colors.text} />
+                      <ThemedText style={[
+                        styles.modalFilterText,
+                        listFilter === 'storage' ? { color: 'white' } : {}
+                      ]}>Tárolók</ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                          styles.modalFilterButton,
+                          listFilter === 'service' ? { backgroundColor: '#2196F3' } : {}
+                        ]}
+                        onPress={() => setListFilter('service')}
+                    >
+                      <Ionicons name="construct" size={16} color={listFilter === 'service' ? 'white' : colors.text} />
+                      <ThemedText style={[
+                        styles.modalFilterText,
+                        listFilter === 'service' ? { color: 'white' } : {}
+                      ]}>Szervizek</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+
+                  <FlatList
+                      data={listFilter === 'storage' ? bikeStorageLocations :
+                          listFilter === 'service' ? serviceLocations :
+                              [...bikeStorageLocations, ...serviceLocations]}
+                      keyExtractor={(item) => (item.id + (('capacity' in item) ? '-storage' : '-service'))}
+                      renderItem={({ item }) => {
+                        const isBikeStorage = 'capacity' in item;
+                        return (
+                            <TouchableOpacity
+                                style={styles.listItem}
+                                onPress={() => {
+                                  setSelectedMarker(item);
+                                  setListViewVisible(false);
+                                  mapRef.current?.animateToRegion({
+                                    latitude: item.coordinates.latitude,
+                                    longitude: item.coordinates.longitude,
+                                    latitudeDelta: 0.005,
+                                    longitudeDelta: 0.005,
+                                  }, 1000);
+                                }}
+                            >
+                              <View style={styles.listItemContent}>
+                                <View style={[
+                                  styles.listItemIcon,
+                                  { backgroundColor: isBikeStorage ? '#4CAF50' : '#2196F3' }
+                                ]}>
+                                  <Ionicons
+                                      name={isBikeStorage ? "bicycle" : "construct"}
+                                      size={20}
+                                      color="white"
+                                  />
+                                </View>
+
+                                <View style={styles.listItemDetails}>
+                                  <ThemedText style={styles.listItemTitle}>{item.name}</ThemedText>
+
+                                  <View style={styles.listItemInfo}>
+                                    {/* Item info remains the same */}
+                                  </View>
+                                </View>
+
+                                <Ionicons name="chevron-forward" size={20} color={colors.text} />
+                              </View>
+                            </TouchableOpacity>
+                        );
+                      }}
+                      contentContainerStyle={styles.listContainer}
+                  />
+                </ThemedView>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+
+
 
 
         {/* Custom My Location Button */}
@@ -431,5 +559,91 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 4,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: '80%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalFilterContainer: {
+    flexDirection: 'row',
+    padding: 12,
+    justifyContent: 'space-around',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalFilterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  modalFilterText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  listContainer: {
+    paddingBottom: 20,
+  },
+  listItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  listItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  listItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  listItemDetails: {
+    flex: 1,
+  },
+  listItemTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  listItemInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  infoText: {
+    fontSize: 13,
   }
 });
