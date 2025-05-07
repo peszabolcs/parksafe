@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Image, useColorScheme, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, useColorScheme } from 'react-native';
 import { DrawerContentScrollView, DrawerItem, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { Feather } from '@expo/vector-icons';
 import { DrawerActions } from '@react-navigation/native';

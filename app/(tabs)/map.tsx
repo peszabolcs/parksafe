@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, TouchableOpacity, useColorScheme, Platform } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,9 @@ import * as Location from 'expo-location';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
+
+import { useFocusEffect } from '@react-navigation/native';
+
 
 // Sample data for bicycle storage locations in Szeged
 const bikeStorageLocations = [
@@ -28,11 +31,11 @@ const serviceLocations = [
 export default function MapScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
+  const mapRef = useRef<MapView | null>(null);
+
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [mapRegion, setMapRegion] = useState({
-    // Szeged city center coordinates
     latitude: 46.2530,
     longitude: 20.1414,
     latitudeDelta: 0.02,
@@ -40,6 +43,24 @@ export default function MapScreen() {
   });
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedMarker, setSelectedMarker] = useState<any>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  useFocusEffect(
+      React.useCallback(() => {
+        // This runs when the screen comes into focus
+        if (location && mapLoaded) {
+          goToMyLocation();
+        }
+      }, [location, mapLoaded])
+  );
+
+  useEffect(() => {
+    console.log('Map component initialized');
+
+    if (Platform.OS === 'android') {
+      console.log('Running on Android platform');
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -52,8 +73,7 @@ export default function MapScreen() {
 
         let location = await Location.getCurrentPositionAsync({});
         setLocation(location);
-        // Don't update map region automatically to keep Szeged in view
-        // Only store the user location for the "locate me" button
+        console.log('Location obtained:', location.coords.latitude, location.coords.longitude);
       } catch (error) {
         setErrorMsg('Nem sikerült lekérni a helyadatokat');
         console.error('Location error:', error);
@@ -72,220 +92,207 @@ export default function MapScreen() {
     }
   };
 
+  // Handle map ready event
+  const onMapReady = () => {
+    setMapLoaded(true);
+    goToMyLocation()
+    console.log('Map is ready and loaded');
+  };
+
+  // Function to center map on user's current location
+  const goToMyLocation = () => {
+    if (location) {
+      mapRef.current?.animateToRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      }, 1000);
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      {errorMsg && (
-        <ThemedView style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>{errorMsg}</ThemedText>
-        </ThemedView>
-      )}
-      
-      <MapView 
-        style={styles.map}
-        region={mapRegion}
-        showsUserLocation={true}
-        showsMyLocationButton={false}
-        showsCompass={true}
-        mapType={Platform.OS === 'ios' 
-          ? (colorScheme === 'dark' ? 'mutedStandard' : 'standard') 
-          : 'standard'}
-        onRegionChangeComplete={(region) => setMapRegion(region)}
-      >
-        {filteredLocations().map((marker) => {
-          const isBikeStorage = 'capacity' in marker;
-          return (
-            <Marker
-              key={`${isBikeStorage ? 'storage' : 'service'}-${marker.id}`}
-              coordinate={marker.coordinates}
-              title={marker.name}
-              description={isBikeStorage 
-                ? `Kapacitás: ${marker.capacity} | Értékelés: ${marker.rating}★` 
-                : `${marker.openNow ? 'Nyitva' : 'Zárva'} | Értékelés: ${marker.rating}★`}
-              pinColor={isBikeStorage ? 'green' : 'blue'}
-              onPress={() => setSelectedMarker(marker)}
+      <View style={styles.container}>
+        {errorMsg && (
+            <ThemedView style={styles.errorContainer}>
+              <ThemedText style={styles.errorText}>{errorMsg}</ThemedText>
+            </ThemedView>
+        )}
+
+        <MapView
+            ref={mapRef}
+            style={styles.map}
+            initialRegion={mapRegion}
+            showsUserLocation={true}
+            showsMyLocationButton={false} // Hide default button
+            showsCompass={true}
+            onMapReady={onMapReady}
+            provider="google"
+            mapType="standard"
+            onRegionChangeComplete={(region) => setMapRegion(region)}
+        >
+          {filteredLocations().map((marker) => {
+            const isBikeStorage = 'capacity' in marker;
+            return (
+                <Marker
+                    key={`${isBikeStorage ? 'storage' : 'service'}-${marker.id}`}
+                    coordinate={marker.coordinates}
+                    title={marker.name}
+                    description={isBikeStorage
+                        ? `Kapacitás: ${marker.capacity} | Értékelés: ${marker.rating}★`
+                        : `${marker.openNow ? 'Nyitva' : 'Zárva'} | Értékelés: ${marker.rating}★`}
+                    pinColor={isBikeStorage ? 'green' : 'blue'}
+                    onPress={() => setSelectedMarker(marker)}
+                />
+            );
+          })}
+        </MapView>
+
+        {/* Filter buttons */}
+        <View style={styles.filterContainer}>
+          <TouchableOpacity
+              style={[
+                styles.filterButton,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(60, 60, 60, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
+                selectedFilter === 'all' ? { backgroundColor: 'white' } : { opacity: 0.8 }
+              ]}
+              onPress={() => setSelectedFilter('all')}
+          >
+            <ThemedText style={[
+              styles.filterText,
+              selectedFilter === 'all' ? { color: 'black' } : { color: colorScheme === 'dark' ? 'white' : colors.text }
+            ]}>Összes</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+              style={[
+                styles.filterButton,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(60, 60, 60, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
+                selectedFilter === 'storage' ? { backgroundColor: '#4CAF50' } : { opacity: 0.8 }
+              ]}
+              onPress={() => setSelectedFilter('storage')}
+          >
+            <Ionicons
+                name="bicycle"
+                size={16}
+                color={selectedFilter === 'storage'
+                    ? 'white'
+                    : colorScheme === 'dark' ? 'white' : colors.text
+                }
             />
-          );
-        })}
-      </MapView>
-      
-     {/* Filter buttons */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity 
-          style={[
-            styles.filterButton, 
-            { backgroundColor: colorScheme === 'dark' ? 'rgba(60, 60, 60, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
-            selectedFilter === 'all' ? { backgroundColor: 'white' } : { opacity: 0.8 }
-          ]}
-          onPress={() => setSelectedFilter('all')}
-        >
-          <ThemedText style={[
-            styles.filterText, 
-            selectedFilter === 'all' ? { color: 'black' } : { color: colorScheme === 'dark' ? 'white' : colors.text }
-          ]}>Összes</ThemedText>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[
-            styles.filterButton, 
-            { backgroundColor: colorScheme === 'dark' ? 'rgba(60, 60, 60, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
-            selectedFilter === 'storage' ? { backgroundColor: '#4CAF50' } : { opacity: 0.8 }
-          ]}
-          onPress={() => setSelectedFilter('storage')}
-        >
-          <Ionicons 
-            name="bicycle" 
-            size={16} 
-            color={selectedFilter === 'storage' 
-              ? 'white' 
-              : colorScheme === 'dark' ? 'white' : colors.text
-            } 
-          />
-          <ThemedText style={[
-            styles.filterText, 
-            selectedFilter === 'storage' 
-              ? { color: 'white' } 
-              : { color: colorScheme === 'dark' ? 'white' : colors.text }
-          ]}>Tárolók</ThemedText>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[
-            styles.filterButton, 
-            { backgroundColor: colorScheme === 'dark' ? 'rgba(60, 60, 60, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
-            selectedFilter === 'service' ? { backgroundColor: '#2196F3' } : { opacity: 0.8 }
-          ]}
-          onPress={() => setSelectedFilter('service')}
-        >
-          <Ionicons 
-            name="construct" 
-            size={16} 
-            color={selectedFilter === 'service' 
-              ? 'white' 
-              : colorScheme === 'dark' ? 'white' : colors.text
-            } 
-          />
-          <ThemedText style={[
-            styles.filterText, 
-            selectedFilter === 'service' 
-              ? { color: 'white' } 
-              : { color: colorScheme === 'dark' ? 'white' : colors.text }
-          ]}>Szervizek</ThemedText>
-        </TouchableOpacity>
-      </View>
-      
-      {/* Selected Location Info */}
-      {selectedMarker && (
-        <ThemedView style={[
-          styles.selectedLocationContainer, 
+            <ThemedText style={[
+              styles.filterText,
+              selectedFilter === 'storage'
+                  ? { color: 'white' }
+                  : { color: colorScheme === 'dark' ? 'white' : colors.text }
+            ]}>Tárolók</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+              style={[
+                styles.filterButton,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(60, 60, 60, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
+                selectedFilter === 'service' ? { backgroundColor: '#2196F3' } : { opacity: 0.8 }
+              ]}
+              onPress={() => setSelectedFilter('service')}
+          >
+            <Ionicons
+                name="construct"
+                size={16}
+                color={selectedFilter === 'service'
+                    ? 'white'
+                    : colorScheme === 'dark' ? 'white' : colors.text
+                }
+            />
+            <ThemedText style={[
+              styles.filterText,
+              selectedFilter === 'service'
+                  ? { color: 'white' }
+                  : { color: colorScheme === 'dark' ? 'white' : colors.text }
+            ]}>Szervizek</ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        {/* Selected Location Info */}
+        {selectedMarker && (
+            <ThemedView style={[
+              styles.selectedLocationContainer,
+              { backgroundColor: colorScheme === 'dark' ? '#222' : 'white' }
+            ]}>
+              <View style={styles.selectedLocationHeader}>
+                <ThemedText type="defaultSemiBold">{selectedMarker.name}</ThemedText>
+                <TouchableOpacity onPress={() => setSelectedMarker(null)}>
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.selectedLocationDetails}>
+                {'capacity' in selectedMarker ? (
+                    <>
+                      <View style={styles.detailItem}>
+                        <Ionicons name="people-outline" size={16} color={colors.text} />
+                        <ThemedText style={styles.detailText}>Kapacitás: {selectedMarker.capacity}</ThemedText>
+                      </View>
+                      {selectedMarker.secured && (
+                          <View style={styles.detailItem}>
+                            <Ionicons name="shield-checkmark-outline" size={16} color="#4CAF50" />
+                            <ThemedText style={styles.detailText}>Védett tárolóhely</ThemedText>
+                          </View>
+                      )}
+                    </>
+                ) : (
+                    <>
+                      <View style={styles.detailItem}>
+                        <Ionicons
+                            name="time-outline"
+                            size={16}
+                            color={selectedMarker.openNow ? "#4CAF50" : "#F44336"}
+                        />
+                        <ThemedText style={[
+                          styles.detailText,
+                          { color: selectedMarker.openNow ? "#4CAF50" : "#F44336" }
+                        ]}>
+                          {selectedMarker.openNow ? "Nyitva" : "Zárva"}
+                        </ThemedText>
+                      </View>
+                    </>
+                )}
+                <View style={styles.detailItem}>
+                  <Ionicons name="star" size={16} color="#FFC107" />
+                  <ThemedText style={styles.detailText}>{selectedMarker.rating}★</ThemedText>
+                </View>
+              </View>
+
+              <TouchableOpacity style={[
+                styles.detailsButton,
+                { backgroundColor: '#2196F3' }
+              ]}>
+                <ThemedText style={{ color: 'white', fontWeight: '600' }}>Részletek megtekintése</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+        )}
+
+        {/* List view button */}
+        <TouchableOpacity style={[
+          styles.listViewButton,
           { backgroundColor: colorScheme === 'dark' ? '#222' : 'white' }
         ]}>
-          <View style={styles.selectedLocationHeader}>
-            <ThemedText type="defaultSemiBold">{selectedMarker.name}</ThemedText>
-            <TouchableOpacity onPress={() => setSelectedMarker(null)}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.selectedLocationDetails}>
-            {'capacity' in selectedMarker ? (
-              <>
-                <View style={styles.detailItem}>
-                  <Ionicons name="people-outline" size={16} color={colors.text} />
-                  <ThemedText style={styles.detailText}>Kapacitás: {selectedMarker.capacity}</ThemedText>
-                </View>
-                {selectedMarker.secured && (
-                  <View style={styles.detailItem}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color="#4CAF50" />
-                    <ThemedText style={styles.detailText}>Védett tárolóhely</ThemedText>
-                  </View>
-                )}
-              </>
-            ) : (
-              <>
-                <View style={styles.detailItem}>
-                  <Ionicons 
-                    name="time-outline"
-                    size={16} 
-                    color={selectedMarker.openNow ? "#4CAF50" : "#F44336"} 
-                  />
-                  <ThemedText style={[
-                    styles.detailText, 
-                    { color: selectedMarker.openNow ? "#4CAF50" : "#F44336" }
-                  ]}>
-                    {selectedMarker.openNow ? "Nyitva" : "Zárva"}
-                  </ThemedText>
-                </View>
-              </>
-            )}
-            <View style={styles.detailItem}>
-              <Ionicons name="star" size={16} color="#FFC107" />
-              <ThemedText style={styles.detailText}>{selectedMarker.rating}★</ThemedText>
-            </View>
-          </View>
-          
-          <TouchableOpacity style={[
-            styles.detailsButton, 
-          ]}>
-            <ThemedText style={{ color: 'white', fontWeight: '600' }}>Részletek megtekintése</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-      )}
-      
-      {/* List view button */}
-      <TouchableOpacity style={[
-        styles.listViewButton, 
-        { backgroundColor: colorScheme === 'dark' ? '#222' : 'white' }
-      ]}>
-        <Ionicons name="list" size={20} color={colors.text} />
-        <ThemedText style={styles.listViewText}>Lista nézet</ThemedText>
-      </TouchableOpacity>
-      
-      {/* Current location button */}
-      <TouchableOpacity 
-        style={[
-          styles.currentLocationButton, 
-          { backgroundColor: colorScheme === 'dark' ? '#333' : 'white' }
-        ]}
-        onPress={() => {
-          if (location) {
-            setMapRegion({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.01,
-            });
-          } else {
-            // If location is not available, go back to Szeged center
-            setMapRegion({
-              latitude: 46.2530,
-              longitude: 20.1414,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.01,
-            });
-          }
-        }}
-      >
-        <Ionicons name="locate" size={24} color={colorScheme === 'dark' ? '#fff' : 'gray'} />
-      </TouchableOpacity>
-      
-      {/* Szeged center button */}
-      <TouchableOpacity 
-        style={[
-          styles.szegedButton, 
-          { backgroundColor: colorScheme === 'dark' ? '#333' : 'white' }
-        ]}
-        onPress={() => {
-          setMapRegion({
-            latitude: 46.2530,
-            longitude: 20.1414,
-            latitudeDelta: 0.02,
-            longitudeDelta: 0.01,
-          });
-        }}
-      >
-        <Ionicons name="home" size={24} color={colorScheme === 'dark' ? '#fff' : 'gray'} />
-      </TouchableOpacity>
-    </View>
+          <Ionicons name="list" size={20} color={colors.text} />
+          <ThemedText style={styles.listViewText}>Lista nézet</ThemedText>
+        </TouchableOpacity>
+
+
+        {/* Custom My Location Button */}
+        <TouchableOpacity
+            style={[
+              styles.currentLocationButton,
+              { backgroundColor: colorScheme === 'dark' ? '#222' : 'white' }
+            ]}
+            onPress={goToMyLocation}
+        >
+          <Ionicons name="locate" size={24} color={colors.text} />
+        </TouchableOpacity>
+      </View>
   );
 }
 
@@ -424,6 +431,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 4,
-    backgroundColor: '#2196F3', // Default color in case colors.primary is undefined
   }
 });

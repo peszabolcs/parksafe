@@ -1,7 +1,7 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from 'react-native';
+
+import { StyleSheet, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import {Colors} from '@/constants/Colors';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -34,7 +34,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  // Get top rated locations
+  // Get top-rated locations
   const topRatedLocations = [...bikeStorageLocations, ...serviceLocations]
     .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
     .slice(0, 3);
@@ -43,7 +43,7 @@ export default function HomeScreen() {
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header Section */}
       <ThemedView style={styles.headerContainer}>
-        <ThemedText type="title">Üdvözöljük a ParkSafe-ben!</ThemedText>
+        <ThemedText type="title">aÜdvözöljük a ParkSafe-ben!</ThemedText>
         <ThemedText style={styles.subheader}>
           Találja meg a legközelebbi biciklitárolókat és szervizeket
         </ThemedText>
