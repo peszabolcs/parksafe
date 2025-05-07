@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React  from 'react';
 import { 
   View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar, 
-  Platform, FlatList, Animated, useColorScheme, Image
+  Platform, FlatList, Animated, useColorScheme
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -18,8 +18,7 @@ type SavedPlace = {
 export default function SavedPlacesScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
-  const [backButtonAnim] = useState(new Animated.Value(0));
-  
+
   // Get colors based on theme
   const themeColors = Colors[colorScheme];
 
@@ -31,29 +30,6 @@ export default function SavedPlacesScreen() {
     { id: '4', name: 'Konditerem', address: 'Bartók Béla út 75, Budapest', favorite: false, type: 'other' },
   ];
 
-  const animateBackButton = (pressed: boolean) => {
-    Animated.spring(backButtonAnim, {
-      toValue: pressed ? 1 : 0,
-      friction: 7,
-      tension: 40,
-      useNativeDriver: true
-    }).start();
-  };
-
-  const backButtonTransform = {
-    transform: [
-      { translateX: backButtonAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, -5]
-        })
-      },
-      { scale: backButtonAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 0.95]
-        })
-      }
-    ]
-  };
 
   const getIconForType = (type: 'home' | 'work' | 'other') => {
     switch (type) {
@@ -70,7 +46,7 @@ export default function SavedPlacesScreen() {
   const themeStyles = createThemedStyles(themeColors, colorScheme);
 
   const renderItem = ({ item }: { item: SavedPlace }) => (
-    <Pressable 
+    <Pressable
       style={({pressed}) => [
         themeStyles.placeItem,
         pressed && themeStyles.placeItemPressed
@@ -84,15 +60,15 @@ export default function SavedPlacesScreen() {
         <Text style={themeStyles.placeName}>{item.name}</Text>
         <Text style={themeStyles.placeAddress}>{item.address}</Text>
       </View>
-      <Pressable 
+      <Pressable
         style={themeStyles.favoriteButton}
         onPress={() => console.log(`Toggle favorite: ${item.name}`)}
         hitSlop={8}
       >
-        <Feather 
-          name={item.favorite ? "star" : "star"} 
-          size={22} 
-          color={item.favorite ? '#FFD700' : (colorScheme === 'dark' ? '#555' : '#DDD')} 
+        <Feather
+          name={item.favorite ? "star" : "star"}
+          size={22}
+          color={item.favorite ? '#FFD700' : (colorScheme === 'dark' ? '#555' : '#DDD')}
         />
       </Pressable>
     </Pressable>
@@ -120,30 +96,28 @@ export default function SavedPlacesScreen() {
   return (
     <SafeAreaView style={themeStyles.safeArea}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-      
+
       {/* Header with Animated Back Button */}
       <View style={themeStyles.header}>
-        <Animated.View style={backButtonTransform}>
-          <Pressable 
-            style={themeStyles.backButton} 
+        <Animated.View>
+          <Pressable
+            style={themeStyles.backButton}
             onPress={() => router.back()}
-            onPressIn={() => animateBackButton(true)}
-            onPressOut={() => animateBackButton(false)}
             hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
           >
             <Feather name="arrow-left" size={24} color={themeColors.text} />
           </Pressable>
         </Animated.View>
         <Text style={themeStyles.headerTitle}>Mentett helyek</Text>
-        <Pressable 
-          style={themeStyles.addNewButton} 
+        <Pressable
+          style={themeStyles.addNewButton}
           onPress={() => console.log('Add new place')}
           hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
         >
           <Feather name="plus" size={24} color={themeColors.tint} />
         </Pressable>
       </View>
-      
+
       {/* Content */}
       <FlatList
         data={placeholderData}
@@ -205,8 +179,8 @@ const createThemedStyles = (themeColors: any, colorScheme: 'light' | 'dark') => 
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colorScheme === 'dark' 
-      ? 'rgba(74, 144, 226, 0.2)' 
+    backgroundColor: colorScheme === 'dark'
+      ? 'rgba(74, 144, 226, 0.2)'
       : 'rgba(74, 144, 226, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -238,8 +212,8 @@ const createThemedStyles = (themeColors: any, colorScheme: 'light' | 'dark') => 
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colorScheme === 'dark' 
-      ? 'rgba(74, 144, 226, 0.15)' 
+    backgroundColor: colorScheme === 'dark'
+      ? 'rgba(74, 144, 226, 0.15)'
       : 'rgba(74, 144, 226, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',

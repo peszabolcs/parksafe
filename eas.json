@@ -1,0 +1,43 @@
+{
+  "cli": {
+    "version": ">= 14.4.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PROJECT_ID": "b81dbd0d-9ec5-4bf1-845e-a9c464202fe3"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PROJECT_ID": "b81dbd0d-9ec5-4bf1-845e-a9c464202fe3"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PROJECT_ID": "b81dbd0d-9ec5-4bf1-845e-a9c464202fe3"
+      }
+    },
+    "local": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PROJECT_ID": "b81dbd0d-9ec5-4bf1-845e-a9c464202fe3"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

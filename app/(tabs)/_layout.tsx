@@ -1,9 +1,11 @@
-import { Tabs, useRouter } from 'expo-router';
+// noinspection JSUnusedGlobalSymbols
+
+import { Tabs } from 'expo-router';
 import React, { useState } from 'react';
 import { Platform, View, Pressable, StyleSheet, Modal, TouchableOpacity, TouchableWithoutFeedback, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { DrawerActions } from '@react-navigation/native';
+import { useNavigation , DrawerActions } from '@react-navigation/native';
+
 
 import { HapticTab } from '@/components/HapticTab';
 import TabBarBackground from '@/components/ui/TabBarBackground';
@@ -24,7 +26,6 @@ const notifications = [
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const router = useRouter();
   const navigation = useNavigation();
   const colors = Colors[colorScheme ?? 'light'];
   
@@ -250,8 +251,7 @@ export default function TabLayout() {
                   ]}>
                     <TouchableOpacity 
                       style={[
-                        styles.footerButton,
-                        { backgroundColor: colors.primary }
+                        styles.footerButton
                       ]} 
                       onPress={() => {
                         markAllAsRead();

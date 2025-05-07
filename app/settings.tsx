@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar, 
   Platform, ScrollView, Animated, useColorScheme 
@@ -10,8 +10,7 @@ import { Colors } from '@/constants/Colors'; // Using your app's color constants
 export default function SettingsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
-  const [backButtonAnim] = useState(new Animated.Value(0));
-  
+
   // Get colors based on theme
   const themeColors = Colors[colorScheme];
   
@@ -24,29 +23,7 @@ export default function SettingsScreen() {
     { id: 'about', title: 'Az alkalmazásról', icon: 'info', description: 'Verzió és licenc információk' },
   ];
 
-  const animateBackButton = (pressed: boolean) => {
-    Animated.spring(backButtonAnim, {
-      toValue: pressed ? 1 : 0,
-      friction: 7,
-      tension: 40,
-      useNativeDriver: true
-    }).start();
-  };
 
-  const backButtonTransform = {
-    transform: [
-      { translateX: backButtonAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, -5]
-        })
-      },
-      { scale: backButtonAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 0.95]
-        })
-      }
-    ]
-  };
 
   // Create styles with the current theme
   const themeStyles = createThemedStyles(themeColors, colorScheme);
@@ -57,12 +34,10 @@ export default function SettingsScreen() {
       
       {/* Header with Animated Back Button */}
       <View style={themeStyles.header}>
-        <Animated.View style={backButtonTransform}>
+        <Animated.View>
           <Pressable 
             style={themeStyles.backButton} 
             onPress={() => router.back()}
-            onPressIn={() => animateBackButton(true)}
-            onPressOut={() => animateBackButton(false)}
             hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
           >
             <Feather name="arrow-left" size={24} color={themeColors.text} />

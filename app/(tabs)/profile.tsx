@@ -69,7 +69,7 @@ export default function ProfileScreen() {
         }
       };
       
-      loadTabState();
+      loadTabState().then(r => r);
       
       // No cleanup needed
       return () => {};
@@ -81,7 +81,7 @@ export default function ProfileScreen() {
     setActiveTab(tab);
     // Store user's manual tab selection for the current session only
     try {
-      AsyncStorage.setItem('profileActiveTab', tab);
+      AsyncStorage.setItem('profileActiveTab', tab).then(r => r);
     } catch (error) {
       console.error('Error saving tab selection:', error);
     }
