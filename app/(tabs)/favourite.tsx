@@ -4,7 +4,7 @@ import { Fonts } from '@/constants/Fonts';
 
 export default function TabTwoScreen() {
   return (
-    <ThemedText style={Fonts.test}>Térkép</ThemedText>
+    <ThemedText style={Fonts.test}>Kedvencek</ThemedText>
   )
     
 }
