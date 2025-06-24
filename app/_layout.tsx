@@ -6,41 +6,37 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { ThemeProvider } from '@/context/ThemeContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useAppState } from '@/hooks/useAppState';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
+  const { session, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+  // Handle app state changes and token refresh
+  useAppState();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (loading) return;
+    
     const inAuth = segments[0] === 'login' || segments[0] === 'register';
+    
     if (!session && !inAuth) {
+      // User is not authenticated and not on auth pages, redirect to login
       router.replace('/login');
     } else if (session && inAuth) {
+      // User is authenticated but on auth pages, redirect to home
       router.replace('/');
     }
   }, [session, loading, segments]);
 
-  if (loading) return null;
+  if (loading) {
+    // Show loading screen while checking authentication
+    return null;
+  }
+
   return <>{children}</>;
 }
 
@@ -73,9 +69,11 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <AuthGate>
-        <RootLayoutNav />
-      </AuthGate>
+      <AuthProvider>
+        <AuthGate>
+          <RootLayoutNav />
+        </AuthGate>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

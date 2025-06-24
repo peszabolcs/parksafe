@@ -1,30 +1,12 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
-
-const nearby = [
-  {
-    icon: <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />,
-    title: 'Keleti Biciklitároló',
-    distance: '0.3 km',
-    rating: 4.5,
-  },
-  {
-    icon: <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />,
-    title: 'Nyugati Biciklitároló',
-    distance: '0.7 km',
-    rating: 4.2,
-  },
-  {
-    icon: <MaterialCommunityIcons name="tools" size={24} color="#60A5FA" />,
-    title: 'Bringaszerviz Kft.',
-    distance: '0.5 km',
-    rating: 4.8,
-  },
-];
+import * as Location from 'expo-location';
+import { generateMarkers, getDistance, MapMarker } from '../../lib/markers';
+import { router } from 'expo-router';
 
 const bestRated = [
   {
@@ -61,6 +43,10 @@ const recentActivity = [
 ];
 
 export default function HomeScreen() {
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [nearby, setNearby] = useState<(MapMarker & { distance: number })[]>([]);
+  const [loadingNearby, setLoadingNearby] = useState(true);
+
   // Theme-aware colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -102,6 +88,52 @@ export default function HomeScreen() {
     'text'
   );
 
+  // Fetch user location and calculate nearby markers
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | null = null;
+    setLoadingNearby(true);
+    (async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Location permission denied');
+          setNearby([]);
+          setLoadingNearby(false);
+          return;
+        }
+        let location = await Location.getCurrentPositionAsync({});
+        setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+        // Watch position for live updates
+        locationSubscription = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, distanceInterval: 10 },
+          (loc) => {
+            setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+          }
+        );
+      } catch (error) {
+        console.error('Error getting location:', error);
+        setNearby([]);
+        setLoadingNearby(false);
+      }
+    })();
+    return () => {
+      if (locationSubscription) locationSubscription.remove();
+    };
+  }, []);
+
+  // Calculate and sort nearby markers whenever userLocation changes
+  useEffect(() => {
+    if (!userLocation) return;
+    const markers = generateMarkers();
+    const withDistance = markers.map(m => ({
+      ...m,
+      distance: getDistance(userLocation.latitude, userLocation.longitude, m.coordinate.latitude, m.coordinate.longitude)
+    }));
+    withDistance.sort((a, b) => a.distance - b.distance);
+    setNearby(withDistance.slice(0, 3));
+    setLoadingNearby(false);
+  }, [userLocation]);
+
   return (
     <ThemedView style={styles.container}>
       {/* Header */}
@@ -130,24 +162,45 @@ export default function HomeScreen() {
         {/* Nearby Section */}
         <View style={styles.sectionHeaderRow}>
           <ThemedText style={styles.sectionTitle} type="subtitle">Közelben</ThemedText>
-          <ThemedText style={[styles.sectionAll, { color: subtitleColor }]}>Összes</ThemedText>
+          <ThemedText
+            style={[styles.sectionAll, { color: subtitleColor }]}
+            onPress={() => {
+              router.push({ pathname: '/(tabs)/map', params: { openList: '1' } });
+            }}
+          >
+            Összes
+          </ThemedText>
         </View>
         <View>
-          {nearby.map((item, idx) => (
-            <View key={idx} style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}>
-              <View style={[styles.nearbyIcon, { backgroundColor: iconBackgroundLight }]}>{item.icon}</View>
-              <View style={styles.nearbyInfo}>
-                <ThemedText style={styles.nearbyTitle}>{item.title}</ThemedText>
-                <View style={styles.nearbyDetails}>
-                  <Ionicons name="location-outline" size={14} color={secondaryTextColor} />
-                  <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>{item.distance}</ThemedText>
-                  <ThemedText style={[styles.nearbyDetailDot, { color: secondaryTextColor }]}>•</ThemedText>
-                  <Ionicons name="star" size={14} color="#FBBF24" />
-                  <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>{item.rating}</ThemedText>
+          {loadingNearby ? (
+            <ActivityIndicator size="small" color="#3B82F6" style={{ marginVertical: 16 }} />
+          ) : nearby.length === 0 ? (
+            <ThemedText style={{ textAlign: 'center', color: '#888', marginVertical: 16 }}>
+              Nem találhatóak közeli helyek vagy nincs helyhozzáférés engedélyezve.
+            </ThemedText>
+          ) : (
+            nearby.map((item, idx) => (
+              <View key={item.id} style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}> 
+                <View style={[styles.nearbyIcon, { backgroundColor: item.type === 'parking' ? iconBackgroundLight : '#EFF6FF' }]}> 
+                  {item.type === 'parking' ? (
+                    <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />
+                  ) : (
+                    <MaterialCommunityIcons name="tools" size={24} color="#60A5FA" />
+                  )}
+                </View>
+                <View style={styles.nearbyInfo}>
+                  <ThemedText style={styles.nearbyTitle}>{item.title}</ThemedText>
+                  <View style={styles.nearbyDetails}>
+                    <Ionicons name="location-outline" size={14} color={secondaryTextColor} />
+                    <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>{(item.distance / 1000).toFixed(2)} km</ThemedText>
+                    <ThemedText style={[styles.nearbyDetailDot, { color: secondaryTextColor }]}>•</ThemedText>
+                    <Ionicons name="star" size={14} color="#FBBF24" />
+                    <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>{item.type === 'parking' ? (item.available ? '4.5' : '4.2') : '4.8'}</ThemedText>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
         {/* Best Rated Section */}
         <View style={styles.sectionHeaderRow}>
