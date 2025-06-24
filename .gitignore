@@ -1,4 +1,6 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+.env
+.env.local
 
 # dependencies
 node_modules/
@@ -20,7 +22,6 @@ expo-env.d.ts
 
 # ide
 .vscode/
-.cursor
 
 # Metro
 .metro-health-check*
@@ -36,11 +37,10 @@ yarn-error.*
 
 # local env files
 .env*.local
-.env
 
 # typescript
 *.tsbuildinfo
 
 app-example
-
-.early.coverage
+.env
+.env
