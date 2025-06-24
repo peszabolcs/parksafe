@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking, Modal, FlatList, Text, Pressable } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Region, Marker, Callout } from 'react-native-maps';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
@@ -320,6 +320,8 @@ export default function MapScreen() {
   const [zoom, setZoom] = useState(15);
   const [markers] = useState<MapMarker[]>(generateMarkers());
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+  const [showListModal, setShowListModal] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   // Theme context
   const { currentTheme } = useTheme();
@@ -336,6 +338,7 @@ export default function MapScreen() {
 
   // On mount, always fetch and set user's current location
   useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | null = null;
     (async () => {
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
@@ -343,6 +346,7 @@ export default function MapScreen() {
           console.log('Location permission denied');
           return;
         }
+        // Get initial location
         let location = await Location.getCurrentPositionAsync({});
         const userRegion = {
           latitude: location.coords.latitude,
@@ -351,11 +355,57 @@ export default function MapScreen() {
           longitudeDelta: 0.01,
         };
         setRegion(userRegion);
+        setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+        // Watch position for live updates
+        locationSubscription = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, distanceInterval: 10 },
+          (loc) => {
+            setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+          }
+        );
       } catch (error) {
         console.error('Error getting location:', error);
       }
     })();
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
   }, []);
+
+  // Haversine formula for distance in meters
+  function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371e3; // meters
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // Get sorted list of markers by distance
+  const sortedMarkers = React.useMemo(() => {
+    if (!userLocation) return markers;
+    return markers
+      .map(m => ({
+        ...m,
+        distance: getDistance(userLocation.latitude, userLocation.longitude, m.coordinate.latitude, m.coordinate.longitude)
+      }))
+      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+  }, [markers, userLocation]);
+
+  // Show only those within 2km, or all if none
+  const NEARBY_RADIUS = 2000;
+  const nearbyMarkers = React.useMemo(() => {
+    if (!userLocation) return sortedMarkers;
+    const nearby = sortedMarkers.filter(m => (m as any).distance <= NEARBY_RADIUS);
+    return nearby.length > 0 ? nearby : sortedMarkers;
+  }, [sortedMarkers, userLocation]);
 
   async function recenter() {
     try {
@@ -421,6 +471,20 @@ export default function MapScreen() {
       });
     }
   };
+
+  // Handler for list item tap
+  function handleListItemPress(marker: MapMarker) {
+    setSelectedMarker(marker);
+    setShowListModal(false);
+    // Center map on marker
+    const newRegion = {
+      latitude: marker.coordinate.latitude,
+      longitude: marker.coordinate.longitude,
+      latitudeDelta: 0.005,
+      longitudeDelta: 0.005,
+    };
+    mapRef.current?.animateToRegion(newRegion, 500);
+  }
 
   const renderMarker = (marker: MapMarker) => {
     const isParking = marker.type === 'parking';
@@ -625,14 +689,76 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* Lista nézet Modal */}
+      <Modal
+        visible={showListModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowListModal(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'flex-end' }}
+          onPress={() => setShowListModal(false)}
+        >
+          <Pressable
+            style={{ backgroundColor: cardBackground, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, maxHeight: '60%' }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ThemedText style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12, textAlign: 'center' }}>Közeli helyek</ThemedText>
+            <FlatList
+              data={nearbyMarkers}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => handleListItemPress(item)}
+                  style={({ pressed }) => [{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 12,
+                    paddingHorizontal: 8,
+                    borderBottomWidth: 1,
+                    borderBottomColor: borderColor,
+                    backgroundColor: pressed ? '#e5e7eb55' : 'transparent',
+                    borderRadius: 8,
+                  }]}
+                >
+                  <View style={{
+                    width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 12,
+                    backgroundColor: item.type === 'parking' ? '#DCFCE7' : '#DBEAFE',
+                  }}>
+                    <Ionicons name={item.type === 'parking' ? 'bicycle' : 'build'} size={18} color={item.type === 'parking' ? '#22C55E' : '#3B82F6'} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontWeight: '600', fontSize: 15 }}>{item.title}</ThemedText>
+                    <ThemedText style={{ fontSize: 12, color: '#666' }}>{item.type === 'parking' ? 'Parkoló' : 'Szerviz'} • {item.available ? 'Nyitva' : 'Zárva'}</ThemedText>
+                  </View>
+                  {userLocation && (item as any).distance !== undefined && (
+                    <ThemedText style={{ fontSize: 13, color: '#3B82F6', fontWeight: '500', marginLeft: 8 }}>{((item as any).distance / 1000).toFixed(2)} km</ThemedText>
+                  )}
+                </Pressable>
+              )}
+              ListEmptyComponent={<Text style={{ textAlign: 'center', color: '#888', marginTop: 20 }}>Nincs elérhető hely.</Text>}
+            />
+            <TouchableOpacity onPress={() => setShowListModal(false)} style={{ marginTop: 18, alignSelf: 'center', padding: 10 }}>
+              <ThemedText style={{ color: '#3B82F6', fontWeight: 'bold', fontSize: 16 }}>Bezárás</ThemedText>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Lista nézet Button (bottom center) */}
       <View style={styles.fabGroupBottomCenter}>
-        <TouchableOpacity style={[styles.fabWide, { 
-          backgroundColor: cardBackground, 
-          shadowColor,
-          borderColor: borderColor,
-          borderWidth: 1
-        }]}>
+        <TouchableOpacity
+          style={[styles.fabWide, {
+            backgroundColor: cardBackground,
+            shadowColor,
+            borderColor: borderColor,
+            borderWidth: 1
+          }]}
+          onPress={() => setShowListModal(true)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="list" size={18} color={textColor} style={{ marginRight: 8 }} />
           <ThemedText style={[styles.fabWideText, { color: textColor }]}>Lista nézet</ThemedText>
         </TouchableOpacity>
       </View>
