@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import CountryFlag from 'react-native-country-flag';
+import { useAuth } from '@/context/AuthContext';
 
 const COUNTRY_CODES = [
   { code: '+36', country: 'HU' },
@@ -34,6 +35,7 @@ export default function RegisterScreen() {
   const [error, setError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dobDate, setDobDate] = useState<Date | null>(null);
+  const { refreshSession } = useAuth();
 
   const borderColor = useThemeColor({ light: '#E5E7EB', dark: '#27272A' }, 'background');
   const inputBg = useThemeColor({ light: '#F1F5F9', dark: '#18181B' }, 'background');
@@ -44,25 +46,46 @@ export default function RegisterScreen() {
   const country = getCountryFromPhone(phone);
 
   async function handleRegister() {
-    setLoading(true);
-    setError('');
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username,
-          dob,
-          phone,
-        },
-      },
-    });
-    setLoading(false);
-    if (signUpError) {
-      setError(signUpError.message);
+    // Validation
+    if (!email || !password || !username || !dob || !phone) {
+      setError('Kérjük, töltse ki az összes mezőt');
       return;
     }
-    router.replace('/login');
+
+    if (password.length < 6) {
+      setError('A jelszónak legalább 6 karakter hosszúnak kell lennie');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            dob,
+            phone,
+          },
+        },
+      });
+      
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+      
+      // Registration successful, redirect to login
+      router.replace('/login');
+    } catch (err) {
+      setError('Váratlan hiba történt. Kérjük, próbálja újra.');
+      console.error('Registration error:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function onDateChange(event: any, selectedDate?: Date) {
@@ -86,11 +109,12 @@ export default function RegisterScreen() {
             autoCapitalize="none"
             value={username}
             onChangeText={setUsername}
+            editable={!loading}
           />
         </View>
         <View style={styles.inputGroup}>
           <ThemedText style={[styles.label, { color: labelColor }]}>Születési dátum</ThemedText>
-          <Pressable onPress={() => setShowDatePicker(true)}>
+          <Pressable onPress={() => setShowDatePicker(true)} disabled={loading}>
             <View style={[styles.input, { backgroundColor: inputBg, borderColor, flexDirection: 'row', alignItems: 'center' }]}> 
               <ThemedText style={{ color: dob ? textColor : placeholderColor }}>
                 {dob ? dob : 'YYYY-MM-DD'}
@@ -123,6 +147,7 @@ export default function RegisterScreen() {
               keyboardType="phone-pad"
               value={phone}
               onChangeText={setPhone}
+              editable={!loading}
             />
           </View>
         </View>
@@ -136,6 +161,7 @@ export default function RegisterScreen() {
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            editable={!loading}
           />
         </View>
         <View style={styles.inputGroup}>
@@ -147,11 +173,18 @@ export default function RegisterScreen() {
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            editable={!loading}
           />
         </View>
         {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-          <ThemedText style={styles.buttonText}>{loading ? 'Regisztráció...' : 'Regisztráció'}</ThemedText>
+        <TouchableOpacity 
+          style={[styles.button, loading && styles.buttonDisabled]} 
+          onPress={handleRegister} 
+          disabled={loading}
+        >
+          <ThemedText style={styles.buttonText}>
+            {loading ? 'Regisztráció...' : 'Regisztráció'}
+          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.replace('/login')} style={styles.linkRow}>
           <ThemedText style={styles.link}>Van már fiókod? Jelentkezz be!</ThemedText>
@@ -196,6 +229,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
     width: '100%',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     color: '#fff',
