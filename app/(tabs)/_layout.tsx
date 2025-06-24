@@ -33,7 +33,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="map"
         options={{
           title: 'Térkép',
           tabBarIcon: ({ color }) => <Feather name="map" size={24} color={color} />,
