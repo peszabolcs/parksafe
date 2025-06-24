@@ -5,12 +5,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { supabase } from '@/lib/supabase';
-
-const user = {
-  name: 'Felhasználó Név',
-  email: 'felhasznalo@email.com',
-};
+import { useAuth } from '@/context/AuthContext';
 
 const activities = [
   {
@@ -44,18 +39,8 @@ const activities = [
 
 export default function ProfileScreen() {
   const [tab, setTab] = useState<'activity' | 'reviews'>('activity');
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserEmail(data?.user?.email ?? null);
-      setUsername(data?.user?.user_metadata?.username ?? null);
-      setLoading(false);
-    });
-  }, []);
+  const { user, signOut } = useAuth();
 
   // Theme colors
   const cardBg = useThemeColor({ light: '#F8FAFC', dark: '#18181B' }, 'background');
@@ -74,18 +59,18 @@ export default function ProfileScreen() {
 
   async function handleLogout() {
     setLoggingOut(true);
-    await supabase.auth.signOut();
-    setLoggingOut(false);
-    // The AuthGate in _layout.tsx will redirect to /login
+    try {
+      await signOut();
+      // The AuthGate in _layout.tsx will redirect to /login
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setLoggingOut(false);
+    }
   }
 
-  if (loading) {
-    return (
-      <ThemedView style={styles.container}>
-        <ThemedText style={{ textAlign: 'center', marginTop: 40 }}>Betöltés...</ThemedText>
-      </ThemedView>
-    );
-  }
+  const userEmail = user?.email;
+  const username = user?.user_metadata?.username;
 
   return (
     <ThemedView style={styles.container}>
@@ -97,8 +82,12 @@ export default function ProfileScreen() {
               <Ionicons name="person-outline" size={48} color={textSecondary} />
             </View>
             <View style={styles.profileInfo}>
-              <ThemedText style={[styles.profileName, { color: textPrimary }]} type="subtitle">{username ?? userEmail ?? '—'}</ThemedText>
-              <ThemedText style={[styles.profileEmail, { color: textSecondary }]}>{userEmail ?? '—'}</ThemedText>
+              <ThemedText style={[styles.profileName, { color: textPrimary }]} type="subtitle">
+                {username ?? userEmail ?? '—'}
+              </ThemedText>
+              <ThemedText style={[styles.profileEmail, { color: textSecondary }]}>
+                {userEmail ?? '—'}
+              </ThemedText>
             </View>
           </View>
           <View style={styles.profileButtonsRow}>
@@ -106,45 +95,64 @@ export default function ProfileScreen() {
               <Ionicons name="settings-outline" size={18} color={iconSettings} style={{ marginRight: 6 }} />
               <ThemedText style={[styles.settingsButtonText, { color: iconSettings }]}>Beállítások</ThemedText>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.logoutButton, { backgroundColor: cardInnerBg, borderColor: borderLogout }]} onPress={handleLogout} disabled={loggingOut}>
+            <TouchableOpacity 
+              style={[styles.logoutButton, { backgroundColor: cardInnerBg, borderColor: borderLogout }]} 
+              onPress={handleLogout} 
+              disabled={loggingOut}
+            >
               <Ionicons name="log-out-outline" size={18} color={iconLogout} style={{ marginRight: 6 }} />
-              <ThemedText style={[styles.logoutButtonText, { color: iconLogout }]}>{loggingOut ? 'Kijelentkezés...' : 'Kijelentkezés'}</ThemedText>
+              <ThemedText style={[styles.logoutButtonText, { color: iconLogout }]}>
+                {loggingOut ? 'Kijelentkezés...' : 'Kijelentkezés'}
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </ThemedView>
         {/* Tabs */}
-        <View style={[styles.tabsRow, { backgroundColor: tabBg }]}> 
-          <TouchableOpacity style={[styles.tabButton, tab === 'activity' && { backgroundColor: tabActiveBg }]} onPress={() => setTab('activity')}>
-            <ThemedText style={[styles.tabButtonText, { color: tabInactiveText }, tab === 'activity' && { color: tabActiveText, fontWeight: 'bold' }]}>Aktivitás</ThemedText>
+        <View style={[styles.tabsRow, { backgroundColor: tabBg }]}>
+          <TouchableOpacity
+            style={[styles.tabButton, tab === 'activity' && { backgroundColor: tabActiveBg }]}
+            onPress={() => setTab('activity')}
+          >
+            <ThemedText style={[styles.tabButtonText, { color: tab === 'activity' ? tabActiveText : tabInactiveText }]}>
+              Tevékenységek
+            </ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tabButton, tab === 'reviews' && { backgroundColor: tabActiveBg }]} onPress={() => setTab('reviews')}>
-            <ThemedText style={[styles.tabButtonText, { color: tabInactiveText }, tab === 'reviews' && { color: tabActiveText, fontWeight: 'bold' }]}>Értékeléseim</ThemedText>
+          <TouchableOpacity
+            style={[styles.tabButton, tab === 'reviews' && { backgroundColor: tabActiveBg }]}
+            onPress={() => setTab('reviews')}
+          >
+            <ThemedText style={[styles.tabButtonText, { color: tab === 'reviews' ? tabActiveText : tabInactiveText }]}>
+              Értékelések
+            </ThemedText>
           </TouchableOpacity>
         </View>
         {/* Activity List */}
         {tab === 'activity' && (
           <View style={styles.activityList}>
-            {activities.map((item, idx) => {
-              const iconBg = useThemeColor({ light: item.iconBgLight, dark: item.iconBgDark }, 'background');
-              return (
-                <ThemedView key={idx} style={[styles.activityCard, { backgroundColor: cardInnerBg, shadowColor: '#000' }]}> 
-                  <View style={[styles.activityIconCircle, { backgroundColor: iconBg }]}> 
-                    <MaterialCommunityIcons name={item.icon} size={22} color={item.iconColor} />
-                  </View>
-                  <View style={styles.activityInfo}>
-                    <ThemedText style={[styles.activityTitle, { color: textPrimary }]}>{item.title}</ThemedText>
-                    <ThemedText style={[styles.activitySubtitle, { color: textSecondary }]}>{item.subtitle}</ThemedText>
-                  </View>
-                  <ThemedText style={[styles.activityDate, { color: textSecondary }]}>{item.date}</ThemedText>
-                </ThemedView>
-              );
-            })}
+            {activities.map((activity, index) => (
+              <ThemedView key={index} style={[styles.activityCard, { backgroundColor: cardInnerBg, shadowColor: '#000' }]}>
+                <View style={[
+                  styles.activityIcon,
+                  { 
+                    backgroundColor: activity.iconBgLight,
+                    shadowColor: '#000',
+                  }
+                ]}>
+                  <MaterialCommunityIcons name={activity.icon as any} size={20} color={activity.iconColor} />
+                </View>
+                <View style={styles.activityContent}>
+                  <ThemedText style={[styles.activityTitle, { color: textPrimary }]}>{activity.title}</ThemedText>
+                  <ThemedText style={[styles.activitySubtitle, { color: textSecondary }]}>{activity.subtitle}</ThemedText>
+                </View>
+                <ThemedText style={[styles.activityDate, { color: textSecondary }]}>{activity.date}</ThemedText>
+              </ThemedView>
+            ))}
           </View>
         )}
-        {/* Reviews Tab Placeholder */}
+        {/* Reviews Tab */}
         {tab === 'reviews' && (
-          <View style={styles.reviewsPlaceholder}>
-            <ThemedText style={{ color: textSecondary }}>Nincsenek értékelések.</ThemedText>
+          <View style={styles.activityList}>
+            <ThemedText style={[styles.emptyText, { color: textSecondary }]}>Még nincsenek értékelések</ThemedText>
           </View>
         )}
       </ScrollView>
@@ -256,19 +264,22 @@ const styles = StyleSheet.create({
     elevation: 1,
     marginBottom: 2,
   },
-  activityIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  activityInfo: {
+  activityContent: {
     flex: 1,
   },
   activityTitle: {
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 16,
     marginBottom: 2,
   },
@@ -276,11 +287,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   activityDate: {
-    fontSize: 13,
-    marginLeft: 8,
+    fontSize: 12,
   },
-  reviewsPlaceholder: {
-    alignItems: 'center',
-    padding: 32,
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 16,
   },
 });
