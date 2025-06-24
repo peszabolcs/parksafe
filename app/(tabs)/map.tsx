@@ -7,112 +7,14 @@ import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '@/context/ThemeContext';
 import * as Location from 'expo-location';
+import { generateMarkers, getDistance, MapMarker } from '../../lib/markers';
+import { useLocalSearchParams } from 'expo-router';
 
 const INITIAL_REGION = {
   latitude: 46.2530, // Szeged coordinates
   longitude: 20.1484,
   latitudeDelta: 0.01,
   longitudeDelta: 0.01,
-};
-
-// Marker types
-interface MapMarker {
-  id: string;
-  coordinate: {
-    latitude: number;
-    longitude: number;
-  };
-  type: 'parking' | 'repair';
-  title: string;
-  description: string;
-  available: boolean;
-}
-
-// Generate static markers for Szeged
-const generateMarkers = (): MapMarker[] => {
-  const markers: MapMarker[] = [];
-
-  // Static parking spots in Szeged
-  const parkingSpots: MapMarker[] = [
-    {
-      id: 'parking-1',
-      coordinate: { latitude: 46.2530, longitude: 20.1484 }, // Szeged center
-      type: 'parking',
-      title: 'Szeged Központi Parkoló',
-      description: '12 szabad hely',
-      available: true,
-    },
-    {
-      id: 'parking-2',
-      coordinate: { latitude: 46.2490, longitude: 20.1520 }, // Dugonics tér area
-      type: 'parking',
-      title: 'Dugonics tér Parkoló',
-      description: '8 szabad hely',
-      available: true,
-    },
-    {
-      id: 'parking-3',
-      coordinate: { latitude: 46.2570, longitude: 20.1440 }, // Széchenyi tér area
-      type: 'parking',
-      title: 'Széchenyi tér Parkoló',
-      description: '15 szabad hely',
-      available: true,
-    },
-    {
-      id: 'parking-4',
-      coordinate: { latitude: 46.2510, longitude: 20.1400 }, // Dóm tér area
-      type: 'parking',
-      title: 'Dóm tér Parkoló',
-      description: '6 szabad hely',
-      available: false,
-    },
-  ];
-
-  // Static repair shops in Szeged
-  const repairShops: MapMarker[] = [
-    {
-      id: 'repair-1',
-      coordinate: { latitude: 46.2550, longitude: 20.1500 }, // Near center
-      type: 'repair',
-      title: 'Bike Service Szeged',
-      description: 'Nyitva',
-      available: true,
-    },
-    {
-      id: 'repair-2',
-      coordinate: { latitude: 46.2480, longitude: 20.1550 }, // South area
-      type: 'repair',
-      title: 'Bringa Szerviz Kft.',
-      description: 'Nyitva',
-      available: true,
-    },
-    {
-      id: 'repair-3',
-      coordinate: { latitude: 46.2600, longitude: 20.1420 }, // North area
-      type: 'repair',
-      title: 'Cycling Center',
-      description: 'Zárva',
-      available: false,
-    },
-    {
-      id: 'repair-4',
-      coordinate: { latitude: 46.2500, longitude: 20.1350 }, // West area
-      type: 'repair',
-      title: 'Bicikli Műhely',
-      description: 'Nyitva',
-      available: true,
-    },
-    {
-      id: 'repair-5',
-      coordinate: { latitude: 46.2560, longitude: 20.1580 }, // East area
-      type: 'repair',
-      title: 'Szeged Bike Repair',
-      description: 'Nyitva',
-      available: true,
-    },
-  ];
-
-  return [...parkingSpots, ...repairShops];
 };
 
 // Dark mode map style for Google Maps
@@ -322,6 +224,7 @@ export default function MapScreen() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [showListModal, setShowListModal] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair'>('all');
 
   // Theme context
   const { currentTheme } = useTheme();
@@ -335,6 +238,15 @@ export default function MapScreen() {
 
   // Determine if we're in dark mode - use theme context directly
   const isDarkMode = currentTheme === 'dark';
+
+  const params = useLocalSearchParams();
+
+  // Open list modal if openList param is present
+  useEffect(() => {
+    if (params.openList === '1') {
+      setShowListModal(true);
+    }
+  }, [params.openList]);
 
   // On mount, always fetch and set user's current location
   useEffect(() => {
@@ -374,20 +286,6 @@ export default function MapScreen() {
     };
   }, []);
 
-  // Haversine formula for distance in meters
-  function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const toRad = (v: number) => (v * Math.PI) / 180;
-    const R = 6371e3; // meters
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
   // Get sorted list of markers by distance
   const sortedMarkers = React.useMemo(() => {
     if (!userLocation) return markers;
@@ -406,6 +304,12 @@ export default function MapScreen() {
     const nearby = sortedMarkers.filter(m => (m as any).distance <= NEARBY_RADIUS);
     return nearby.length > 0 ? nearby : sortedMarkers;
   }, [sortedMarkers, userLocation]);
+
+  // Filtered markers for the list view
+  const filteredMarkers = React.useMemo(() => {
+    if (listFilter === 'all') return nearbyMarkers;
+    return nearbyMarkers.filter(m => m.type === listFilter);
+  }, [nearbyMarkers, listFilter]);
 
   async function recenter() {
     try {
@@ -704,9 +608,32 @@ export default function MapScreen() {
             style={{ backgroundColor: cardBackground, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, maxHeight: '60%' }}
             onPress={(e) => e.stopPropagation()}
           >
+            {/* Filter Buttons */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
+              {[
+                { key: 'all', label: 'Összes' },
+                { key: 'parking', label: 'Parkolók' },
+                { key: 'repair', label: 'Szervizek' },
+              ].map(f => (
+                <TouchableOpacity
+                  key={f.key}
+                  onPress={() => setListFilter(f.key as 'all' | 'parking' | 'repair')}
+                  style={{
+                    paddingVertical: 7,
+                    paddingHorizontal: 18,
+                    borderRadius: 20,
+                    marginHorizontal: 6,
+                    backgroundColor: listFilter === f.key ? '#3B82F6' : '#E5E7EB',
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <ThemedText style={{ color: listFilter === f.key ? '#fff' : '#222', fontWeight: '600', fontSize: 14 }}>{f.label}</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
             <ThemedText style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12, textAlign: 'center' }}>Közeli helyek</ThemedText>
             <FlatList
-              data={nearbyMarkers}
+              data={filteredMarkers}
               keyExtractor={item => item.id}
               renderItem={({ item }) => (
                 <Pressable
