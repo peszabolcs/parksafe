@@ -44,3 +44,5 @@ yarn-error.*
 app-example
 .env
 .env
+
+.cursor
