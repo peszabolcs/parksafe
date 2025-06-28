@@ -3,10 +3,12 @@ import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } fro
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { LocationProvider } from '@/context/LocationContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useAppState } from '@/hooks/useAppState';
 
@@ -68,12 +70,16 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AuthGate>
-          <RootLayoutNav />
-        </AuthGate>
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <LocationProvider>
+            <AuthGate>
+              <RootLayoutNav />
+            </AuthGate>
+          </LocationProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking, Modal, FlatList, Text, Pressable } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Region, Marker, Callout } from 'react-native-maps';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -6,8 +6,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '@/context/ThemeContext';
-import * as Location from 'expo-location';
-import { generateMarkers, getDistance, MapMarker } from '../../lib/markers';
+import { useLocation } from '@/context/LocationContext';
+import { MapMarker, getDistance } from '@/lib/markers';
 import { useLocalSearchParams } from 'expo-router';
 
 const INITIAL_REGION = {
@@ -17,200 +17,26 @@ const INITIAL_REGION = {
   longitudeDelta: 0.01,
 };
 
-// Dark mode map style for Google Maps
-const DARK_MAP_STYLE: any[] = [
-  {
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#212121'
-      }
-    ]
-  },
-  {
-    elementType: 'geometry.fill',
-    stylers: [
-      {
-        color: '#212121'
-      }
-    ]
-  },
-  {
-    elementType: 'labels.icon',
-    stylers: [
-      {
-        visibility: 'off'
-      }
-    ]
-  },
-  {
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#757575'
-      }
-    ]
-  },
-  {
-    elementType: 'labels.text.stroke',
-    stylers: [
-      {
-        color: '#212121'
-      }
-    ]
-  },
-  {
-    featureType: 'administrative',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#757575'
-      }
-    ]
-  },
-  {
-    featureType: 'administrative.country',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#9e9e9e'
-      }
-    ]
-  },
-  {
-    featureType: 'administrative.land_parcel',
-    stylers: [
-      {
-        visibility: 'off'
-      }
-    ]
-  },
-  {
-    featureType: 'administrative.locality',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#bdbdbd'
-      }
-    ]
-  },
-  {
-    featureType: 'poi',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#757575'
-      }
-    ]
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#181818'
-      }
-    ]
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#616161'
-      }
-    ]
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'labels.text.stroke',
-    stylers: [
-      {
-        color: '#1b1b1b'
-      }
-    ]
-  },
-  {
-    featureType: 'road',
-    elementType: 'geometry.fill',
-    stylers: [
-      {
-        color: '#2c2c2c'
-      }
-    ]
-  },
-  {
-    featureType: 'road',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#8a8a8a'
-      }
-    ]
-  },
-  {
-    featureType: 'road.arterial',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#373737'
-      }
-    ]
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#3c3c3c'
-      }
-    ]
-  },
-  {
-    featureType: 'road.highway.controlled_access',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#4e4e4e'
-      }
-    ]
-  },
-  {
-    featureType: 'road.local',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#616161'
-      }
-    ]
-  },
-  {
-    featureType: 'transit',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#757575'
-      }
-    ]
-  },
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [
-      {
-        color: '#000000'
-      }
-    ]
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.fill',
-    stylers: [
-      {
-        color: '#3d3d3d'
-      }
-    ]
-  }
+// Simplified map styles
+const DARK_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#212121' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#757575' }] },
+  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#bdbdbd' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#181818' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
+  { featureType: 'road', elementType: 'geometry.fill', stylers: [{ color: '#2c2c2c' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#373737' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3c3c3c' }] },
+  { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
+  { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d3d3d' }] },
 ];
 
 // Light mode map style (default Google Maps style)
@@ -219,12 +45,12 @@ const LIGHT_MAP_STYLE: any[] = [];
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const [region, setRegion] = useState<Region>(INITIAL_REGION);
-  const [zoom, setZoom] = useState(15);
-  const [markers] = useState<MapMarker[]>(generateMarkers());
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [showListModal, setShowListModal] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair'>('all');
+
+  // Get location and markers from context
+  const { userLocation, markers, nearbyMarkers, loading } = useLocation();
 
   // Theme context
   const { currentTheme } = useTheme();
@@ -241,146 +67,104 @@ export default function MapScreen() {
 
   const params = useLocalSearchParams();
 
-  // Open list modal if openList param is present
-  useEffect(() => {
-    if (params.openList === '1') {
-      setShowListModal(true);
-    }
-  }, [params.openList]);
-
-  // On mount, always fetch and set user's current location
-  useEffect(() => {
-    let locationSubscription: Location.LocationSubscription | null = null;
-    (async () => {
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.log('Location permission denied');
-          return;
-        }
-        // Get initial location
-        let location = await Location.getCurrentPositionAsync({});
-        const userRegion = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        };
-        setRegion(userRegion);
-        setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
-        // Watch position for live updates
-        locationSubscription = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, distanceInterval: 10 },
-          (loc) => {
-            setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-          }
-        );
-      } catch (error) {
-        console.error('Error getting location:', error);
-      }
-    })();
-    return () => {
-      if (locationSubscription) {
-        locationSubscription.remove();
-      }
-    };
-  }, []);
-
-  // Get sorted list of markers by distance
-  const sortedMarkers = React.useMemo(() => {
-    if (!userLocation) return markers;
-    return markers
-      .map(m => ({
-        ...m,
-        distance: getDistance(userLocation.latitude, userLocation.longitude, m.coordinate.latitude, m.coordinate.longitude)
-      }))
-      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
-  }, [markers, userLocation]);
-
-  // Show only those within 2km, or all if none
-  const NEARBY_RADIUS = 2000;
-  const nearbyMarkers = React.useMemo(() => {
-    if (!userLocation) return sortedMarkers;
-    const nearby = sortedMarkers.filter(m => (m as any).distance <= NEARBY_RADIUS);
-    return nearby.length > 0 ? nearby : sortedMarkers;
-  }, [sortedMarkers, userLocation]);
-
   // Filtered markers for the list view
-  const filteredMarkers = React.useMemo(() => {
+  const filteredMarkers = useMemo(() => {
     if (listFilter === 'all') return nearbyMarkers;
+    if (listFilter === 'repair') return nearbyMarkers.filter(m => m.type === 'repairStation');
     return nearbyMarkers.filter(m => m.type === listFilter);
   }, [nearbyMarkers, listFilter]);
 
-  async function recenter() {
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Helymeghatározás', 'A helymeghatározás nincs engedélyezve.');
-        return;
-      }
-      let location = await Location.getCurrentPositionAsync({});
-      console.log('Fetched location:', location.coords);
-      // Add a tiny random value to latitudeDelta to force re-render
-      const newRegion = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.005 ,
-        longitudeDelta: 0.005 ,
-      };
-      //setRegion(newRegion);
-      mapRef.current?.animateToRegion(newRegion, 500);
-    } catch (e) {
-      Alert.alert('Helymeghatározás', 'Nem sikerült lekérni a helyzetet.');
+  // Update region when user location is available
+  useEffect(() => {
+    if (userLocation) {
+      setRegion({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
     }
-  }
+  }, [userLocation]);
 
-  function handleZoom(delta: number) {
-    const newZoom = Math.max(1, Math.min(20, zoom + delta));
-    setZoom(newZoom);
-    const newDelta = 0.04 / Math.pow(2, newZoom - 15);
-    setRegion(r => ({ ...r, latitudeDelta: newDelta, longitudeDelta: newDelta }));
-    mapRef.current?.animateToRegion({ ...region, latitudeDelta: newDelta, longitudeDelta: newDelta }, 300);
-  }
+  // Handle selected marker from navigation params
+  useEffect(() => {
+    if (params.selectedMarkerId && markers.length > 0) {
+      const selectedMarker = markers.find(m => m.id === params.selectedMarkerId);
+      if (selectedMarker) {
+        setSelectedMarker(selectedMarker);
+        
+        // Center map on the selected marker
+        const newRegion = {
+          latitude: selectedMarker.coordinate.latitude,
+          longitude: selectedMarker.coordinate.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        };
+        setRegion(newRegion);
+        mapRef.current?.animateToRegion(newRegion, 500);
+      }
+    }
+  }, [params.selectedMarkerId, markers]);
 
-  const handleMapReady = () => {
-    console.log('Map is ready');
-  };
+  // Open list modal if openList param is present
+  useEffect(() => {
+    if (params.openList) {
+      setShowListModal(true);
+      // Add small delay to ensure modal opens before resetting filter
+      setTimeout(() => {
+        setListFilter('all');
+      }, 100);
+    }
+  }, [params.openList]);
 
-  const handleMarkerPress = (marker: MapMarker) => {
+  const recenter = useCallback(async () => {
+    if (!userLocation) {
+      Alert.alert('Helymeghatározás', 'A helymeghatározás nincs elérhető.');
+      return;
+    }
+    
+    const newRegion = {
+      latitude: userLocation.latitude,
+      longitude: userLocation.longitude,
+      latitudeDelta: 0.005,
+      longitudeDelta: 0.005,
+    };
+    mapRef.current?.animateToRegion(newRegion, 500);
+  }, [userLocation]);
+
+  const handleMarkerPress = useCallback((marker: MapMarker) => {
     setSelectedMarker(marker);
     
-    // Center map on the selected marker
     const newRegion = {
       latitude: marker.coordinate.latitude,
       longitude: marker.coordinate.longitude,
-      latitudeDelta: 0.005, // Closer zoom
+      latitudeDelta: 0.005,
       longitudeDelta: 0.005,
     };
     
     mapRef.current?.animateToRegion(newRegion, 500);
-  };
+  }, []);
 
-  const closeFlyout = () => {
+  const closeFlyout = useCallback(() => {
     setSelectedMarker(null);
-  };
+  }, []);
 
-  const handleDirections = () => {
+  const handleDirections = useCallback(() => {
     if (selectedMarker) {
       const { latitude, longitude } = selectedMarker.coordinate;
       const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
       
-      // Open in default browser or maps app
-      Linking.openURL(url).catch(err => {
+      Linking.openURL(url).catch(() => {
         Alert.alert('Hiba', 'Nem sikerült megnyitni a navigációt.');
       });
     }
-  };
+  }, [selectedMarker]);
 
   // Handler for list item tap
-  function handleListItemPress(marker: MapMarker) {
+  const handleListItemPress = useCallback((marker: MapMarker) => {
     setSelectedMarker(marker);
     setShowListModal(false);
-    // Center map on marker
+    
     const newRegion = {
       latitude: marker.coordinate.latitude,
       longitude: marker.coordinate.longitude,
@@ -388,17 +172,15 @@ export default function MapScreen() {
       longitudeDelta: 0.005,
     };
     mapRef.current?.animateToRegion(newRegion, 500);
-  }
+  }, []);
 
-  const renderMarker = (marker: MapMarker) => {
+  const renderMarker = useCallback((marker: MapMarker) => {
     const isParking = marker.type === 'parking';
     const iconName = isParking ? 'bicycle' : 'build';
     const iconColor = isParking ? '#22C55E' : '#3B82F6';
     const backgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
     const isSelected = selectedMarker?.id === marker.id;
-
-    // Set border color: always black in light theme, current logic in dark theme
-    const markerBorderColor = isDarkMode ? (isSelected ? '#fff' : '#fff') : '#000';
+    const markerBorderColor = isDarkMode ? '#fff' : '#000';
 
     return (
       <Marker
@@ -407,6 +189,7 @@ export default function MapScreen() {
         title={marker.title}
         description={marker.description}
         onPress={() => handleMarkerPress(marker)}
+        tracksViewChanges={true}
       >
         <View style={[
           styles.markerContainer, 
@@ -421,7 +204,55 @@ export default function MapScreen() {
         </View>
       </Marker>
     );
-  };
+  }, [selectedMarker, isDarkMode, handleMarkerPress]);
+
+  // Optimize markers rendering - only render markers that are reasonably close
+  const visibleMarkers = useMemo(() => {
+    if (!userLocation) return markers;
+    
+    // Only show markers within 50km to improve performance
+    return markers.filter(marker => {
+      const distance = getDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        marker.coordinate.latitude,
+        marker.coordinate.longitude
+      );
+      return distance <= 50000; // 50km
+    });
+  }, [markers, userLocation]);
+
+  if (loading) {
+    return (
+      <ThemedView style={[styles.container, { backgroundColor }]}>
+        {/* Show map with loading overlay */}
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_GOOGLE}
+          style={StyleSheet.absoluteFill}
+          initialRegion={region}
+          showsUserLocation
+          showsMyLocationButton={false}
+          showsCompass={false}
+          showsScale={false}    
+          toolbarEnabled={false}
+          customMapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+          mapType="standard"
+          rotateEnabled={true}
+          scrollEnabled={true}
+          zoomEnabled={true}
+        />
+        
+        {/* Loading overlay */}
+        <View style={[styles.loadingOverlay, { backgroundColor: backgroundColor + '90' }]}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <ThemedText style={[styles.loadingText, { color: textColor }]}>
+            Helyek betöltése...
+          </ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -429,9 +260,7 @@ export default function MapScreen() {
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFill}
-        region={region}
-        onRegionChangeComplete={setRegion}
-        onMapReady={handleMapReady}
+        initialRegion={region}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
@@ -439,8 +268,11 @@ export default function MapScreen() {
         toolbarEnabled={false}
         customMapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         mapType="standard"
+        rotateEnabled={true}
+        scrollEnabled={true}
+        zoomEnabled={true}
       >
-        {markers.map(renderMarker)}
+        {visibleMarkers.map(renderMarker)}
       </MapView>
 
       {/* Bottom Flyout */}
@@ -544,6 +376,7 @@ export default function MapScreen() {
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>+36 62 123 4567</ThemedText>
                 </View>
+
                 <View style={styles.detailRow}>
                   <View style={[styles.detailIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
                     <Ionicons name="star" size={14} color="#3B82F6" />
@@ -617,7 +450,13 @@ export default function MapScreen() {
               ].map(f => (
                 <TouchableOpacity
                   key={f.key}
-                  onPress={() => setListFilter(f.key as 'all' | 'parking' | 'repair')}
+                  onPress={() => {
+                    // Force state update even if same filter is selected
+                    setListFilter('none' as any);
+                    setTimeout(() => {
+                      setListFilter(f.key as 'all' | 'parking' | 'repair');
+                    }, 10);
+                  }}
                   style={{
                     paddingVertical: 7,
                     paddingHorizontal: 18,
@@ -682,7 +521,12 @@ export default function MapScreen() {
             borderColor: borderColor,
             borderWidth: 1
           }]}
-          onPress={() => setShowListModal(true)}
+          onPress={() => {
+            setShowListModal(true);
+            setTimeout(() => {
+              setListFilter('all');
+            }, 100);
+          }}
           activeOpacity={0.85}
         >
           <Ionicons name="list" size={18} color={textColor} style={{ marginRight: 8 }} />
@@ -905,4 +749,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.1,
   },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: '500',
+  },
 });
+
