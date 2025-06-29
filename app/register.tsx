@@ -1,5 +1,17 @@
-import { useState } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { 
+  View, 
+  TextInput, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Platform, 
+  Pressable, 
+  ScrollView, 
+  KeyboardAvoidingView,
+  ActivityIndicator,
+  Alert
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -18,6 +30,15 @@ const COUNTRY_CODES = [
   // Add more as needed
 ];
 
+interface ValidationErrors {
+  username?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  phone?: string;
+  dob?: string;
+}
+
 function getCountryFromPhone(phone: string) {
   for (const entry of COUNTRY_CODES) {
     if (phone.startsWith(entry.code)) return entry.country;
@@ -28,32 +49,94 @@ function getCountryFromPhone(phone: string) {
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [dob, setDob] = useState('');
   const [phone, setPhone] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dobDate, setDobDate] = useState<Date | null>(null);
   const { refreshSession } = useAuth();
 
-  const borderColor = useThemeColor({ light: '#E5E7EB', dark: '#27272A' }, 'background');
-  const inputBg = useThemeColor({ light: '#F1F5F9', dark: '#18181B' }, 'background');
+  const usernameRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+
+  const borderColor = useThemeColor({ light: '#E2E8F0', dark: '#374151' }, 'background');
+  const errorBorderColor = '#EF4444';
+  const inputBg = useThemeColor({ light: '#F8FAFC', dark: '#1F2937' }, 'background');
   const textColor = useThemeColor({}, 'text');
-  const labelColor = useThemeColor({ light: '#334155', dark: '#CBD5E1' }, 'text');
-  const placeholderColor = useThemeColor({ light: '#64748B', dark: '#A1A1AA' }, 'text');
+  const labelColor = useThemeColor({ light: '#374151', dark: '#D1D5DB' }, 'text');
+  const placeholderColor = useThemeColor({ light: '#9CA3AF', dark: '#6B7280' }, 'text');
+  const backgroundColor = useThemeColor({}, 'background');
 
   const country = getCountryFromPhone(phone);
 
-  async function handleRegister() {
-    // Validation
-    if (!email || !password || !username || !dob || !phone) {
-      setError('Kérjük, töltse ki az összes mezőt');
-      return;
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone: string): boolean => {
+    const phoneRegex = /^\+?[\d\s\-\(\)]+$/;
+    return phoneRegex.test(phone) && phone.length >= 10;
+  };
+
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    if (!username.trim()) {
+      errors.username = 'Felhasználónév megadása kötelező';
+    } else if (username.length < 3) {
+      errors.username = 'A felhasználónévnek legalább 3 karakter hosszúnak kell lennie';
     }
 
-    if (password.length < 6) {
-      setError('A jelszónak legalább 6 karakter hosszúnak kell lennie');
+    if (!email) {
+      errors.email = 'Email cím megadása kötelező';
+    } else if (!validateEmail(email)) {
+      errors.email = 'Érvénytelen email cím formátum';
+    }
+
+    if (!password) {
+      errors.password = 'Jelszó megadása kötelező';
+    } else if (password.length < 8) {
+      errors.password = 'A jelszónak legalább 8 karakter hosszúnak kell lennie';
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Jelszó megerősítése kötelező';
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = 'A jelszavak nem egyeznek';
+    }
+
+    if (!phone) {
+      errors.phone = 'Telefonszám megadása kötelező';
+    } else if (!validatePhone(phone)) {
+      errors.phone = 'Érvénytelen telefonszám formátum';
+    }
+
+    if (!dob) {
+      errors.dob = 'Születési dátum megadása kötelező';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const clearValidationError = (field: keyof ValidationErrors) => {
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  async function handleRegister() {
+    if (!validateForm()) {
       return;
     }
 
@@ -78,8 +161,17 @@ export default function RegisterScreen() {
         return;
       }
       
-      // Registration successful, redirect to login
-      router.replace('/login');
+      // Registration successful, show success message and redirect
+      Alert.alert(
+        'Siker!',
+        'Fiókja sikeresen létrejött! Kérjük, ellenőrizze email címét a megerősítéshez.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/login')
+          }
+        ]
+      );
     } catch (err) {
       setError('Váratlan hiba történt. Kérjük, próbálja újra.');
       console.error('Registration error:', err);
@@ -93,142 +185,413 @@ export default function RegisterScreen() {
     if (selectedDate) {
       setDobDate(selectedDate);
       setDob(selectedDate.toISOString().slice(0, 10));
+      clearValidationError('dob');
     }
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.form}>
-        <ThemedText style={styles.title} type="title">Regisztráció</ThemedText>
-        <View style={styles.inputGroup}>
-          <ThemedText style={[styles.label, { color: labelColor }]}>Felhasználónév</ThemedText>
-          <TextInput
-            style={[styles.input, { backgroundColor: inputBg, borderColor, color: textColor }]}
-            placeholder="Felhasználónév"
-            placeholderTextColor={placeholderColor}
-            autoCapitalize="none"
-            value={username}
-            onChangeText={setUsername}
-            editable={!loading}
-          />
-        </View>
-        <View style={styles.inputGroup}>
-          <ThemedText style={[styles.label, { color: labelColor }]}>Születési dátum</ThemedText>
-          <Pressable onPress={() => setShowDatePicker(true)} disabled={loading}>
-            <View style={[styles.input, { backgroundColor: inputBg, borderColor, flexDirection: 'row', alignItems: 'center' }]}> 
-              <ThemedText style={{ color: dob ? textColor : placeholderColor }}>
-                {dob ? dob : 'YYYY-MM-DD'}
+    <View style={[styles.container, { backgroundColor }]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.form}>
+            <View style={styles.header}>
+              <ThemedText style={styles.title} type="title">Regisztráció</ThemedText>
+              <ThemedText style={styles.subtitle}>
+                Hozzon létre egy új fiókot a szolgáltatás használatához
               </ThemedText>
             </View>
-          </Pressable>
-          {showDatePicker && (
-            <DateTimePicker
-              value={dobDate || new Date(2000, 0, 1)}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onDateChange}
-              maximumDate={new Date()}
-            />
-          )}
-        </View>
-        <View style={styles.inputGroup}>
-          <ThemedText style={[styles.label, { color: labelColor }]}>Telefonszám</ThemedText>
-          <View style={[styles.input, { backgroundColor: inputBg, borderColor, flexDirection: 'row', alignItems: 'center' }]}> 
-            {country && (
-              <View style={{ marginRight: 8 }}>
-                <CountryFlag isoCode={country} size={20} />
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>
+                Felhasználónév
+              </ThemedText>
+              <View style={[
+                styles.inputContainer, 
+                { 
+                  backgroundColor: inputBg, 
+                  borderColor: validationErrors.username ? errorBorderColor : borderColor 
+                }
+              ]}>
+                <Ionicons 
+                  name="person-outline" 
+                  size={20} 
+                  color={placeholderColor} 
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  ref={usernameRef}
+                  style={[styles.input, { color: textColor }]}
+                  placeholder="Felhasználónév"
+                  placeholderTextColor={placeholderColor}
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  textContentType="username"
+                  returnKeyType="next"
+                  value={username}
+                  onChangeText={(text) => {
+                    setUsername(text);
+                    clearValidationError('username');
+                  }}
+                  onSubmitEditing={() => emailRef.current?.focus()}
+                  editable={!loading}
+                />
               </View>
-            )}
-            <TextInput
-              style={{ flex: 1, color: textColor, fontSize: 16 }}
-              placeholder="Telefonszám"
-              placeholderTextColor={placeholderColor}
-              autoCapitalize="none"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-              editable={!loading}
-            />
+              {validationErrors.username && (
+                <ThemedText style={styles.errorText}>{validationErrors.username}</ThemedText>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>
+                Email cím
+              </ThemedText>
+              <View style={[
+                styles.inputContainer, 
+                { 
+                  backgroundColor: inputBg, 
+                  borderColor: validationErrors.email ? errorBorderColor : borderColor 
+                }
+              ]}>
+                <Ionicons 
+                  name="mail-outline" 
+                  size={20} 
+                  color={placeholderColor} 
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  ref={emailRef}
+                  style={[styles.input, { color: textColor }]}
+                  placeholder="pelda@email.com"
+                  placeholderTextColor={placeholderColor}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  returnKeyType="next"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    clearValidationError('email');
+                  }}
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  editable={!loading}
+                />
+              </View>
+              {validationErrors.email && (
+                <ThemedText style={styles.errorText}>{validationErrors.email}</ThemedText>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>
+                Jelszó
+              </ThemedText>
+              <View style={[
+                styles.inputContainer, 
+                { 
+                  backgroundColor: inputBg, 
+                  borderColor: validationErrors.password ? errorBorderColor : borderColor 
+                }
+              ]}>
+                <Ionicons 
+                  name="lock-closed-outline" 
+                  size={20} 
+                  color={placeholderColor} 
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  ref={passwordRef}
+                  style={[styles.input, { color: textColor }]}
+                  placeholder="Jelszó"
+                  placeholderTextColor={placeholderColor}
+                  secureTextEntry={!showPassword}
+                  autoComplete="password-new"
+                  textContentType="newPassword"
+                  returnKeyType="next"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    clearValidationError('password');
+                  }}
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                  editable={!loading}
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                  disabled={loading}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={20} 
+                    color={placeholderColor} 
+                  />
+                </TouchableOpacity>
+              </View>
+              {validationErrors.password && (
+                <ThemedText style={styles.errorText}>{validationErrors.password}</ThemedText>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>
+                Jelszó megerősítése
+              </ThemedText>
+              <View style={[
+                styles.inputContainer, 
+                { 
+                  backgroundColor: inputBg, 
+                  borderColor: validationErrors.confirmPassword ? errorBorderColor : borderColor 
+                }
+              ]}>
+                <Ionicons 
+                  name="lock-closed-outline" 
+                  size={20} 
+                  color={placeholderColor} 
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  ref={confirmPasswordRef}
+                  style={[styles.input, { color: textColor }]}
+                  placeholder="Jelszó megerősítése"
+                  placeholderTextColor={placeholderColor}
+                  secureTextEntry={!showConfirmPassword}
+                  autoComplete="password-new"
+                  textContentType="newPassword"
+                  returnKeyType="next"
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    clearValidationError('confirmPassword');
+                  }}
+                  onSubmitEditing={() => phoneRef.current?.focus()}
+                  editable={!loading}
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeIcon}
+                  disabled={loading}
+                >
+                  <Ionicons 
+                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={20} 
+                    color={placeholderColor} 
+                  />
+                </TouchableOpacity>
+              </View>
+              {validationErrors.confirmPassword && (
+                <ThemedText style={styles.errorText}>{validationErrors.confirmPassword}</ThemedText>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>
+                Telefonszám
+              </ThemedText>
+              <View style={[
+                styles.inputContainer, 
+                { 
+                  backgroundColor: inputBg, 
+                  borderColor: validationErrors.phone ? errorBorderColor : borderColor 
+                }
+              ]}> 
+                {country && (
+                  <View style={styles.flagContainer}>
+                    <CountryFlag isoCode={country} size={20} />
+                  </View>
+                )}
+                <TextInput
+                  ref={phoneRef}
+                  style={[styles.input, { color: textColor }]}
+                  placeholder="+36 20 123 4567"
+                  placeholderTextColor={placeholderColor}
+                  autoCapitalize="none"
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  textContentType="telephoneNumber"
+                  returnKeyType="next"
+                  value={phone}
+                  onChangeText={(text) => {
+                    setPhone(text);
+                    clearValidationError('phone');
+                  }}
+                  onSubmitEditing={() => setShowDatePicker(true)}
+                  editable={!loading}
+                />
+              </View>
+              {validationErrors.phone && (
+                <ThemedText style={styles.errorText}>{validationErrors.phone}</ThemedText>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>
+                Születési dátum
+              </ThemedText>
+              <Pressable 
+                onPress={() => setShowDatePicker(true)} 
+                disabled={loading}
+                style={[
+                  styles.inputContainer, 
+                  { 
+                    backgroundColor: inputBg, 
+                    borderColor: validationErrors.dob ? errorBorderColor : borderColor 
+                  }
+                ]}
+              > 
+                <Ionicons 
+                  name="calendar-outline" 
+                  size={20} 
+                  color={placeholderColor} 
+                  style={styles.inputIcon}
+                />
+                <ThemedText style={{ color: dob ? textColor : placeholderColor, flex: 1 }}>
+                  {dob ? dob : 'YYYY-MM-DD'}
+                </ThemedText>
+              </Pressable>
+              {validationErrors.dob && (
+                <ThemedText style={styles.errorText}>{validationErrors.dob}</ThemedText>
+              )}
+              {showDatePicker && (
+                <DateTimePicker
+                  value={dobDate || new Date(2000, 0, 1)}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onDateChange}
+                  maximumDate={new Date()}
+                />
+              )}
+            </View>
+
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
+                <ThemedText style={styles.error}>{error}</ThemedText>
+              </View>
+            ) : null}
+
+            <TouchableOpacity 
+              style={[styles.button, loading && styles.buttonDisabled]} 
+              onPress={handleRegister} 
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <ThemedText style={styles.buttonText}>Regisztráció</ThemedText>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.footer}>
+              <ThemedText style={[styles.footerText, { color: placeholderColor }]}>
+                Van már fiókja?
+              </ThemedText>
+              <TouchableOpacity onPress={() => router.push('/login')}>
+                <ThemedText style={styles.link}>Jelentkezzen be!</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-        <View style={styles.inputGroup}>
-          <ThemedText style={[styles.label, { color: labelColor }]}>Email</ThemedText>
-          <TextInput
-            style={[styles.input, { backgroundColor: inputBg, borderColor, color: textColor }]}
-            placeholder="Email"
-            placeholderTextColor={placeholderColor}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-            editable={!loading}
-          />
-        </View>
-        <View style={styles.inputGroup}>
-          <ThemedText style={[styles.label, { color: labelColor }]}>Jelszó</ThemedText>
-          <TextInput
-            style={[styles.input, { backgroundColor: inputBg, borderColor, color: textColor }]}
-            placeholder="Jelszó"
-            placeholderTextColor={placeholderColor}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            editable={!loading}
-          />
-        </View>
-        {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-        <TouchableOpacity 
-          style={[styles.button, loading && styles.buttonDisabled]} 
-          onPress={handleRegister} 
-          disabled={loading}
-        >
-          <ThemedText style={styles.buttonText}>
-            {loading ? 'Regisztráció...' : 'Regisztráció'}
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/login')} style={styles.linkRow}>
-          <ThemedText style={styles.link}>Van már fiókod? Jelentkezz be!</ThemedText>
-        </TouchableOpacity>
-      </View>
-    </ThemedView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#F8FAFC', // Light theme fallback
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 24,
   },
   form: {
-    gap: 18,
+    gap: 20,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 8,
   },
   title: {
+    fontSize: 28,
+    fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
   },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
   inputGroup: {
-    marginBottom: 18,
+    gap: 8,
   },
   label: {
-    fontSize: 15,
-    fontWeight: '500',
-    marginBottom: 4,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 52,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
+    flex: 1,
+    fontSize: 16,
+    padding: 0,
+  },
+  flagContainer: {
+    marginRight: 12,
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
+    borderColor: '#FECACA',
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
-    marginBottom: 0,
+    gap: 8,
+  },
+  error: {
+    color: '#EF4444',
+    fontSize: 14,
+    flex: 1,
   },
   button: {
     backgroundColor: '#0a7ea4',
-    borderRadius: 8,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
     marginTop: 10,
-    width: '100%',
+    minHeight: 52,
+    justifyContent: 'center',
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -238,17 +601,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  error: {
-    color: '#EF4444',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  linkRow: {
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 4,
     marginTop: 8,
+  },
+  footerText: {
+    fontSize: 14,
   },
   link: {
     color: '#0a7ea4',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 14,
   },
 }); 
