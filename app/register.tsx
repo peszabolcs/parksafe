@@ -123,6 +123,22 @@ export default function RegisterScreen() {
 
     if (!dob) {
       errors.dob = 'Születési dátum megadása kötelező';
+    } else {
+      // Validate that the date is not in the future and user is at least 13 years old
+      const selectedDate = new Date(dob);
+      const today = new Date();
+      const minDate = new Date();
+      minDate.setFullYear(today.getFullYear() - 120); // Maximum 120 years ago
+      const maxDate = new Date();
+      maxDate.setFullYear(today.getFullYear() - 13); // Minimum 13 years old
+      
+      if (selectedDate > today) {
+        errors.dob = 'A születési dátum nem lehet a jövőben';
+      } else if (selectedDate < minDate) {
+        errors.dob = 'A születési dátum nem lehet 120 évnél régebbi';
+      } else if (selectedDate > maxDate) {
+        errors.dob = 'A felhasználónak legalább 13 évesnek kell lennie';
+      }
     }
 
     setValidationErrors(errors);
@@ -181,13 +197,62 @@ export default function RegisterScreen() {
   }
 
   function onDateChange(event: any, selectedDate?: Date) {
-    setShowDatePicker(false);
-    if (selectedDate) {
+    // Handle dismissal (user cancels)
+    if (event.type === 'dismissed') {
+      setShowDatePicker(false);
+      return;
+    }
+    
+    // Handle set (user confirms on Android)
+    if (event.type === 'set' && selectedDate) {
       setDobDate(selectedDate);
-      setDob(selectedDate.toISOString().slice(0, 10));
+      // Fix timezone issue by using local date formatting instead of toISOString()
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      
+      // Debug logging
+      console.log('Date picker - Original date:', selectedDate);
+      console.log('Date picker - Formatted date:', formattedDate);
+      console.log('Date picker - Event type:', event.type);
+      
+      setDob(formattedDate);
       clearValidationError('dob');
+      
+      // On Android, close picker after selection
+      if (Platform.OS === 'android') {
+        setShowDatePicker(false);
+      }
+      // On iOS, keep picker open for further adjustments
     }
   }
+
+  function handleDateConfirm() {
+    if (dobDate) {
+      // Ensure the date is properly formatted when user confirms
+      const year = dobDate.getFullYear();
+      const month = String(dobDate.getMonth() + 1).padStart(2, '0');
+      const day = String(dobDate.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      
+      // Debug logging
+      console.log('Date confirm - Original date:', dobDate);
+      console.log('Date confirm - Formatted date:', formattedDate);
+      
+      setDob(formattedDate);
+      clearValidationError('dob');
+    }
+    setShowDatePicker(false);
+  }
+
+  // Calculate default date for picker (18 years ago)
+  const getDefaultDate = () => {
+    if (dobDate) return dobDate;
+    const defaultDate = new Date();
+    defaultDate.setFullYear(defaultDate.getFullYear() - 18);
+    return defaultDate;
+  };
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -460,13 +525,40 @@ export default function RegisterScreen() {
                 <ThemedText style={styles.errorText}>{validationErrors.dob}</ThemedText>
               )}
               {showDatePicker && (
-                <DateTimePicker
-                  value={dobDate || new Date(2000, 0, 1)}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onDateChange}
-                  maximumDate={new Date()}
-                />
+                <>
+                  <DateTimePicker
+                    value={getDefaultDate()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onDateChange}
+                    maximumDate={(() => {
+                      const maxDate = new Date();
+                      maxDate.setFullYear(maxDate.getFullYear() - 13);
+                      return maxDate;
+                    })()}
+                    minimumDate={(() => {
+                      const minDate = new Date();
+                      minDate.setFullYear(minDate.getFullYear() - 120);
+                      return minDate;
+                    })()}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <View style={styles.datePickerButtons}>
+                      <TouchableOpacity 
+                        style={styles.datePickerButton} 
+                        onPress={() => setShowDatePicker(false)}
+                      >
+                        <ThemedText style={styles.datePickerButtonText}>Mégse</ThemedText>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.datePickerButton, styles.datePickerButtonPrimary]} 
+                        onPress={handleDateConfirm}
+                      >
+                        <ThemedText style={styles.datePickerButtonTextPrimary}>Kész</ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
               )}
             </View>
 
@@ -615,5 +707,40 @@ const styles = StyleSheet.create({
     color: '#0a7ea4',
     fontWeight: '600',
     fontSize: 14,
+  },
+  datePickerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  datePickerButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  datePickerButtonPrimary: {
+    backgroundColor: '#0a7ea4',
+    borderColor: '#0a7ea4',
+  },
+  datePickerButtonText: {
+    color: '#374151',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  datePickerButtonTextPrimary: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 }); 
