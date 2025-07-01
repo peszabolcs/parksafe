@@ -7,6 +7,7 @@ type ThemeMode = 'light' | 'dark' | 'system';
 interface ThemeContextType {
   themeMode: ThemeMode;
   currentTheme: 'light' | 'dark';
+  isLoading: boolean;
   setThemeMode: (mode: ThemeMode) => void;
 }
 
@@ -26,6 +27,7 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+  const [isLoading, setIsLoading] = useState(true);
   const systemColorScheme = useSystemColorScheme();
 
   const currentTheme: 'light' | 'dark' = 
@@ -43,6 +45,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         }
       } catch (error) {
         console.error('Error loading theme mode:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -61,6 +65,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const value: ThemeContextType = {
     themeMode,
     currentTheme,
+    isLoading,
     setThemeMode,
   };
 

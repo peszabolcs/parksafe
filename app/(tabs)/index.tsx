@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import * as Location from 'expo-location';
-import { generateMarkers, getDistance, MapMarker } from '../../lib/markers';
+import { useLocation } from '@/context/LocationContext';
 import { router } from 'expo-router';
 
 const bestRated = [
@@ -43,103 +43,29 @@ const recentActivity = [
 ];
 
 export default function HomeScreen() {
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [nearby, setNearby] = useState<(MapMarker & { distance: number })[]>([]);
-  const [loadingNearby, setLoadingNearby] = useState(true);
+  const { userLocation, nearbyMarkers, loading } = useLocation();
 
   // Theme-aware colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
-  const iconColor = useThemeColor({}, 'icon');
-  const cardBackgroundColor = useThemeColor(
-    { light: '#fff', dark: '#1F2937' },
-    'background'
-  );
-  const subtitleColor = useThemeColor(
-    { light: '#6B7280', dark: '#9CA3AF' },
-    'text'
-  );
-  const secondaryTextColor = useThemeColor(
-    { light: '#6B7280', dark: '#9CA3AF' },
-    'text'
-  );
-  const cardShadowColor = useThemeColor(
-    { light: '#000', dark: '#000' },
-    'text'
-  );
-  const iconBackgroundLight = useThemeColor(
-    { light: '#ECFDF5', dark: '#064E3B' },
-    'background'
-  );
-  const iconBackgroundService = useThemeColor(
-    { light: '#EFF6FF', dark: '#1E3A8A' },
-    'background'
-  );
-  const recentActivityIconBg = useThemeColor(
-    { light: '#F1F5F9', dark: '#374151' },
-    'background'
-  );
-  const recentActivityTextColor = useThemeColor(
-    { light: '#0F172A', dark: '#F9FAFB' },
-    'text'
-  );
-  const recentActivitySubtitleColor = useThemeColor(
-    { light: '#64748B', dark: '#9CA3AF' },
-    'text'
-  );
+  const cardBackgroundColor = useThemeColor({ light: '#fff', dark: '#1F2937' }, 'background');
+  const subtitleColor = useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text');
+  const secondaryTextColor = useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text');
+  const cardShadowColor = useThemeColor({ light: '#000', dark: '#000' }, 'text');
+  const iconBackgroundLight = useThemeColor({ light: '#ECFDF5', dark: '#064E3B' }, 'background');
 
-  // Fetch user location and calculate nearby markers
-  useEffect(() => {
-    let locationSubscription: Location.LocationSubscription | null = null;
-    setLoadingNearby(true);
-    (async () => {
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.log('Location permission denied');
-          setNearby([]);
-          setLoadingNearby(false);
-          return;
-        }
-        let location = await Location.getCurrentPositionAsync({});
-        setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
-        // Watch position for live updates
-        locationSubscription = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, distanceInterval: 10 },
-          (loc) => {
-            setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-          }
-        );
-      } catch (error) {
-        console.error('Error getting location:', error);
-        setNearby([]);
-        setLoadingNearby(false);
-      }
-    })();
-    return () => {
-      if (locationSubscription) locationSubscription.remove();
-    };
-  }, []);
-
-  // Calculate and sort nearby markers whenever userLocation changes
-  useEffect(() => {
-    if (!userLocation) return;
-    const markers = generateMarkers();
-    const withDistance = markers.map(m => ({
-      ...m,
-      distance: getDistance(userLocation.latitude, userLocation.longitude, m.coordinate.latitude, m.coordinate.longitude)
-    }));
-    withDistance.sort((a, b) => a.distance - b.distance);
-    setNearby(withDistance.slice(0, 3));
-    setLoadingNearby(false);
-  }, [userLocation]);
+  // Get top 3 nearby markers
+  const nearby = useMemo(() => {
+    return nearbyMarkers.slice(0, 3);
+  }, [nearbyMarkers]);
 
   return (
-    <ThemedView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <ThemedText style={styles.headerTitle} type="title">ParkSafe</ThemedText>
       </View>
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Welcome Section */}
         <ThemedText style={styles.welcomeTitle} type="title">
@@ -148,6 +74,7 @@ export default function HomeScreen() {
         <ThemedText style={[styles.welcomeSubtitle, { color: subtitleColor }]}>
           Találja meg a legközelebbi biciklitárolókat és szervizeket
         </ThemedText>
+        
         {/* Main Buttons - Card Style */}
         <View style={styles.mainButtonsRow}>
           <TouchableOpacity style={[styles.mainButtonCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor, borderColor: '#4ADE80' }]}>
@@ -159,28 +86,44 @@ export default function HomeScreen() {
             <ThemedText style={[styles.mainButtonCardLabel, { color: textColor }]}>Szervizek</ThemedText>
           </TouchableOpacity>
         </View>
+        
         {/* Nearby Section */}
         <View style={styles.sectionHeaderRow}>
           <ThemedText style={styles.sectionTitle} type="subtitle">Közelben</ThemedText>
           <ThemedText
             style={[styles.sectionAll, { color: subtitleColor }]}
             onPress={() => {
-              router.push({ pathname: '/(tabs)/map', params: { openList: '1' } });
+              router.push({ pathname: '/(tabs)/map', params: { openList: Date.now().toString() } });
             }}
           >
             Összes
           </ThemedText>
         </View>
+        
         <View>
-          {loadingNearby ? (
+          {loading ? (
             <ActivityIndicator size="small" color="#3B82F6" style={{ marginVertical: 16 }} />
           ) : nearby.length === 0 ? (
             <ThemedText style={{ textAlign: 'center', color: '#888', marginVertical: 16 }}>
               Nem találhatóak közeli helyek vagy nincs helyhozzáférés engedélyezve.
             </ThemedText>
           ) : (
-            nearby.map((item, idx) => (
-              <View key={item.id} style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}> 
+            nearby.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}
+                onPress={() => {
+                  router.push({ 
+                    pathname: '/(tabs)/map', 
+                    params: { 
+                      selectedMarkerId: item.id,
+                      latitude: item.coordinate.latitude.toString(),
+                      longitude: item.coordinate.longitude.toString()
+                    } 
+                  });
+                }}
+                activeOpacity={0.7}
+              > 
                 <View style={[styles.nearbyIcon, { backgroundColor: item.type === 'parking' ? iconBackgroundLight : '#EFF6FF' }]}> 
                   {item.type === 'parking' ? (
                     <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />
@@ -195,53 +138,53 @@ export default function HomeScreen() {
                     <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>{(item.distance / 1000).toFixed(2)} km</ThemedText>
                     <ThemedText style={[styles.nearbyDetailDot, { color: secondaryTextColor }]}>•</ThemedText>
                     <Ionicons name="star" size={14} color="#FBBF24" />
-                    <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>{item.type === 'parking' ? (item.available ? '4.5' : '4.2') : '4.8'}</ThemedText>
+                    <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>
+                      {item.type === 'parking' ? '4.5' : '4.8'}
+                    </ThemedText>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
+
         {/* Best Rated Section */}
         <View style={styles.sectionHeaderRow}>
-          <ThemedText style={styles.sectionTitle} type="subtitle">Legjobb értékelésű</ThemedText>
-          <ThemedText style={[styles.sectionAll, { color: subtitleColor }]}>Összes</ThemedText>
+          <ThemedText style={styles.sectionTitle} type="subtitle">Legjobban értékelt</ThemedText>
         </View>
-        <View>
-          {bestRated.map((item, idx) => (
-            <View key={idx} style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}>
-              <View style={[styles.nearbyIcon, { backgroundColor: item.type === 'Szerviz' ? iconBackgroundService : iconBackgroundLight }]}>{item.icon}</View>
-              <View style={styles.nearbyInfo}>
-                <ThemedText style={styles.nearbyTitle}>{item.title}</ThemedText>
+        <View style={styles.bestRatedContainer}>
+          {bestRated.map((item, index) => (
+            <View key={index} style={[styles.bestRatedCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}>
+              <View style={styles.bestRatedIcon}>{item.icon}</View>
+              <View style={styles.bestRatedInfo}>
+                <ThemedText style={[styles.bestRatedTitle, { color: textColor }]}>{item.title}</ThemedText>
                 <View style={styles.bestRatedDetails}>
                   <Ionicons name="star" size={14} color="#FBBF24" />
-                  <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>{item.rating}</ThemedText>
-                  <ThemedText style={[styles.bestRatedType, { color: item.typeColor }]}>
-                    {item.type}
-                  </ThemedText>
+                  <ThemedText style={[styles.bestRatedRating, { color: secondaryTextColor }]}>{item.rating}</ThemedText>
+                  <ThemedText style={[styles.bestRatedType, { color: item.typeColor }]}>{item.type}</ThemedText>
                 </View>
               </View>
             </View>
           ))}
         </View>
+
         {/* Recent Activity Section */}
         <View style={styles.sectionHeaderRow}>
-          <ThemedText style={styles.sectionTitle} type="subtitle">Legutóbbi aktivitás</ThemedText>
-          <ThemedText style={[styles.sectionAll, { color: subtitleColor }]}>Összes</ThemedText>
+          <ThemedText style={styles.sectionTitle} type="subtitle">Legutóbbi tevékenységek</ThemedText>
         </View>
-        <View style={[styles.recentActivityCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}>
-          {recentActivity.map((item, idx) => (
-            <View key={idx} style={styles.recentActivityRow}>
-              <View style={[styles.recentActivityIcon, { backgroundColor: recentActivityIconBg }]}>{item.icon}</View>
+        <View style={styles.recentActivityContainer}>
+          {recentActivity.map((item, index) => (
+            <View key={index} style={[styles.recentActivityCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}>
+              <View style={[styles.recentActivityIcon, { backgroundColor: item.iconBg }]}>{item.icon}</View>
               <View style={styles.recentActivityInfo}>
-                <ThemedText style={[styles.recentActivityTitle, { color: recentActivityTextColor }]}>{item.title}</ThemedText>
-                <ThemedText style={[styles.recentActivitySubtitle, { color: recentActivitySubtitleColor }]}>{item.subtitle}</ThemedText>
+                <ThemedText style={[styles.recentActivityTitle, { color: item.textColor }]}>{item.title}</ThemedText>
+                <ThemedText style={[styles.recentActivitySubtitle, { color: item.textColor }]}>{item.subtitle}</ThemedText>
               </View>
             </View>
           ))}
         </View>
       </ScrollView>
-    </ThemedView>
+    </SafeAreaView>
   );
 }
 
@@ -254,8 +197,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 12,
+    paddingVertical: 12,
     backgroundColor: 'transparent',
   },
   headerTitle: {
@@ -342,10 +284,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  bestRatedContainer: {
+    marginBottom: 24,
+  },
+  bestRatedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  bestRatedIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  bestRatedInfo: {
+    flex: 1,
+  },
+  bestRatedTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 2,
+  },
   bestRatedDetails: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  bestRatedRating: {
+    fontSize: 14,
+    marginHorizontal: 2,
   },
   bestRatedType: {
     fontSize: 14,
@@ -360,16 +335,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginHorizontal: 2,
   },
+  recentActivityContainer: {
+    marginBottom: 24,
+  },
   recentActivityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
-    marginTop: 4,
-  },
-  recentActivityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   recentActivityIcon: {
     width: 32,
