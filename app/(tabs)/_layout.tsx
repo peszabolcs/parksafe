@@ -5,16 +5,15 @@ import { Platform } from 'react-native';
 import { HapticTab } from '@/components/HapticTab';
 import Feather from '@expo/vector-icons/Feather';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeStore } from '@/stores/themeStore';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { currentTheme } = useThemeStore();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: currentTheme === 'dark' ? '#0A84FF' : '#007AFF',
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,

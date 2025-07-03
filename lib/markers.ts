@@ -170,7 +170,16 @@ export const generateAllMarkers = async (): Promise<MapMarker[]> => {
   }
 };
 
-// Haversine formula for distance in meters
+// Fast distance approximation for nearby calculations (within ~10km)
+export function getDistanceFast(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = dLat * dLat + dLon * dLon * Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
+  return R * Math.sqrt(a);
+}
+
+// Haversine formula for distance in meters (more accurate for longer distances)
 export function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const toRad = (v: number) => (v * Math.PI) / 180;
   const R = 6371e3; // meters

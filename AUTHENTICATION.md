@@ -19,8 +19,8 @@ The ParkSafe app now implements a robust authentication system with persistent l
 
 ## Implementation Details
 
-### AuthContext (`context/AuthContext.tsx`)
-The main authentication context that manages:
+### AuthStore (`stores/authStore.ts`)
+The main authentication store using Zustand that manages:
 - Session state
 - User information
 - Automatic token refresh
@@ -47,10 +47,10 @@ Manages authentication flow:
 
 ### In Components
 ```typescript
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 
 function MyComponent() {
-  const { user, session, signOut, refreshSession } = useAuth();
+  const { user, session, signOut, refreshSession } = useAuthStore();
   
   // Access user data
   const userEmail = user?.email;

@@ -5,8 +5,8 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useTheme } from '@/context/ThemeContext';
-import { useLocation } from '@/context/LocationContext';
+import { useThemeStore } from '@/stores/themeStore';
+import { useLocationStore } from '@/stores/locationStore';
 import { MapMarker, getDistance } from '@/lib/markers';
 import { useLocalSearchParams } from 'expo-router';
 
@@ -50,10 +50,10 @@ export default function MapScreen() {
   const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair'>('all');
 
   // Get location and markers from context
-  const { userLocation, markers, nearbyMarkers, loading } = useLocation();
+  const { userLocation, markers, nearbyMarkers, loading } = useLocationStore();
 
   // Theme context
-  const { currentTheme } = useTheme();
+  const { currentTheme } = useThemeStore();
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');

@@ -19,7 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import CountryFlag from 'react-native-country-flag';
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 
 const COUNTRY_CODES = [
   { code: '+36', country: 'HU' },
@@ -60,7 +60,7 @@ export default function RegisterScreen() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dobDate, setDobDate] = useState<Date | null>(null);
-  const { refreshSession } = useAuth();
+  const { refreshSession } = useAuthStore();
 
   const usernameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);

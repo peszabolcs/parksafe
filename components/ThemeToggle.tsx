@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
-import { useTheme } from '@/context/ThemeContext';
+import { useThemeStore } from '@/stores/themeStore';
 import { Colors } from '@/constants/Colors';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
@@ -15,7 +15,7 @@ const themeOptions: { value: ThemeMode; label: string }[] = [
 ];
 
 export const ThemeToggle: React.FC = () => {
-  const { themeMode, setThemeMode } = useTheme();
+  const { themeMode, setThemeMode } = useThemeStore();
   
   // Use themed colors
   const borderColor = useThemeColor({}, 'icon');

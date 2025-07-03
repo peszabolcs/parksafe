@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 
 export const useAppState = () => {
   const appState = useRef(AppState.currentState);
-  const { refreshSession } = useAuth();
+  const { refreshSession } = useAuthStore();
 
   useEffect(() => {
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {

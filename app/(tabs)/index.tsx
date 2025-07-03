@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useLocation } from '@/context/LocationContext';
+import { useLocationStore } from '@/stores/locationStore';
 import { router } from 'expo-router';
 
 const bestRated = [
@@ -43,7 +43,7 @@ const recentActivity = [
 ];
 
 export default function HomeScreen() {
-  const { userLocation, nearbyMarkers, loading } = useLocation();
+  const { userLocation, nearbyMarkers, loading } = useLocationStore();
 
   // Theme-aware colors
   const backgroundColor = useThemeColor({}, 'background');

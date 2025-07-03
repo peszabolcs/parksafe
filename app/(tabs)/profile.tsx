@@ -5,7 +5,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 
 const activities = [
   {
@@ -40,7 +40,7 @@ const activities = [
 export default function ProfileScreen() {
   const [tab, setTab] = useState<'activity' | 'reviews'>('activity');
   const [loggingOut, setLoggingOut] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useAuthStore();
 
   // Theme colors
   const cardBg = useThemeColor({ light: '#F8FAFC', dark: '#18181B' }, 'background');

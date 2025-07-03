@@ -16,7 +16,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 import * as AuthSession from 'expo-auth-session';
 
 interface ValidationErrors {
@@ -32,7 +32,7 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const { refreshSession } = useAuth();
+  const { refreshSession } = useAuthStore();
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
