@@ -1,4 +1,4 @@
-// Shared marker data and distance calculation for ParkSafe
+// Optimized marker data and distance calculation for ParkSafe
 import { supabase } from './supabase';
 
 export interface MapMarker {
@@ -11,184 +11,263 @@ export interface MapMarker {
   title: string;
   description: string;
   available: boolean;
-  // Additional fields for repair stations
   covered?: boolean;
-  averagePoint?: number;
   free?: boolean;
   city?: string;
   pictureUrl?: string;
+  distance?: number; // For nearby searches
 }
 
-// Interface for Supabase repair station data
-export interface RepairStation {
+// Base interface for location data
+interface BaseLocationData {
   id: string;
-  coordinate: { latitude: number; longitude: number };
   name: string;
   description: string;
   available: boolean;
   covered: boolean;
-  averagePoint: number;
-  free: boolean;
   city: string;
+  latitude: number;
+  longitude: number;
+}
+
+// Interface for parking spot data
+export interface ParkingSpot extends BaseLocationData {}
+
+// Interface for repair station data
+export interface RepairStation extends BaseLocationData {
+  free: boolean;
   pictureUrl: string;
 }
 
-// Interface for Supabase parking spot data
-export interface ParkingSpot {
-  id: string;
-  coordinate: { latitude: number; longitude: number };
-  name: string;
-  description: string;
-  available: boolean;
-  city: string;
-}
+// Unified validation function
+const validateLocationData = (item: any): boolean => {
+  const isValid = item.id && item.name && 
+         typeof item.latitude === 'number' && 
+         typeof item.longitude === 'number';
+  
+  if (!isValid) {
+    console.log('❌ Invalid location data:', { 
+      id: item.id, 
+      name: item.name, 
+      lat: typeof item.latitude, 
+      lng: typeof item.longitude 
+    });
+  }
+  
+  return isValid;
+};
 
-// Fetch parking spots from Supabase
+// Unified mapping function for location data
+const mapToMarker = (
+  item: BaseLocationData | RepairStation, 
+  type: 'parking' | 'repairStation',
+  distance?: number
+): MapMarker => {
+  console.log(`🔄 Mapping ${type} marker:`, item.name, distance ? `(${Math.round(distance)}m)` : '');
+  
+  return {
+    id: item.id,
+    coordinate: {
+      latitude: item.latitude,
+      longitude: item.longitude
+    },
+    type,
+    title: item.name,
+    description: item.description || '',
+    available: item.available ?? true,
+    covered: item.covered,
+    city: item.city,
+    ...(type === 'repairStation' && {
+      free: (item as RepairStation).free,
+      pictureUrl: (item as RepairStation).pictureUrl,
+    }),
+    ...(distance !== undefined && { distance })
+  };
+};
+
+// Generic fetch function for RPC calls
+const fetchFromRPC = async (
+  rpcName: string, 
+  params?: any,
+  type?: 'parking' | 'repairStation'
+): Promise<MapMarker[]> => {
+  console.log('🚀 Starting RPC call:', rpcName, params ? 'with params' : 'no params');
+  console.time(`⏱️ ${rpcName} execution time`);
+  
+  try {
+    console.log('📡 Calling Supabase RPC:', rpcName);
+    const { data, error } = await supabase.rpc(rpcName, params);
+
+    if (error) {
+      console.error(`❌ Error fetching from ${rpcName}:`, error);
+      console.timeEnd(`⏱️ ${rpcName} execution time`);
+      return [];
+    }
+
+    if (!data?.length) {
+      console.log(`ℹ️ No data returned from ${rpcName}`);
+      console.timeEnd(`⏱️ ${rpcName} execution time`);
+      return [];
+    }
+
+    console.log(`✅ Raw data from ${rpcName}:`, data.length, 'items');
+    
+    const validData = data.filter(validateLocationData);
+    console.log(`✨ Valid data after filtering:`, validData.length, 'items');
+    
+    const mappedData = validData.map((item: any) => mapToMarker(
+      item, 
+      type || (rpcName.includes('parking') ? 'parking' : 'repairStation'),
+      item.distance_meters
+    ));
+    
+    console.log(`🎯 Final mapped data:`, mappedData.length, 'markers');
+    console.timeEnd(`⏱️ ${rpcName} execution time`);
+    
+    return mappedData;
+  } catch (error) {
+    console.error(`💥 Exception in ${rpcName}:`, error);
+    console.timeEnd(`⏱️ ${rpcName} execution time`);
+    return [];
+  }
+};
+
+// Fetch all parking spots
 export const fetchParkingSpots = async (): Promise<MapMarker[]> => {
-  try {
-    console.log('Fetching parking spots from Supabase...');
-    const { data, error } = await supabase
-      .from('parkingSpots')
-      .select('id, coordinate, name, description, available, city');
-
-    if (error) {
-      console.error('Error fetching parking spots:', error);
-      return [];
-    }
-
-    if (!data || data.length === 0) {
-      console.log('No parking spots data found');
-      return [];
-    }
-
-    const mappedData = data
-      .filter((spot: any) => {
-        // Quick validation - only check essential fields
-        return spot.id && spot.name && spot.coordinate && 
-               typeof spot.coordinate.latitude === 'number' && 
-               typeof spot.coordinate.longitude === 'number';
-      })
-      .map((spot: ParkingSpot) => ({
-        id: spot.id,
-        coordinate: spot.coordinate,
-        type: 'parking' as const,
-        title: spot.name,
-        description: spot.description || '',
-        available: spot.available ?? true,
-        city: spot.city,
-      }));
-
-    console.log(`Processed ${mappedData.length}/${data.length} parking spots`);
-    return mappedData;
-  } catch (error) {
-    console.error('Error fetching parking spots:', error);
-    return [];
-  }
+  console.log('🅿️ Fetching all parking spots...');
+  return fetchFromRPC('get_all_parking_spots', undefined, 'parking');
 };
 
-// Fetch repair stations from Supabase
+// Fetch all repair stations
 export const fetchRepairStations = async (): Promise<MapMarker[]> => {
-  try {
-    console.log('Fetching repair stations from Supabase...');
-    const { data, error } = await supabase
-      .from('repairStation')
-      .select('id, coordinate, name, description, available, covered, averagePoint, free, city, pictureUrl');
-
-    if (error) {
-      console.error('Error fetching repair stations:', error);
-      return [];
-    }
-
-    if (!data || data.length === 0) {
-      console.log('No repair stations data found');
-      return [];
-    }
-
-    const mappedData = data
-      .filter((station: any) => {
-        // Quick validation - only check essential fields
-        return station.id && station.name && station.coordinate && 
-               typeof station.coordinate.latitude === 'number' && 
-               typeof station.coordinate.longitude === 'number';
-      })
-      .map((station: RepairStation) => ({
-        id: station.id,
-        coordinate: station.coordinate,
-        type: 'repairStation' as const,
-        title: station.name,
-        description: station.description || '',
-        available: station.available ?? true,
-        covered: station.covered,
-        averagePoint: station.averagePoint,
-        free: station.free,
-        city: station.city,
-        pictureUrl: station.pictureUrl,
-      }));
-
-    console.log(`Processed ${mappedData.length}/${data.length} repair stations`);
-    return mappedData;
-  } catch (error) {
-    console.error('Error fetching repair stations:', error);
-    return [];
-  }
+  console.log('🔧 Fetching all repair stations...');
+  return fetchFromRPC('get_all_repair_stations', undefined, 'repairStation');
 };
 
-// Generate all markers including parking spots and repair stations from Supabase
+// Fetch nearby parking spots
+export const fetchNearbyParkingSpots = async (
+  userLatitude: number, 
+  userLongitude: number, 
+  radiusMeters: number = 1000,
+  onlyAvailable: boolean = true
+): Promise<MapMarker[]> => {
+  console.log('📍 Fetching nearby parking spots:', {
+    location: `${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`,
+    radius: `${radiusMeters}m`,
+    onlyAvailable
+  });
+  
+  return fetchFromRPC('find_nearby_parking_spots', {
+    user_lat: userLatitude,
+    user_lng: userLongitude,
+    radius_meters: radiusMeters,
+    only_available: onlyAvailable
+  }, 'parking');
+};
+
+// Fetch nearby repair stations
+export const fetchNearbyRepairStations = async (
+  userLatitude: number, 
+  userLongitude: number, 
+  radiusMeters: number = 1000,
+  onlyAvailable: boolean = true
+): Promise<MapMarker[]> => {
+  console.log('🛠️ Fetching nearby repair stations:', {
+    location: `${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`,
+    radius: `${radiusMeters}m`,
+    onlyAvailable
+  });
+  
+  return fetchFromRPC('find_nearby_repair_stations', {
+    user_lat: userLatitude,
+    user_lng: userLongitude,
+    radius_meters: radiusMeters,
+    only_available: onlyAvailable
+  }, 'repairStation');
+};
+
+// Optimized fetch both types nearby with single call
+export const fetchNearbyMarkers = async (
+  userLatitude: number, 
+  userLongitude: number, 
+  radiusMeters: number = 1000,
+  onlyAvailable: boolean = true
+): Promise<MapMarker[]> => {
+  console.log('🎯 Fetching nearby markers (combined):', {
+    location: `${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`,
+    radius: `${radiusMeters}m`,
+    onlyAvailable
+  });
+  console.time('⏱️ Combined nearby markers fetch');
+  
+  console.log('🔄 Starting parallel fetch for parking spots and repair stations...');
+  const [parkingSpots, repairStations] = await Promise.all([
+    fetchNearbyParkingSpots(userLatitude, userLongitude, radiusMeters, onlyAvailable),
+    fetchNearbyRepairStations(userLatitude, userLongitude, radiusMeters, onlyAvailable)
+  ]);
+  
+  console.log('📊 Parallel fetch results:', {
+    parkingSpots: parkingSpots.length,
+    repairStations: repairStations.length
+  });
+  
+  const combinedMarkers = [...parkingSpots, ...repairStations];
+  console.log('🔗 Combined markers before sorting:', combinedMarkers.length);
+  
+  const sortedMarkers = combinedMarkers.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+  console.log('📈 Sorted markers by distance:', sortedMarkers.length);
+  
+  console.timeEnd('⏱️ Combined nearby markers fetch');
+  return sortedMarkers;
+};
+
+// Generate all markers (fallback for non-location based usage)
 export const generateAllMarkers = async (): Promise<MapMarker[]> => {
-  try {
-    console.log('Generating all markers...');
-    
-    // Fetch both data sources in parallel for better performance
-    const [parkingSpots, repairStations] = await Promise.allSettled([
-      fetchParkingSpots(),
-      fetchRepairStations()
-    ]);
-    
-    let parkingSpotsData: MapMarker[] = [];
-    let repairStationsData: MapMarker[] = [];
-    
-    if (parkingSpots.status === 'fulfilled') {
-      parkingSpotsData = parkingSpots.value;
-      console.log(`Loaded ${parkingSpotsData.length} parking spots`);
-    } else {
-      console.error('Error fetching parking spots:', parkingSpots.reason);
-    }
-    
-    if (repairStations.status === 'fulfilled') {
-      repairStationsData = repairStations.value;
-      console.log(`Loaded ${repairStationsData.length} repair stations`);
-    } else {
-      console.error('Error fetching repair stations:', repairStations.reason);
-    }
-    
-    const allMarkers = [...parkingSpotsData, ...repairStationsData];
-    console.log(`Total markers loaded: ${allMarkers.length}`);
-    return allMarkers;
-  } catch (error) {
-    console.error('Error in generateAllMarkers:', error);
-    return [];
-  }
+  console.log('🗂️ Generating all markers (fallback mode)...');
+  console.time('⏱️ Generate all markers');
+  
+  console.log('🔄 Starting parallel fetch for all data...');
+  const [parkingSpots, repairStations] = await Promise.all([
+    fetchParkingSpots(),
+    fetchRepairStations()
+  ]);
+  
+  console.log('📊 All markers fetch results:', {
+    parkingSpots: parkingSpots.length,
+    repairStations: repairStations.length,
+    total: parkingSpots.length + repairStations.length
+  });
+  
+  const allMarkers = [...parkingSpots, ...repairStations];
+  console.timeEnd('⏱️ Generate all markers');
+  
+  return allMarkers;
 };
 
-// Fast distance approximation for nearby calculations (within ~10km)
-export function getDistanceFast(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371e3; // meters
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = dLat * dLat + dLon * dLon * Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
-  return R * Math.sqrt(a);
-}
-
-// Haversine formula for distance in meters (more accurate for longer distances)
-export function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const toRad = (v: number) => (v * Math.PI) / 180;
-  const R = 6371e3; // meters
+// Optimized distance calculation (Haversine formula)
+export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371e3; // Earth's radius in meters
+  const toRad = (deg: number) => deg * Math.PI / 180;
+  
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-} 
+  
+  const a = Math.sin(dLat / 2) ** 2 + 
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+            Math.sin(dLon / 2) ** 2;
+  
+  const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  
+  // Only log for very close calculations to avoid spam
+  if (distance < 100) {
+    console.log(`📏 Distance calculated: ${Math.round(distance)}m`);
+  }
+  
+  return distance;
+};
+
+// Fast distance approximation for short distances (more performant)
+export const getDistanceFast = calculateDistance; // Use same function, simplified
+
+// Legacy alias for backward compatibility
+export const getDistance = calculateDistance; 
