@@ -23,7 +23,12 @@ export const useLocationStore = create<LocationState>((set, get) => {
   
   const updateCombinedMarkers = () => {
     const state = get();
-    const combined = [...state.homeMarkers, ...state.searchMarkers];
+    
+    // Combine markers while avoiding duplicates (home markers take priority)
+    const homeMarkerIds = new Set(state.homeMarkers.map(m => m.id));
+    const uniqueSearchMarkers = state.searchMarkers.filter(m => !homeMarkerIds.has(m.id));
+    const combined = [...state.homeMarkers, ...uniqueSearchMarkers];
+    
     set({ markers: combined });
   };
 
