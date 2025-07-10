@@ -43,11 +43,12 @@ const LIGHT_MAP_STYLE: any[] = [];
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const [region, setRegion] = useState<Region>(INITIAL_REGION);
+  const [currentMapCenter, setCurrentMapCenter] = useState<{latitude: number, longitude: number} | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [showListModal, setShowListModal] = useState(false);
   const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair'>('all');
 
-  const { userLocation, markers, loading } = useLocationStore();
+  const { userLocation, markers, loading, searchAtLocation, clearSearchResults } = useLocationStore();
   const { currentTheme } = useThemeStore();
 
   const backgroundColor = useThemeColor({}, 'background');
@@ -59,6 +60,41 @@ export default function MapScreen() {
   const isDarkMode = currentTheme === 'dark';
   const params = useLocalSearchParams();
 
+  // Check if user has moved map significantly from their location
+  const showSearchButton = useMemo(() => {
+    if (!userLocation || !currentMapCenter) return false;
+    
+    const distance = getDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      currentMapCenter.latitude,
+      currentMapCenter.longitude
+    );
+    
+    // Show search button if moved more than 2km from user location
+    return distance > 2000;
+  }, [userLocation, currentMapCenter]);
+
+  // Automatically clear search results when user returns to their location
+  useEffect(() => {
+    if (!userLocation || !currentMapCenter) return;
+    
+    const distance = getDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      currentMapCenter.latitude,
+      currentMapCenter.longitude
+    );
+    
+    // If user is back within 2km of their location, clear search results
+    if (distance <= 2000) {
+      const { searchMarkers } = useLocationStore.getState();
+      if (searchMarkers && searchMarkers.length > 0) {
+        clearSearchResults();
+      }
+    }
+  }, [userLocation, currentMapCenter, clearSearchResults]);
+
   const filteredMarkers = useMemo(() => {
     if (listFilter === 'all') return markers;
     if (listFilter === 'repair') return markers.filter(m => m.type === 'repairStation');
@@ -67,11 +103,16 @@ export default function MapScreen() {
 
   useEffect(() => {
     if (userLocation) {
-      setRegion({
+      const newRegion = {
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
+      };
+      setRegion(newRegion);
+      setCurrentMapCenter({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
       });
     }
   }, [userLocation]);
@@ -103,10 +144,35 @@ export default function MapScreen() {
     }
   }, [params.openList]);
 
+  const handleRegionChangeComplete = useCallback((newRegion: Region) => {
+    setCurrentMapCenter({
+      latitude: newRegion.latitude,
+      longitude: newRegion.longitude,
+    });
+  }, []);
+
+  const handleSearchAtCurrentLocation = useCallback(async () => {
+    if (!currentMapCenter) return;
+    
+    try {
+      await searchAtLocation(currentMapCenter.latitude, currentMapCenter.longitude);
+    } catch (error) {
+      Alert.alert('Hiba', 'Nem sikerült betölteni a helyeket ezen a területen.');
+    }
+  }, [currentMapCenter, searchAtLocation]);
+
+
+
   const recenter = useCallback(async () => {
     if (!userLocation) {
       Alert.alert('Helymeghatározás', 'A helymeghatározás nincs elérhető.');
       return;
+    }
+    
+    // Clear any search results when returning to user location
+    const { searchMarkers } = useLocationStore.getState();
+    if (searchMarkers && searchMarkers.length > 0) {
+      clearSearchResults();
     }
     
     const newRegion = {
@@ -115,8 +181,15 @@ export default function MapScreen() {
       latitudeDelta: 0.005,
       longitudeDelta: 0.005,
     };
+    
+    // Update current map center to user location
+    setCurrentMapCenter({
+      latitude: userLocation.latitude,
+      longitude: userLocation.longitude,
+    });
+    
     mapRef.current?.animateToRegion(newRegion, 500);
-  }, [userLocation]);
+  }, [userLocation, clearSearchResults]);
 
   const handleMarkerPress = useCallback((marker: MapMarker) => {
     setSelectedMarker(marker);
@@ -169,7 +242,8 @@ export default function MapScreen() {
 
     return (
       <Marker
-        key={marker.id}
+              key={marker.id}
+              style={{}}
         coordinate={marker.coordinate}
         title={marker.title}
         description={marker.description}
@@ -182,7 +256,6 @@ export default function MapScreen() {
             backgroundColor,
             borderColor: markerBorderColor,
             borderWidth: isSelected ? 3 : 2,
-            transform: [{ scale: isSelected ? 1.2 : 1 }]
           }
         ]}>
           <Ionicons name={iconName as any} size={16} color={iconColor} />
@@ -233,6 +306,7 @@ export default function MapScreen() {
         provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFill}
         initialRegion={region}
+        onRegionChangeComplete={handleRegionChangeComplete}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
@@ -476,6 +550,34 @@ export default function MapScreen() {
         </Pressable>
       </Modal>
 
+      {/* Search Button - appears when user moves map away from their location */}
+      {showSearchButton && (
+        <View style={styles.fabGroupTopCenter}>
+          <TouchableOpacity
+            style={[styles.searchButton, {
+              backgroundColor: '#3B82F6',
+              shadowColor,
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 8,
+            }]}
+            onPress={handleSearchAtCurrentLocation}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+            ) : (
+              <Ionicons name="search" size={18} color="#fff" style={{ marginRight: 8 }} />
+            )}
+            <ThemedText style={[styles.searchButtonText, { color: '#fff' }]}>
+              {loading ? 'Keresés...' : 'Keresés'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      )}
+
+
+
       <View style={styles.fabGroupBottomCenter}>
         <TouchableOpacity
           style={[styles.fabWide, {
@@ -557,6 +659,15 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '500',
   },
+  fabGroupTopCenter: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+
   fabGroupBottomCenter: {
     position: 'absolute',
     bottom: 38,
@@ -598,6 +709,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 16,
   },
+  searchButton: {
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    minWidth: 120,
+  },
+  searchButtonText: {
+    fontWeight: '600',
+    fontSize: 16,
+  },
+
   flyoutContainer: {
     position: 'absolute',
     bottom: 100,
