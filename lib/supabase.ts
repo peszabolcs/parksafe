@@ -16,4 +16,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  global: {
+    headers: {
+      'cache-control': 'max-age=3600', // 1 hour cache
+    },
+  },
+  db: {
+    schema: 'public',
+  },
 }); 

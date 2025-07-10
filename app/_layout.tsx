@@ -1,174 +1,113 @@
-import React, { useMemo, useCallback } from 'react';
-import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, useColorScheme } from 'react-native';
+import { ActivityIndicator, View, useColorScheme } from 'react-native';
 import 'react-native-reanimated';
 
 import { useThemeStore } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useLocationStore } from '@/stores/locationStore';
-import { useAppState } from '@/hooks/useAppState';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { appStartup } from '@/lib/startup';
 
-const AppInitializer = React.memo(({ children }: { children: React.ReactNode }) => {
-  const { isLoading: themeLoading, initializeTheme, updateSystemTheme } = useThemeStore();
-  const { loading: authLoading, initializeAuth } = useAuthStore();
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const router = useRouter();
+  const segments = useSegments();
   const systemColorScheme = useColorScheme();
+  const { currentTheme, initializeTheme, updateSystemTheme } = useThemeStore();
+  const { session, user, loading: authLoading } = useAuthStore();
+  const [loaded] = useFonts({
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
+  const [isAppReady, setIsAppReady] = useState(false);
 
-  const backgroundColor = useThemeColor({}, 'background');
-  const tintColor = useThemeColor({}, 'tint');
+  // Initialize theme on mount
+  useEffect(() => {
+    initializeTheme();
+  }, [initializeTheme]);
 
-  // Memoize the loading styles to prevent unnecessary re-renders
-  const loadingStyles = useMemo(() => ({
-    flex: 1,
-    backgroundColor,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  }), [backgroundColor]);
-
-  // Memoize the update system theme callback
-  const handleSystemThemeChange = useCallback((scheme: string | null | undefined) => {
-    if (scheme) {
-      updateSystemTheme(scheme as 'light' | 'dark');
+  // Update theme when system theme changes
+  useEffect(() => {
+    if (systemColorScheme) {
+      updateSystemTheme(systemColorScheme as 'light' | 'dark');
     }
-  }, [updateSystemTheme]);
+  }, [systemColorScheme, updateSystemTheme]);
 
-  // Update system theme when it changes
-  React.useEffect(() => {
-    handleSystemThemeChange(systemColorScheme);
-  }, [systemColorScheme, handleSystemThemeChange]);
-
-  // Initialize critical stores on mount (theme and auth)
-  React.useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Initialize critical stores in parallel
-        await Promise.allSettled([
-          initializeTheme(),
-          initializeAuth(),
-        ]);
-      } catch (error) {
-        console.error('Error during app initialization:', error);
+  // Initial app startup
+  useEffect(() => {
+    async function initializeApp() {
+      if (loaded) {
+        try {
+          // Initialize the app startup logic
+          await appStartup.initialize();
+        } catch (error) {
+          console.error('App initialization failed:', error);
+        } finally {
+          setIsAppReady(true);
+          SplashScreen.hideAsync();
+        }
       }
-    };
+    }
 
     initializeApp();
-  }, [initializeTheme, initializeAuth]);
+  }, [loaded]);
 
-  // Initialize location store in background (non-blocking)
-  React.useEffect(() => {
-    const { initializeLocation } = useLocationStore.getState();
-    initializeLocation().catch(error => {
-      console.error('Error initializing location store:', error);
+  // Handle auth state changes during runtime (login/logout)
+  useEffect(() => {
+    if (!isAppReady || authLoading) {
+      return; // Don't navigate until app is ready and auth is loaded
+    }
+
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+    const hasValidSession = !!(session && user);
+
+    console.log('Auth change detected:', {
+      hasSession: hasValidSession,
+      inAuthGroup,
+      currentRoute: segments[0] || 'root'
     });
-  }, []);
 
-  // Show loading screen only while critical stores are loading
-  if (themeLoading || authLoading) {
+    if (!hasValidSession && !inAuthGroup) {
+      // User logged out or session expired - go to login
+      console.log('Navigating to login: No session');
+      router.replace('/login');
+    } else if (hasValidSession && inAuthGroup) {
+      // User logged in while on auth screen - go to home
+      console.log('Navigating to home: Session found');
+      router.replace('/(tabs)');
+      
+      // Start loading location and markers immediately after successful login
+      appStartup.startDataFetching().catch(error => {
+        console.error('Post-login data loading failed:', error);
+      });
+    }
+  }, [session, user, authLoading, isAppReady, segments, router]);
+
+  if (!loaded || !isAppReady) {
     return (
-      <View style={loadingStyles}>
-        <ActivityIndicator size="large" color={tintColor} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
   }
 
-  return <>{children}</>;
-});
-
-AppInitializer.displayName = 'AppInitializer';
-
-const AuthGate = React.memo(({ children }: { children: React.ReactNode }) => {
-  const { session, loading } = useAuthStore();
-  const router = useRouter();
-  const segments = useSegments();
-
-  // Handle app state changes and token refresh
-  useAppState();
-
-  // Memoize the auth check logic
-  const handleAuthCheck = useCallback(() => {
-    if (loading) return;
-    
-    const inAuth = segments[0] === 'login' || segments[0] === 'register';
-    
-    if (!session && !inAuth) {
-      // User is not authenticated and not on auth pages, redirect to login
-      router.replace('/login');
-    } else if (session && inAuth) {
-      // User is authenticated but on auth pages, redirect to home
-      router.replace('/');
-    }
-  }, [session, loading, segments, router]);
-
-  React.useEffect(() => {
-    handleAuthCheck();
-  }, [handleAuthCheck]);
-
-  return <>{children}</>;
-});
-
-const RootLayoutNav = React.memo(() => {
-  const { currentTheme } = useThemeStore();
-  const backgroundColor = useThemeColor({}, 'background');
-
-  // Memoize the navigation theme and styles
-  const navigationTheme = useMemo(() => 
-    currentTheme === 'dark' ? DarkTheme : DefaultTheme, 
-    [currentTheme]
-  );
-
-  const containerStyle = useMemo(() => ({ 
-    flex: 1, 
-    backgroundColor 
-  }), [backgroundColor]);
-
-  const screenOptions = useMemo(() => ({
-    headerShown: false,
-    animation: 'none' as const,
-    contentStyle: { backgroundColor },
-  }), [backgroundColor]);
-
-  const statusBarStyle = useMemo(() => 
-    currentTheme === 'dark' ? 'light' : 'dark', 
-    [currentTheme]
-  );
+  // Use the current theme from the theme store
+  const navigationTheme = currentTheme === 'dark' ? DarkTheme : DefaultTheme;
 
   return (
-    <View style={containerStyle}>
-      <NavigationThemeProvider value={navigationTheme}>
-        <Stack screenOptions={screenOptions}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="settings" options={{ headerShown: true, title: 'Beállítások' }} />
-          <Stack.Screen name="+not-found" />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="register" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style={statusBarStyle} />
-      </NavigationThemeProvider>
-    </View>
-  );
-});
-
-export default function RootLayout() {
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
-
-  return (
-    <SafeAreaProvider>
-      <AppInitializer>
-        <AuthGate>
-          <RootLayoutNav />
-        </AuthGate>
-      </AppInitializer>
-    </SafeAreaProvider>
+    <ThemeProvider value={navigationTheme}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="register" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style={currentTheme === 'dark' ? 'light' : 'dark'} />
+    </ThemeProvider>
   );
 }

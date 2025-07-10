@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
@@ -6,6 +6,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useLocationStore } from '@/stores/locationStore';
+import { useAuthStore } from '@/stores/authStore';
 import { router } from 'expo-router';
 
 const bestRated = [
@@ -43,7 +44,8 @@ const recentActivity = [
 ];
 
 export default function HomeScreen() {
-  const { userLocation, nearbyMarkers, loading } = useLocationStore();
+  const { userLocation, markers, loading, error } = useLocationStore();
+  const { session, user } = useAuthStore();
 
   // Theme-aware colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -56,8 +58,10 @@ export default function HomeScreen() {
 
   // Get top 3 nearby markers
   const nearby = useMemo(() => {
-    return nearbyMarkers.slice(0, 3);
-  }, [nearbyMarkers]);
+    return markers.slice(0, 3);
+  }, [markers]);
+
+  const isLoggedIn = session && user;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
@@ -101,50 +105,113 @@ export default function HomeScreen() {
         </View>
         
         <View>
-          {loading ? (
-            <ActivityIndicator size="small" color="#3B82F6" style={{ marginVertical: 16 }} />
-          ) : nearby.length === 0 ? (
-            <ThemedText style={{ textAlign: 'center', color: '#888', marginVertical: 16 }}>
-              Nem találhatóak közeli helyek vagy nincs helyhozzáférés engedélyezve.
-            </ThemedText>
-          ) : (
-            nearby.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}
+          {loading && nearby.length === 0 ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 16 }}>
+              <ActivityIndicator size="small" color="#3B82F6" style={{ marginRight: 8 }} />
+              <ThemedText style={{ color: '#888' }}>
+                Hely meghatározása...
+              </ThemedText>
+            </View>
+          ) : error && nearby.length === 0 ? (
+            <View style={{ alignItems: 'center', marginVertical: 16 }}>
+              <Ionicons name="location-outline" size={24} color="#EF4444" style={{ marginBottom: 8 }} />
+              <ThemedText style={{ textAlign: 'center', color: '#EF4444', marginBottom: 8, fontSize: 14 }}>
+                {error}
+              </ThemedText>
+              <TouchableOpacity 
                 onPress={() => {
-                  router.push({ 
-                    pathname: '/(tabs)/map', 
-                    params: { 
-                      selectedMarkerId: item.id,
-                      latitude: item.coordinate.latitude.toString(),
-                      longitude: item.coordinate.longitude.toString()
-                    } 
-                  });
+                  useLocationStore.getState().refresh();
                 }}
-                activeOpacity={0.7}
-              > 
-                <View style={[styles.nearbyIcon, { backgroundColor: item.type === 'parking' ? iconBackgroundLight : '#EFF6FF' }]}> 
-                  {item.type === 'parking' ? (
-                    <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />
-                  ) : (
-                    <MaterialCommunityIcons name="tools" size={24} color="#60A5FA" />
-                  )}
-                </View>
-                <View style={styles.nearbyInfo}>
-                  <ThemedText style={styles.nearbyTitle}>{item.title}</ThemedText>
-                  <View style={styles.nearbyDetails}>
-                    <Ionicons name="location-outline" size={14} color={secondaryTextColor} />
-                    <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>{(item.distance / 1000).toFixed(2)} km</ThemedText>
-                    <ThemedText style={[styles.nearbyDetailDot, { color: secondaryTextColor }]}>•</ThemedText>
-                    <Ionicons name="star" size={14} color="#FBBF24" />
-                    <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>
-                      {item.type === 'parking' ? '4.5' : '4.8'}
-                    </ThemedText>
-                  </View>
-                </View>
+                style={{ 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 8, 
+                  backgroundColor: '#3B82F6', 
+                  borderRadius: 8 
+                }}
+              >
+                <ThemedText style={{ color: '#fff', fontSize: 14 }}>
+                  Újrapróbálás
+                </ThemedText>
               </TouchableOpacity>
-            ))
+            </View>
+          ) : nearby.length === 0 ? (
+            <View style={{ alignItems: 'center', marginVertical: 16 }}>
+              <ThemedText style={{ textAlign: 'center', color: '#888', marginBottom: 8 }}>
+                {isLoggedIn 
+                  ? 'Még nincsenek közeli helyek betöltve.'
+                  : 'Jelentkezzen be a közeli helyek megtekintéséhez.'
+                }
+              </ThemedText>
+              <TouchableOpacity 
+                onPress={() => {
+                  if (isLoggedIn) {
+                    useLocationStore.getState().refresh();
+                  } else {
+                    router.push('/login');
+                  }
+                }}
+                style={{ 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 8, 
+                  backgroundColor: '#3B82F6', 
+                  borderRadius: 8 
+                }}
+              >
+                <ThemedText style={{ color: '#fff', fontSize: 14 }}>
+                  {isLoggedIn ? 'Frissítés' : 'Bejelentkezés'}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {loading && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                  <ActivityIndicator size="small" color="#3B82F6" style={{ marginRight: 8 }} />
+                  <ThemedText style={{ color: '#888', fontSize: 12 }}>
+                    Frissítés...
+                  </ThemedText>
+                </View>
+              )}
+              {nearby.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}
+                  onPress={() => {
+                    router.push({ 
+                      pathname: '/(tabs)/map', 
+                      params: { 
+                        selectedMarkerId: item.id,
+                        latitude: item.coordinate.latitude.toString(),
+                        longitude: item.coordinate.longitude.toString()
+                      } 
+                    });
+                  }}
+                  activeOpacity={0.7}
+                > 
+                  <View style={[styles.nearbyIcon, { backgroundColor: item.type === 'parking' ? iconBackgroundLight : '#EFF6FF' }]}> 
+                    {item.type === 'parking' ? (
+                      <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />
+                    ) : (
+                      <MaterialCommunityIcons name="tools" size={24} color="#60A5FA" />
+                    )}
+                  </View>
+                  <View style={styles.nearbyInfo}>
+                    <ThemedText style={styles.nearbyTitle}>{item.title}</ThemedText>
+                    <View style={styles.nearbyDetails}>
+                      <Ionicons name="location-outline" size={14} color={secondaryTextColor} />
+                      <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>
+                        {item.distance ? (item.distance / 1000).toFixed(2) : '---'} km
+                      </ThemedText>
+                      <ThemedText style={[styles.nearbyDetailDot, { color: secondaryTextColor }]}>•</ThemedText>
+                      <Ionicons name="star" size={14} color="#FBBF24" />
+                      <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>
+                        {item.type === 'parking' ? '4.5' : '4.8'}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </>
           )}
         </View>
 

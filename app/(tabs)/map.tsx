@@ -11,13 +11,12 @@ import { MapMarker, getDistance } from '@/lib/markers';
 import { useLocalSearchParams } from 'expo-router';
 
 const INITIAL_REGION = {
-  latitude: 46.2530, // Szeged coordinates
+  latitude: 46.2530,
   longitude: 20.1484,
   latitudeDelta: 0.01,
   longitudeDelta: 0.01,
 };
 
-// Simplified map styles
 const DARK_MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: '#212121' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
@@ -39,7 +38,6 @@ const DARK_MAP_STYLE = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d3d3d' }] },
 ];
 
-// Light mode map style (default Google Maps style)
 const LIGHT_MAP_STYLE: any[] = [];
 
 export default function MapScreen() {
@@ -49,32 +47,24 @@ export default function MapScreen() {
   const [showListModal, setShowListModal] = useState(false);
   const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair'>('all');
 
-  // Get location and markers from context
-  const { userLocation, markers, nearbyMarkers, loading } = useLocationStore();
-
-  // Theme context
+  const { userLocation, markers, loading } = useLocationStore();
   const { currentTheme } = useThemeStore();
 
-  // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const cardBackground = useThemeColor({ light: '#fff', dark: '#1F2937' }, 'background');
   const borderColor = useThemeColor({ light: '#E5E7EB', dark: '#374151' }, 'background');
   const shadowColor = useThemeColor({ light: '#000', dark: '#000' }, 'text');
 
-  // Determine if we're in dark mode - use theme context directly
   const isDarkMode = currentTheme === 'dark';
-
   const params = useLocalSearchParams();
 
-  // Filtered markers for the list view
   const filteredMarkers = useMemo(() => {
-    if (listFilter === 'all') return nearbyMarkers;
-    if (listFilter === 'repair') return nearbyMarkers.filter(m => m.type === 'repairStation');
-    return nearbyMarkers.filter(m => m.type === listFilter);
-  }, [nearbyMarkers, listFilter]);
+    if (listFilter === 'all') return markers;
+    if (listFilter === 'repair') return markers.filter(m => m.type === 'repairStation');
+    return markers.filter(m => m.type === listFilter);
+  }, [markers, listFilter]);
 
-  // Update region when user location is available
   useEffect(() => {
     if (userLocation) {
       setRegion({
@@ -86,14 +76,12 @@ export default function MapScreen() {
     }
   }, [userLocation]);
 
-  // Handle selected marker from navigation params
   useEffect(() => {
     if (params.selectedMarkerId && markers.length > 0) {
       const selectedMarker = markers.find(m => m.id === params.selectedMarkerId);
       if (selectedMarker) {
         setSelectedMarker(selectedMarker);
         
-        // Center map on the selected marker
         const newRegion = {
           latitude: selectedMarker.coordinate.latitude,
           longitude: selectedMarker.coordinate.longitude,
@@ -106,11 +94,9 @@ export default function MapScreen() {
     }
   }, [params.selectedMarkerId, markers]);
 
-  // Open list modal if openList param is present
   useEffect(() => {
     if (params.openList) {
       setShowListModal(true);
-      // Add small delay to ensure modal opens before resetting filter
       setTimeout(() => {
         setListFilter('all');
       }, 100);
@@ -160,7 +146,6 @@ export default function MapScreen() {
     }
   }, [selectedMarker]);
 
-  // Handler for list item tap
   const handleListItemPress = useCallback((marker: MapMarker) => {
     setSelectedMarker(marker);
     setShowListModal(false);
@@ -206,26 +191,14 @@ export default function MapScreen() {
     );
   }, [selectedMarker, isDarkMode, handleMarkerPress]);
 
-  // Optimize markers rendering - only render markers that are reasonably close
-  const visibleMarkers = useMemo(() => {
-    if (!userLocation) return markers;
-    
-    // Only show markers within 50km to improve performance
-    return markers.filter(marker => {
-      const distance = getDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        marker.coordinate.latitude,
-        marker.coordinate.longitude
-      );
-      return distance <= 50000; // 50km
-    });
-  }, [markers, userLocation]);
+  // Memoize markers to reduce re-renders
+  const renderedMarkers = useMemo(() => {
+    return markers.map(renderMarker);
+  }, [markers, renderMarker]);
 
-  if (loading) {
+  if (loading && markers.length === 0) {
     return (
       <ThemedView style={[styles.container, { backgroundColor }]}>
-        {/* Show map with loading overlay */}
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
@@ -243,7 +216,6 @@ export default function MapScreen() {
           zoomEnabled={true}
         />
         
-        {/* Loading overlay */}
         <View style={[styles.loadingOverlay, { backgroundColor: backgroundColor + '90' }]}>
           <ActivityIndicator size="large" color="#3B82F6" />
           <ThemedText style={[styles.loadingText, { color: textColor }]}>
@@ -272,10 +244,9 @@ export default function MapScreen() {
         scrollEnabled={true}
         zoomEnabled={true}
       >
-        {visibleMarkers.map(renderMarker)}
+        {renderedMarkers}
       </MapView>
 
-      {/* Bottom Flyout */}
       {selectedMarker && (
         <View style={[styles.flyoutContainer, { 
           backgroundColor: cardBackground,
@@ -287,7 +258,6 @@ export default function MapScreen() {
           shadowRadius: 16,
           elevation: 16,
         }]}>
-          {/* Header with stronger color and more padding */}
           <View style={[styles.flyoutHeader, { 
             backgroundColor: selectedMarker.type === 'parking' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)',
             borderBottomColor: selectedMarker.type === 'parking' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)',
@@ -327,7 +297,6 @@ export default function MapScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Content */}
           <View style={[styles.flyoutContent, { paddingBottom: 20 }]}>
             {selectedMarker.type === 'parking' ? (
               <View style={styles.parkingDetails}>
@@ -376,7 +345,6 @@ export default function MapScreen() {
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>+36 62 123 4567</ThemedText>
                 </View>
-
                 <View style={styles.detailRow}>
                   <View style={[styles.detailIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
                     <Ionicons name="star" size={14} color="#3B82F6" />
@@ -385,7 +353,6 @@ export default function MapScreen() {
                 </View>
               </View>
             )}
-            {/* Action Buttons - redesigned */}
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[styles.actionButtonModern, {
@@ -426,7 +393,6 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Lista nézet Modal */}
       <Modal
         visible={showListModal}
         animationType="slide"
@@ -441,7 +407,6 @@ export default function MapScreen() {
             style={{ backgroundColor: cardBackground, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, maxHeight: '60%' }}
             onPress={(e) => e.stopPropagation()}
           >
-            {/* Filter Buttons */}
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
               {[
                 { key: 'all', label: 'Összes' },
@@ -451,7 +416,6 @@ export default function MapScreen() {
                 <TouchableOpacity
                   key={f.key}
                   onPress={() => {
-                    // Force state update even if same filter is selected
                     setListFilter('none' as any);
                     setTimeout(() => {
                       setListFilter(f.key as 'all' | 'parking' | 'repair');
@@ -498,8 +462,8 @@ export default function MapScreen() {
                     <ThemedText style={{ fontWeight: '600', fontSize: 15 }}>{item.title}</ThemedText>
                     <ThemedText style={{ fontSize: 12, color: '#666' }}>{item.type === 'parking' ? 'Parkoló' : 'Szerviz'} • {item.available ? 'Nyitva' : 'Zárva'}</ThemedText>
                   </View>
-                  {userLocation && (item as any).distance !== undefined && (
-                    <ThemedText style={{ fontSize: 13, color: '#3B82F6', fontWeight: '500', marginLeft: 8 }}>{((item as any).distance / 1000).toFixed(2)} km</ThemedText>
+                  {userLocation && item.distance !== undefined && (
+                    <ThemedText style={{ fontSize: 13, color: '#3B82F6', fontWeight: '500', marginLeft: 8 }}>{(item.distance / 1000).toFixed(2)} km</ThemedText>
                   )}
                 </Pressable>
               )}
@@ -512,7 +476,6 @@ export default function MapScreen() {
         </Pressable>
       </Modal>
 
-      {/* Lista nézet Button (bottom center) */}
       <View style={styles.fabGroupBottomCenter}>
         <TouchableOpacity
           style={[styles.fabWide, {
@@ -533,7 +496,7 @@ export default function MapScreen() {
           <ThemedText style={[styles.fabWideText, { color: textColor }]}>Lista nézet</ThemedText>
         </TouchableOpacity>
       </View>
-      {/* Recenter Button (bottom right) */}
+      
       <View style={styles.fabGroupBottomRight}>
         <TouchableOpacity 
           style={[styles.fab, { 
