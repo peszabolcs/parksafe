@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import { StyleSheet, View, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking, Modal, FlatList, Text, Pressable } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking, Modal, FlatList, Text, Pressable, Animated, Dimensions } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Region, Marker, Callout } from 'react-native-maps';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeStore } from '@/stores/themeStore';
 import { useLocationStore } from '@/stores/locationStore';
+import { useFavouritesStore } from '@/stores/favouritesStore';
 import { MapMarker, getDistance } from '@/lib/markers';
 import { useLocalSearchParams } from 'expo-router';
 
@@ -47,9 +48,13 @@ export default function MapScreen() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [showListModal, setShowListModal] = useState(false);
   const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair'>('all');
+  
+  const screenHeight = Dimensions.get('window').height;
+  const modalAnim = useRef(new Animated.Value(screenHeight)).current; // Single animation value
 
   const { userLocation, markers, loading, searchAtLocation, clearSearchResults } = useLocationStore();
   const { currentTheme } = useThemeStore();
+  const { favourites, addFavourite, removeFavourite, isFavourite, loadFavourites } = useFavouritesStore();
 
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -59,6 +64,34 @@ export default function MapScreen() {
 
   const isDarkMode = currentTheme === 'dark';
   const params = useLocalSearchParams();
+
+  // Animation functions for modal
+  const openModal = useCallback(() => {
+    setShowListModal(true);
+    Animated.timing(modalAnim, {
+      toValue: 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  }, [modalAnim]);
+
+  const closeModal = useCallback(() => {
+    Animated.timing(modalAnim, {
+      toValue: screenHeight,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowListModal(false);
+      modalAnim.setValue(screenHeight);
+    });
+  }, [modalAnim, screenHeight]);
+
+  // Interpolate values from single animation
+  const backgroundOpacity = modalAnim.interpolate({
+    inputRange: [0, screenHeight],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   // Check if user has moved map significantly from their location
   const showSearchButton = useMemo(() => {
@@ -133,16 +166,14 @@ export default function MapScreen() {
         mapRef.current?.animateToRegion(newRegion, 500);
       }
     }
-  }, [params.selectedMarkerId, markers]);
+  }, [params.selectedMarkerId, params.timestamp, markers]); // Add timestamp to dependencies
 
   useEffect(() => {
     if (params.openList) {
-      setShowListModal(true);
-      setTimeout(() => {
-        setListFilter('all');
-      }, 100);
+      setListFilter('all');
+      openModal();
     }
-  }, [params.openList]);
+  }, [params.openList, openModal]);
 
   const handleRegionChangeComplete = useCallback((newRegion: Region) => {
     setCurrentMapCenter({
@@ -219,9 +250,26 @@ export default function MapScreen() {
     }
   }, [selectedMarker]);
 
+  const handleFavouriteToggle = useCallback(async (marker: MapMarker) => {
+    try {
+      if (isFavourite(marker.id)) {
+        await removeFavourite(marker.id);
+      } else {
+        await addFavourite(marker);
+      }
+    } catch (error) {
+      Alert.alert('Hiba', 'Nem sikerült frissíteni a kedvenceket.');
+    }
+  }, [isFavourite, addFavourite, removeFavourite]);
+
+  // Load favourites when component mounts
+  useEffect(() => {
+    loadFavourites();
+  }, [loadFavourites]);
+
   const handleListItemPress = useCallback((marker: MapMarker) => {
     setSelectedMarker(marker);
-    setShowListModal(false);
+    closeModal();
     
     const newRegion = {
       latitude: marker.coordinate.latitude,
@@ -230,7 +278,7 @@ export default function MapScreen() {
       longitudeDelta: 0.005,
     };
     mapRef.current?.animateToRegion(newRegion, 500);
-  }, []);
+  }, [closeModal]);
 
   const renderMarker = useCallback((marker: MapMarker) => {
     const isParking = marker.type === 'parking';
@@ -239,6 +287,7 @@ export default function MapScreen() {
     const backgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
     const isSelected = selectedMarker?.id === marker.id;
     const markerBorderColor = isDarkMode ? '#fff' : '#000';
+    const isMarkerFavourite = isFavourite(marker.id);
 
     return (
       <Marker
@@ -250,19 +299,26 @@ export default function MapScreen() {
         onPress={() => handleMarkerPress(marker)}
         tracksViewChanges={true}
       >
-        <View style={[
-          styles.markerContainer, 
-          { 
-            backgroundColor,
-            borderColor: markerBorderColor,
-            borderWidth: isSelected ? 3 : 2,
-          }
-        ]}>
-          <Ionicons name={iconName as any} size={16} color={iconColor} />
+        <View style={styles.markerWrapper}>
+          <View style={[
+            styles.markerContainer, 
+            { 
+              backgroundColor,
+              borderColor: markerBorderColor,
+              borderWidth: isSelected ? 3 : 2,
+            }
+          ]}>
+            <Ionicons name={iconName as any} size={16} color={iconColor} />
+          </View>
+          {isMarkerFavourite && (
+            <View style={styles.starOverlay}>
+              <Ionicons name="star" size={12} color="#FFD700" />
+            </View>
+          )}
         </View>
       </Marker>
     );
-  }, [selectedMarker, isDarkMode, handleMarkerPress]);
+  }, [selectedMarker, isDarkMode, handleMarkerPress, isFavourite]);
 
   // Memoize markers to reduce re-renders
   const renderedMarkers = useMemo(() => {
@@ -432,7 +488,7 @@ export default function MapScreen() {
                 style={[styles.actionButtonModern, {
                   backgroundColor: selectedMarker.available ? '#22C55E' : '#EF4444',
                   flex: 1,
-                  marginRight: 10,
+                  marginRight: 5,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -447,11 +503,30 @@ export default function MapScreen() {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.actionButtonModern, {
+                  backgroundColor: isFavourite(selectedMarker.id) ? '#FFD700' : '#fff',
+                  borderWidth: 2,
+                  borderColor: '#FFD700',
+                  width: 50,
+                  marginHorizontal: 5,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }]} 
+                activeOpacity={0.85}
+                onPress={() => handleFavouriteToggle(selectedMarker)}
+              >
+                <Ionicons 
+                  name={isFavourite(selectedMarker.id) ? "star" : "star-outline"} 
+                  size={20} 
+                  color={isFavourite(selectedMarker.id) ? "#fff" : "#FFD700"} 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.actionButtonModern, {
                   backgroundColor: '#fff',
                   borderWidth: 2,
                   borderColor: '#3B82F6',
                   flex: 1,
-                  marginLeft: 10,
+                  marginLeft: 5,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -469,18 +544,37 @@ export default function MapScreen() {
 
       <Modal
         visible={showListModal}
-        animationType="slide"
+        animationType="none"
         transparent
-        onRequestClose={() => setShowListModal(false)}
+        onRequestClose={closeModal}
       >
-        <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'flex-end' }}
-          onPress={() => setShowListModal(false)}
+        <Animated.View
+          style={{ 
+            flex: 1, 
+            backgroundColor: 'rgba(0,0,0,0.25)', 
+            justifyContent: 'flex-end',
+            opacity: backgroundOpacity
+          }}
         >
           <Pressable
-            style={{ backgroundColor: cardBackground, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, maxHeight: '60%' }}
-            onPress={(e) => e.stopPropagation()}
+            style={{ flex: 1 }}
+            onPress={closeModal}
+          />
+          <Animated.View
+            style={{ 
+              backgroundColor: cardBackground, 
+              borderTopLeftRadius: 18, 
+              borderTopRightRadius: 18, 
+              padding: 20, 
+              height: '65%',
+              minHeight: 400,
+              transform: [{ translateY: modalAnim }]
+            }}
           >
+            <Pressable
+              style={{ flex: 1 }}
+              onPress={(e) => e.stopPropagation()}
+            >
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
               {[
                 { key: 'all', label: 'Összes' },
@@ -490,10 +584,7 @@ export default function MapScreen() {
                 <TouchableOpacity
                   key={f.key}
                   onPress={() => {
-                    setListFilter('none' as any);
-                    setTimeout(() => {
-                      setListFilter(f.key as 'all' | 'parking' | 'repair');
-                    }, 10);
+                    setListFilter(f.key as 'all' | 'parking' | 'repair');
                   }}
                   style={{
                     paddingVertical: 7,
@@ -512,6 +603,8 @@ export default function MapScreen() {
             <FlatList
               data={filteredMarkers}
               keyExtractor={item => item.id}
+              style={{ flex: 1 }}
+              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => handleListItemPress(item)}
@@ -543,11 +636,12 @@ export default function MapScreen() {
               )}
               ListEmptyComponent={<Text style={{ textAlign: 'center', color: '#888', marginTop: 20 }}>Nincs elérhető hely.</Text>}
             />
-            <TouchableOpacity onPress={() => setShowListModal(false)} style={{ marginTop: 18, alignSelf: 'center', padding: 10 }}>
+            <TouchableOpacity onPress={closeModal} style={{ marginTop: 18, alignSelf: 'center', padding: 10 }}>
               <ThemedText style={{ color: '#3B82F6', fontWeight: 'bold', fontSize: 16 }}>Bezárás</ThemedText>
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
       </Modal>
 
       {/* Search Button - appears when user moves map away from their location */}
@@ -587,10 +681,8 @@ export default function MapScreen() {
             borderWidth: 1
           }]}
           onPress={() => {
-            setShowListModal(true);
-            setTimeout(() => {
-              setListFilter('all');
-            }, 100);
+            setListFilter('all');
+            openModal();
           }}
           activeOpacity={0.85}
         >
@@ -850,6 +942,26 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     fontWeight: '500',
+  },
+  markerWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  starOverlay: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
 });
 

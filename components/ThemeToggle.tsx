@@ -1,85 +1,81 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
 import { useThemeStore } from '@/stores/themeStore';
-import { Colors } from '@/constants/Colors';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { Ionicons } from '@expo/vector-icons';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
-const themeOptions: { value: ThemeMode; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
+const themeOptions: { value: ThemeMode; label: string; icon: string }[] = [
+  { value: 'light', label: 'Világos', icon: 'sunny' },
+  { value: 'dark', label: 'Sötét', icon: 'moon' },
+  { value: 'system', label: 'Rendszer', icon: 'phone-portrait' },
 ];
 
 export const ThemeToggle: React.FC = () => {
   const { themeMode, setThemeMode } = useThemeStore();
   
   // Use themed colors
-  const borderColor = useThemeColor({}, 'icon');
-  const selectedBackgroundColor = useThemeColor({}, 'tint');
+  const containerBackground = useThemeColor({ light: '#F1F5F9', dark: '#334155' }, 'background');
+  const selectedBackground = useThemeColor({ light: '#3B82F6', dark: '#60A5FA' }, 'tint');
+  const textColor = useThemeColor({ light: '#64748B', dark: '#CBD5E1' }, 'text');
+  const selectedTextColor = '#FFFFFF';
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText style={styles.title} type="subtitle">
-        Theme
-      </ThemedText>
-      <View style={styles.optionsContainer}>
-        {themeOptions.map((option) => (
+    <View style={[styles.container, { backgroundColor: containerBackground }]}>
+      {themeOptions.map((option) => {
+        const isSelected = themeMode === option.value;
+        return (
           <TouchableOpacity
             key={option.value}
             style={[
               styles.option,
-              { borderColor },
-              themeMode === option.value && {
-                backgroundColor: selectedBackgroundColor,
-                borderColor: selectedBackgroundColor,
-              },
+              isSelected && { backgroundColor: selectedBackground }
             ]}
             onPress={() => setThemeMode(option.value)}
+            activeOpacity={0.8}
           >
+            <Ionicons 
+              name={option.icon as any} 
+              size={16} 
+              color={isSelected ? selectedTextColor : textColor}
+            />
             <ThemedText
               style={[
                 styles.optionText,
-                themeMode === option.value && styles.selectedOptionText,
+                { color: isSelected ? selectedTextColor : textColor }
               ]}
             >
               {option.label}
             </ThemedText>
           </TouchableOpacity>
-        ))}
-      </View>
-    </ThemedView>
+        );
+      })}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    marginVertical: 8,
-  },
-  title: {
-    marginBottom: 12,
-  },
-  optionsContainer: {
     flexDirection: 'row',
-    gap: 8,
+    borderRadius: 8,
+    padding: 2,
+    width: 180,
+    alignSelf: 'flex-end',
   },
   option: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 6,
+    gap: 4,
   },
   optionText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
-  },
-  selectedOptionText: {
-    color: '#fff',
   },
 }); 

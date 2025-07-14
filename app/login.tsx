@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   forgotPassword: {
-    color: '#0a7ea4',
+    color: '#34aa56',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   button: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#34aa56',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   link: {
-    color: '#0a7ea4',
+    color: '#34aa56',
     fontWeight: '600',
     fontSize: 14,
   },

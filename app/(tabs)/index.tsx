@@ -177,12 +177,14 @@ export default function HomeScreen() {
                   key={item.id}
                   style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}
                   onPress={() => {
+                    const timestamp = Date.now().toString();
                     router.push({ 
                       pathname: '/(tabs)/map', 
                       params: { 
                         selectedMarkerId: item.id,
                         latitude: item.coordinate.latitude.toString(),
-                        longitude: item.coordinate.longitude.toString()
+                        longitude: item.coordinate.longitude.toString(),
+                        timestamp
                       } 
                     });
                   }}
@@ -276,6 +278,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   welcomeTitle: {
+    paddingTop: 4,
     marginTop: 8,
     marginBottom: 4,
   },

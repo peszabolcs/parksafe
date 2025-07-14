@@ -168,6 +168,7 @@ export default function RegisterScreen() {
             username,
             dob,
             phone,
+            favourite_markers: [], // Initialize empty favourites ID array
           },
         },
       });
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   button: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#34aa56',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -704,7 +705,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   link: {
-    color: '#0a7ea4',
+    color: '#34aa56',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -730,8 +731,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   datePickerButtonPrimary: {
-    backgroundColor: '#0a7ea4',
-    borderColor: '#0a7ea4',
+    backgroundColor: '#34aa56',
+    borderColor: '#34aa56',
   },
   datePickerButtonText: {
     color: '#374151',
