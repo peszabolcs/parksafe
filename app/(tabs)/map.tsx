@@ -9,6 +9,7 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useLocationStore } from '@/stores/locationStore';
 import { useFavouritesStore } from '@/stores/favouritesStore';
 import { MapMarker, getDistance } from '@/lib/markers';
+import { generateMarkerImageUri, shouldUseImageMarkers, clearMarkerCache } from '@/lib/markerUtils';
 import { useLocalSearchParams } from 'expo-router';
 
 const INITIAL_REGION = {
@@ -53,6 +54,7 @@ export default function MapScreen() {
   const modalAnim = useRef(new Animated.Value(screenHeight)).current; // Single animation value
 
   const { userLocation, markers, loading, searchAtLocation, clearSearchResults } = useLocationStore();
+  
   const { currentTheme } = useThemeStore();
   const { favourites, addFavourite, removeFavourite, isFavourite, loadFavourites } = useFavouritesStore();
 
@@ -267,6 +269,11 @@ export default function MapScreen() {
     loadFavourites();
   }, [loadFavourites]);
 
+  // Clear marker cache on mount to ensure fresh markers
+  useEffect(() => {
+    clearMarkerCache();
+  }, []);
+
   const handleListItemPress = useCallback((marker: MapMarker) => {
     setSelectedMarker(marker);
     closeModal();
@@ -284,34 +291,66 @@ export default function MapScreen() {
     const isParking = marker.type === 'parking';
     const iconName = isParking ? 'bicycle' : 'build';
     const iconColor = isParking ? '#22C55E' : '#3B82F6';
-    const backgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
+    const markerBackgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
     const isSelected = selectedMarker?.id === marker.id;
     const markerBorderColor = isDarkMode ? '#fff' : '#000';
     const isMarkerFavourite = isFavourite(marker.id);
 
+
+    // Use image markers on iOS to avoid gray circle issue
+    if (shouldUseImageMarkers()) {
+      const imageUri = generateMarkerImageUri(
+        marker.type,
+        isSelected,
+        isDarkMode,
+        isMarkerFavourite
+      );
+
+
+      return (
+        <Marker
+          key={marker.id}
+          coordinate={marker.coordinate}
+          title={marker.title}
+          description={marker.description}
+          onPress={() => handleMarkerPress(marker)}
+          image={{ uri: imageUri }}
+          anchor={{ x: 0.5, y: 0.5 }}
+          centerOffset={{ x: 0, y: 0 }}
+          zIndex={isSelected ? 1000 : 100}
+        />
+      );
+    }
+
+    // Use custom view markers for all platforms
+    
     return (
       <Marker
-              key={marker.id}
-              style={{}}
+        key={marker.id}
         coordinate={marker.coordinate}
         title={marker.title}
         description={marker.description}
         onPress={() => handleMarkerPress(marker)}
-        tracksViewChanges={true}
+        tracksViewChanges={false}
+        anchor={{ x: 0.5, y: 0.5 }}
+        centerOffset={{ x: 0, y: 0 }}
+        zIndex={isSelected ? 1000 : 100}
+        flat={true}
+        style={{ backgroundColor: 'transparent' }}
       >
-        <View style={styles.markerWrapper}>
-          <View style={[
-            styles.markerContainer, 
-            { 
-              backgroundColor,
-              borderColor: markerBorderColor,
-              borderWidth: isSelected ? 3 : 2,
-            }
-          ]}>
-            <Ionicons name={iconName as any} size={16} color={iconColor} />
-          </View>
+        <View style={[
+          styles.markerContainer, 
+          { 
+            backgroundColor: markerBackgroundColor, // Use the marker background color (green/blue)
+            borderColor: markerBorderColor,
+            borderWidth: isSelected ? 3 : 2,
+            shadowOpacity: 0, // Remove shadow that might cause gray background
+            elevation: 0, // Remove elevation on Android
+          }
+        ]}>
+          <Ionicons name={iconName as any} size={16} color={iconColor} />
           {isMarkerFavourite && (
-            <View style={styles.starOverlay}>
+            <View style={[styles.starOverlay, { position: 'absolute', top: -4, right: -4 }]}>
               <Ionicons name="star" size={12} color="#FFD700" />
             </View>
           )}
@@ -724,6 +763,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+    overflow: 'hidden', // Ensure no overflow causing gray squares
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        backgroundColor: 'transparent',
+      },
+      android: {
+        elevation: 5,
+        backgroundColor: 'transparent',
+      },
+    }),
   },
   calloutContainer: {
     padding: 8,
@@ -947,6 +999,15 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        backgroundColor: 'transparent',
+        overflow: 'visible',
+      },
+      android: {
+        backgroundColor: 'transparent',
+      },
+    }),
   },
   starOverlay: {
     position: 'absolute',
