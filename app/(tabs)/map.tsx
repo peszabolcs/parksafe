@@ -331,7 +331,7 @@ export default function MapScreen() {
         title={marker.title}
         description={marker.description}
         onPress={() => handleMarkerPress(marker)}
-        tracksViewChanges={false}
+        tracksViewChanges={true}
         anchor={{ x: 0.5, y: 0.5 }}
         centerOffset={{ x: 0, y: 0 }}
         zIndex={isSelected ? 1000 : 100}
