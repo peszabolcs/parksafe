@@ -191,17 +191,17 @@ export default function SettingsScreen() {
               icon="help-circle-outline"
               title="Súgó és támogatás"
               subtitle="GYIK és kapcsolat"
-              onPress={() => Alert.alert('Súgó', 'Súgó és támogatás hamarosan elérhető')}
+              onPress={() => router.push('/help')}
             />
             <SettingsItem
               icon="document-text-outline"
               title="Felhasználási feltételek"
-              onPress={() => Alert.alert('Feltételek', 'Felhasználási feltételek hamarosan elérhetőek')}
+              onPress={() => router.push('/terms')}
             />
             <SettingsItem
               icon="shield-outline"
               title="Adatvédelem"
-              onPress={() => Alert.alert('Adatvédelem', 'Adatvédelmi szabályzat hamarosan elérhető')}
+              onPress={() => router.push('/privacy')}
             />
             <SettingsItem
               icon="information-circle-outline"
