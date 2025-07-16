@@ -18,7 +18,7 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const systemColorScheme = useColorScheme();
-  const { currentTheme, initializeTheme, updateSystemTheme } = useThemeStore();
+  const { currentTheme, initializeTheme, updateSystemTheme, isLoading: themeLoading } = useThemeStore();
   const { session, user, loading: authLoading } = useAuthStore();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -87,9 +87,11 @@ export default function RootLayout() {
     }
   }, [session, user, authLoading, isAppReady, segments, router]);
 
-  if (!loaded || !isAppReady) {
+  if (!loaded || !isAppReady || authLoading) {
+    // If theme is still loading, default to dark to avoid white flash
+    const bgColor = themeLoading ? '#18181B' : (currentTheme === 'dark' ? '#18181B' : '#FFFFFF');
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: bgColor }}>
         <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );

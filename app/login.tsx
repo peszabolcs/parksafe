@@ -32,7 +32,7 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const { refreshSession } = useAuthStore();
+  const { initializeAuth } = useAuthStore();
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -91,9 +91,14 @@ export default function LoginScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleAuthSuccess = async () => {
-    await refreshSession();
-  };
+  async function handleAuthSuccess() {
+    try {
+      // Re-initialize auth to set up the listener and get the new session
+      await initializeAuth();
+    } catch (error) {
+      console.error('Failed to initialize auth after login:', error);
+    }
+  }
 
   const handleAuthError = (errorMessage: string) => {
     setError(errorMessage);
