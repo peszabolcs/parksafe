@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking, Modal, FlatList, Text, Pressable, Animated, Dimensions } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Region, Marker, Callout } from 'react-native-maps';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -56,7 +56,7 @@ export default function MapScreen() {
   const { userLocation, markers, loading, searchAtLocation, clearSearchResults } = useLocationStore();
   
   const { currentTheme } = useThemeStore();
-  const { favourites, addFavourite, removeFavourite, isFavourite, loadFavourites } = useFavouritesStore();
+  const { addFavourite, removeFavourite, isFavourite, loadFavourites } = useFavouritesStore();
 
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');

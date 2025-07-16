@@ -1,4 +1,5 @@
 import { StyleSheet, View, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -41,6 +42,7 @@ export default function ProfileScreen() {
   const [tab, setTab] = useState<'activity' | 'reviews'>('activity');
   const [loggingOut, setLoggingOut] = useState(false);
   const { user, signOut } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
   // Theme colors
   const cardBg = useThemeColor({ light: '#F8FAFC', dark: '#18181B' }, 'background');
@@ -74,7 +76,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top + 10, 50) }]}>
         {/* Profile Card */}
         <ThemedView style={[styles.profileCard, { backgroundColor: cardBg, shadowColor: '#000' }]}> 
           <View style={styles.avatarRow}>
@@ -165,7 +167,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 16,
     paddingBottom: 32,
   },
   profileCard: {
