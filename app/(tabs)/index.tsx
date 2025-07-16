@@ -1,60 +1,25 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeStore } from '@/stores/themeStore';
 import { useLocationStore } from '@/stores/locationStore';
 import { useAuthStore } from '@/stores/authStore';
 import { router } from 'expo-router';
 
-const bestRated = [
-  {
-    icon: <MaterialCommunityIcons name="tools" size={24} color="#60A5FA" />,
-    title: 'Bringaszerviz Kft.',
-    rating: 4.8,
-    type: 'Szerviz',
-    typeColor: '#64748B',
-  },
-  {
-    icon: <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />,
-    title: 'Keleti Biciklitároló',
-    rating: 4.5,
-    type: 'Biciklitároló',
-    typeColor: '#22C55E',
-  },
-];
-
-const recentActivity = [
-  {
-    icon: <Ionicons name="time-outline" size={22} color="#94A3B8" />,
-    title: 'Keleti Biciklitároló',
-    subtitle: 'Foglalás - 2023.08.15',
-    iconBg: '#F1F5F9',
-    textColor: '#0F172A',
-  },
-  {
-    icon: <Ionicons name="star" size={22} color="#FBBF24" />,
-    title: 'Bringaszerviz Kft.',
-    subtitle: 'Értékelés (5★) - 2023.07.21',
-    iconBg: '#F1F5F9',
-    textColor: '#0F172A',
-  },
-];
 
 export default function HomeScreen() {
-  const { userLocation, markers, loading, error } = useLocationStore();
+  const { markers, loading, error } = useLocationStore();
   const { session, user } = useAuthStore();
+  const { currentTheme } = useThemeStore();
 
   // Theme-aware colors
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const cardBackgroundColor = useThemeColor({ light: '#fff', dark: '#1F2937' }, 'background');
-  const subtitleColor = useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text');
-  const secondaryTextColor = useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text');
-  const cardShadowColor = useThemeColor({ light: '#000', dark: '#000' }, 'text');
-  const iconBackgroundLight = useThemeColor({ light: '#ECFDF5', dark: '#064E3B' }, 'background');
+  const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1E293B' }, 'background');
+  const subtitleColor = useThemeColor({ light: '#64748B', dark: '#94A3B8' }, 'text');
+  const isDarkMode = currentTheme === 'dark';
 
   // Get top 3 nearby markers
   const nearby = useMemo(() => {
@@ -64,44 +29,128 @@ export default function HomeScreen() {
   const isLoggedIn = session && user;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <ThemedText style={styles.headerTitle} type="title">ParkSafe</ThemedText>
-      </View>
+    <View style={styles.container}>
+      {/* Modern Gradient Header */}
+      <LinearGradient
+        colors={isDarkMode ? ['#0F172A', '#1E293B'] : ['#22C55E', '#16A34A']}
+        style={styles.headerGradient}
+      >
+        <SafeAreaView edges={['top']}>
+          <View style={styles.headerContent}>
+            <View>
+              <ThemedText style={styles.headerGreeting}>
+                {isLoggedIn ? `Helló, ${user?.user_metadata?.username || 'Felhasználó'}!` : 'Üdvözöljük!'}
+              </ThemedText>
+              <ThemedText style={styles.headerTitle}>ParkSafe</ThemedText>
+            </View>
+            <TouchableOpacity 
+              style={styles.headerButton}
+              onPress={() => router.push('/notifications')}
+            >
+              <Ionicons name="notifications-outline" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
       
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Welcome Section */}
-        <ThemedText style={styles.welcomeTitle} type="title">
-          Üdvözöljük a ParkSafe-ben!
-        </ThemedText>
-        <ThemedText style={[styles.welcomeSubtitle, { color: subtitleColor }]}>
-          Találja meg a legközelebbi biciklitárolókat és szervizeket
-        </ThemedText>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <ThemedText style={styles.heroTitle}>
+            Keressen biztonságos biciklitárolókat és megbízható szervizeket
+          </ThemedText>
+          <ThemedText style={[styles.heroSubtitle, { color: subtitleColor }]}>
+            Több mint 1000+ ellenőrzött hely országszerte
+          </ThemedText>
+        </View>
         
-        {/* Main Buttons - Card Style */}
-        <View style={styles.mainButtonsRow}>
-          <TouchableOpacity style={[styles.mainButtonCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor, borderColor: '#4ADE80' }]}>
-            <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />
-            <ThemedText style={[styles.mainButtonCardLabel, { color: textColor }]}>Biciklitárolók</ThemedText>
+        {/* Modern Action Cards */}
+        <View style={styles.actionCardsContainer}>
+          <TouchableOpacity 
+            style={[styles.primaryActionCard, { backgroundColor: cardBackgroundColor }]}
+            onPress={() => router.push('/(tabs)/map')}
+          >
+            <LinearGradient
+              colors={['#22C55E', '#16A34A']}
+              style={styles.actionCardGradient}
+            >
+              <View style={styles.actionCardContent}>
+                <MaterialCommunityIcons name="bike" size={32} color="white" />
+                <View style={styles.actionCardText}>
+                  <ThemedText style={styles.actionCardTitle}>Biciklitárolók</ThemedText>
+                  <ThemedText style={styles.actionCardSubtitle}>Keresse meg a legközelebbi biztonságos tárolókat</ThemedText>
+                </View>
+                <Ionicons name="arrow-forward" size={24} color="white" />
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.mainButtonCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor, borderColor: '#60A5FA' }]}>
-            <MaterialCommunityIcons name="tools" size={24} color="#60A5FA" />
-            <ThemedText style={[styles.mainButtonCardLabel, { color: textColor }]}>Szervizek</ThemedText>
+          
+          <TouchableOpacity 
+            style={[styles.primaryActionCard, { backgroundColor: cardBackgroundColor }]}
+            onPress={() => router.push('/(tabs)/map')}
+          >
+            <LinearGradient
+              colors={['#3B82F6', '#2563EB']}
+              style={styles.actionCardGradient}
+            >
+              <View style={styles.actionCardContent}>
+                <MaterialCommunityIcons name="tools" size={32} color="white" />
+                <View style={styles.actionCardText}>
+                  <ThemedText style={styles.actionCardTitle}>Szervizek</ThemedText>
+                  <ThemedText style={styles.actionCardSubtitle}>Találjon szakértő javítókat közelben</ThemedText>
+                </View>
+                <Ionicons name="arrow-forward" size={24} color="white" />
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
         
+        {/* Modern Stats Section */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statCard, { backgroundColor: cardBackgroundColor }]}>
+            <View style={[styles.statIcon, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="location" size={20} color="#F59E0B" />
+            </View>
+            <ThemedText style={styles.statNumber}>{markers.length}</ThemedText>
+            <ThemedText style={[styles.statLabel, { color: subtitleColor }]}>Aktív helyek</ThemedText>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: cardBackgroundColor }]}>
+            <View style={[styles.statIcon, { backgroundColor: '#DCFCE7' }]}>
+              <Ionicons name="star" size={20} color="#22C55E" />
+            </View>
+            <ThemedText style={styles.statNumber}>4.8</ThemedText>
+            <ThemedText style={[styles.statLabel, { color: subtitleColor }]}>Átlag értékelés</ThemedText>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: cardBackgroundColor }]}>
+            <View style={[styles.statIcon, { backgroundColor: '#DBEAFE' }]}>
+              <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
+            </View>
+            <ThemedText style={styles.statNumber}>100%</ThemedText>
+            <ThemedText style={[styles.statLabel, { color: subtitleColor }]}>Biztonságos</ThemedText>
+          </View>
+        </View>
+        
         {/* Nearby Section */}
-        <View style={styles.sectionHeaderRow}>
-          <ThemedText style={styles.sectionTitle} type="subtitle">Közelben</ThemedText>
-          <ThemedText
-            style={[styles.sectionAll, { color: subtitleColor }]}
+        <View style={styles.modernSectionHeader}>
+          <View>
+            <ThemedText style={styles.sectionTitle}>Közelben lévő helyek</ThemedText>
+            <ThemedText style={[styles.sectionSubtitle, { color: subtitleColor }]}>
+              A legközelebbi biciklitárolók és szervizek
+            </ThemedText>
+          </View>
+          <TouchableOpacity 
+            style={styles.sectionButton}
             onPress={() => {
               router.push({ pathname: '/(tabs)/map', params: { openList: Date.now().toString() } });
             }}
           >
-            Összes
-          </ThemedText>
+            <ThemedText style={styles.sectionButtonText}>Összes</ThemedText>
+            <Ionicons name="arrow-forward" size={16} color="#22C55E" />
+          </TouchableOpacity>
         </View>
         
         <View>
@@ -175,7 +224,7 @@ export default function HomeScreen() {
               {nearby.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.nearbyCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}
+                  style={[styles.modernNearbyCard, { backgroundColor: cardBackgroundColor }]}
                   onPress={() => {
                     const timestamp = Date.now().toString();
                     router.push({ 
@@ -188,72 +237,57 @@ export default function HomeScreen() {
                       } 
                     });
                   }}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
                 > 
-                  <View style={[styles.nearbyIcon, { backgroundColor: item.type === 'parking' ? iconBackgroundLight : '#EFF6FF' }]}> 
-                    {item.type === 'parking' ? (
-                      <MaterialCommunityIcons name="bike" size={24} color="#4ADE80" />
-                    ) : (
-                      <MaterialCommunityIcons name="tools" size={24} color="#60A5FA" />
-                    )}
-                  </View>
-                  <View style={styles.nearbyInfo}>
-                    <ThemedText style={styles.nearbyTitle}>{item.title}</ThemedText>
-                    <View style={styles.nearbyDetails}>
-                      <Ionicons name="location-outline" size={14} color={secondaryTextColor} />
-                      <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>
-                        {item.distance ? (item.distance / 1000).toFixed(2) : '---'} km
-                      </ThemedText>
-                      <ThemedText style={[styles.nearbyDetailDot, { color: secondaryTextColor }]}>•</ThemedText>
-                      <Ionicons name="star" size={14} color="#FBBF24" />
-                      <ThemedText style={[styles.nearbyDetailText, { color: secondaryTextColor }]}>
-                        {item.type === 'parking' ? '4.5' : '4.8'}
-                      </ThemedText>
+                  <View style={styles.modernNearbyContent}>
+                    <View style={[
+                      styles.modernNearbyIcon, 
+                      { backgroundColor: item.type === 'parking' ? '#DCFCE7' : '#DBEAFE' }
+                    ]}> 
+                      {item.type === 'parking' ? (
+                        <MaterialCommunityIcons name="bike" size={28} color="#22C55E" />
+                      ) : (
+                        <MaterialCommunityIcons name="tools" size={28} color="#3B82F6" />
+                      )}
+                    </View>
+                    <View style={styles.modernNearbyInfo}>
+                      <ThemedText style={styles.modernNearbyTitle}>{item.title}</ThemedText>
+                      <View style={styles.modernNearbyMeta}>
+                        <View style={styles.modernNearbyDistance}>
+                          <Ionicons name="location" size={16} color={subtitleColor} />
+                          <ThemedText style={[styles.modernNearbyDetailText, { color: subtitleColor }]}>
+                            {item.distance ? (item.distance / 1000).toFixed(2) : '---'} km
+                          </ThemedText>
+                        </View>
+                        <View style={styles.modernNearbyRating}>
+                          <Ionicons name="star" size={16} color="#F59E0B" />
+                          <ThemedText style={[styles.modernNearbyDetailText, { color: subtitleColor }]}>
+                            {item.type === 'parking' ? '4.5' : '4.8'}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={[
+                        styles.modernNearbyBadge,
+                        { backgroundColor: item.type === 'parking' ? '#DCFCE7' : '#DBEAFE' }
+                      ]}>
+                        <ThemedText style={[
+                          styles.modernNearbyBadgeText,
+                          { color: item.type === 'parking' ? '#16A34A' : '#2563EB' }
+                        ]}>
+                          {item.type === 'parking' ? 'Biciklitároló' : 'Szerviz'}
+                        </ThemedText>
+                      </View>
                     </View>
                   </View>
+                  <Ionicons name="chevron-forward" size={20} color={subtitleColor} />
                 </TouchableOpacity>
               ))}
             </>
           )}
         </View>
 
-        {/* Best Rated Section */}
-        <View style={styles.sectionHeaderRow}>
-          <ThemedText style={styles.sectionTitle} type="subtitle">Legjobban értékelt</ThemedText>
-        </View>
-        <View style={styles.bestRatedContainer}>
-          {bestRated.map((item, index) => (
-            <View key={index} style={[styles.bestRatedCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}>
-              <View style={styles.bestRatedIcon}>{item.icon}</View>
-              <View style={styles.bestRatedInfo}>
-                <ThemedText style={[styles.bestRatedTitle, { color: textColor }]}>{item.title}</ThemedText>
-                <View style={styles.bestRatedDetails}>
-                  <Ionicons name="star" size={14} color="#FBBF24" />
-                  <ThemedText style={[styles.bestRatedRating, { color: secondaryTextColor }]}>{item.rating}</ThemedText>
-                  <ThemedText style={[styles.bestRatedType, { color: item.typeColor }]}>{item.type}</ThemedText>
-                </View>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Recent Activity Section */}
-        <View style={styles.sectionHeaderRow}>
-          <ThemedText style={styles.sectionTitle} type="subtitle">Legutóbbi tevékenységek</ThemedText>
-        </View>
-        <View style={styles.recentActivityContainer}>
-          {recentActivity.map((item, index) => (
-            <View key={index} style={[styles.recentActivityCard, { backgroundColor: cardBackgroundColor, shadowColor: cardShadowColor }]}>
-              <View style={[styles.recentActivityIcon, { backgroundColor: item.iconBg }]}>{item.icon}</View>
-              <View style={styles.recentActivityInfo}>
-                <ThemedText style={[styles.recentActivityTitle, { color: item.textColor }]}>{item.title}</ThemedText>
-                <ThemedText style={[styles.recentActivitySubtitle, { color: item.textColor }]}>{item.subtitle}</ThemedText>
-              </View>
-            </View>
-          ))}
-        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -261,77 +295,215 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'transparent',
+  headerGradient: {
+    paddingBottom: 20,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-  welcomeTitle: {
-    paddingTop: 4,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  welcomeSubtitle: {
-    marginBottom: 16,
-  },
-  mainButtonsRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 24,
-  },
-  mainButtonCard: {
-    flex: 1,
-    borderRadius: 16,
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginHorizontal: 0,
-    flexDirection: 'row',
-    gap: 12,
-    borderWidth: 2,
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  mainButtonCardLabel: {
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  sectionHeaderRow: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 8,
-    marginBottom: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
-  sectionTitle: {
+  headerGreeting: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 3,
+  },
+  headerTitle: {
+    fontSize: 24,
     fontWeight: 'bold',
-    fontSize: 18,
+    color: 'white',
   },
-  sectionAll: {
-    fontWeight: '500',
-    fontSize: 15,
+  headerButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
   },
-  nearbyCard: {
+  scrollView: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  heroSection: {
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    lineHeight: 32,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  actionCardsContainer: {
+    gap: 16,
+    marginBottom: 32,
+  },
+  primaryActionCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  actionCardGradient: {
+    padding: 20,
+    borderRadius: 20,
+  },
+  actionCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    shadowOpacity: 0.04,
+    gap: 16,
+  },
+  actionCardText: {
+    flex: 1,
+  },
+  actionCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
+  },
+  actionCardSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 20,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 32,
+  },
+  statCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  modernSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  sectionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 12,
+  },
+  sectionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#22C55E',
+  },
+  modernNearbyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  modernNearbyContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 16,
+  },
+  modernNearbyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modernNearbyInfo: {
+    flex: 1,
+    gap: 8,
+  },
+  modernNearbyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    lineHeight: 22,
+  },
+  modernNearbyMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  modernNearbyDistance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  modernNearbyRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  modernNearbyDetailText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modernNearbyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  modernNearbyBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   nearbyIcon: {
     width: 40,
@@ -432,9 +604,5 @@ const styles = StyleSheet.create({
   recentActivityTitle: {
     fontWeight: 'bold',
     fontSize: 15,
-  },
-  recentActivitySubtitle: {
-    fontSize: 14,
-    marginTop: 1,
   },
 });
