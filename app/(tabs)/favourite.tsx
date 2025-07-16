@@ -9,10 +9,13 @@ import {
   ActivityIndicator,
   Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeStore } from '@/stores/themeStore';
 import { useFavouritesStore } from '@/stores/favouritesStore';
 import { useAuthStore } from '@/stores/authStore';
 import { MapMarker, getDistance } from '@/lib/markers';
@@ -32,6 +35,7 @@ export default function FavouritesScreen() {
   } = useFavouritesStore();
   const { user } = useAuthStore();
   const { userLocation } = useLocationStore();
+  const { currentTheme } = useThemeStore();
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -42,6 +46,7 @@ export default function FavouritesScreen() {
   const secondaryTextColor = useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text');
   const errorColor = useThemeColor({ light: '#EF4444', dark: '#F87171' }, 'text');
   const emptyStateColor = useThemeColor({ light: '#9CA3AF', dark: '#6B7280' }, 'text');
+  const isDarkMode = currentTheme === 'dark';
 
   useEffect(() => {
     if (user) {
@@ -236,13 +241,18 @@ export default function FavouritesScreen() {
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <View style={styles.headerContent}>
-          <ThemedText style={[styles.headerTitle, { color: textColor }]}>
-            Kedvencek
-          </ThemedText>
-        </View>
-      </View>
+      <LinearGradient
+        colors={isDarkMode ? ['#0F172A', '#1E293B'] : ['#22C55E', '#16A34A']}
+        style={styles.headerGradient}
+      >
+        <SafeAreaView edges={['top']}>
+          <View style={styles.headerContent}>
+            <ThemedText style={styles.headerTitle}>
+              Kedvencek
+            </ThemedText>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
 
       {/* Content */}
       {loading && favourites.length === 0 ? (
@@ -281,20 +291,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 60,
+  headerGradient: {
     paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
   },
   listContent: {
     padding: 20,

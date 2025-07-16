@@ -1,11 +1,13 @@
 import { StyleSheet, View, TouchableOpacity, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeStore } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
 
 const activities = [
@@ -42,7 +44,7 @@ export default function ProfileScreen() {
   const [tab, setTab] = useState<'activity' | 'reviews'>('activity');
   const [loggingOut, setLoggingOut] = useState(false);
   const { user, signOut } = useAuthStore();
-  const insets = useSafeAreaInsets();
+  const { currentTheme } = useThemeStore();
 
   // Theme colors
   const cardBg = useThemeColor({ light: '#F8FAFC', dark: '#18181B' }, 'background');
@@ -58,6 +60,7 @@ export default function ProfileScreen() {
   const avatarBg = useThemeColor({ light: '#E5E7EB', dark: '#27272A' }, 'background');
   const iconSettings = useThemeColor({ light: '#0F172A', dark: '#F1F5F9' }, 'text');
   const iconLogout = useThemeColor({ light: '#EF4444', dark: '#F87171' }, 'text');
+  const isDarkMode = currentTheme === 'dark';
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -76,7 +79,21 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top + 10, 50) }]}>
+      {/* Header */}
+      <LinearGradient
+        colors={isDarkMode ? ['#0F172A', '#1E293B'] : ['#22C55E', '#16A34A']}
+        style={styles.headerGradient}
+      >
+        <SafeAreaView edges={['top']}>
+          <View style={styles.headerContent}>
+            <ThemedText style={styles.headerTitle}>
+              Profil
+            </ThemedText>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+      
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Profile Card */}
         <ThemedView style={[styles.profileCard, { backgroundColor: cardBg, shadowColor: '#000' }]}> 
           <View style={styles.avatarRow}>
@@ -166,9 +183,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerGradient: {
+    paddingBottom: 20,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+  },
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 32,
+    paddingTop: 20,
   },
   profileCard: {
     borderRadius: 16,
