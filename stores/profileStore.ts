@@ -344,6 +344,14 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
       // Clear local state
       set({ profile: null, loading: false });
+      
+      // Force sign out from Supabase auth after successful account deletion
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.error('Error signing out after account deletion:', signOutError);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error deleting account:', error);

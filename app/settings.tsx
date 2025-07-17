@@ -118,7 +118,8 @@ export default function SettingsScreen() {
                           [
                             {
                               text: 'OK',
-                              onPress: () => router.replace('/login')
+                              // Ne navigáljunk manuálisan, az auth state változás automatikusan kezelje
+                              onPress: () => {}
                             }
                           ]
                         );
