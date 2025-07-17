@@ -144,8 +144,9 @@ export default function MapScreen() {
     const roundedLatDelta = Math.round(region.latitudeDelta * 1000) / 1000;
     const roundedLngDelta = Math.round(region.longitudeDelta * 1000) / 1000;
     
-    return clusterMarkers(markers, roundedLatDelta, roundedLngDelta);
-  }, [markers, Math.round(region.latitudeDelta * 1000), Math.round(region.longitudeDelta * 1000)]);
+    // Pass selected marker ID to prevent it from being clustered
+    return clusterMarkers(markers, roundedLatDelta, roundedLngDelta, selectedMarker?.id);
+  }, [markers, Math.round(region.latitudeDelta * 1000), Math.round(region.longitudeDelta * 1000), selectedMarker?.id]);
 
   const filteredMarkers = useMemo(() => {
     if (listFilter === 'all') return markers;
@@ -185,7 +186,7 @@ export default function MapScreen() {
         mapRef.current?.animateToRegion(newRegion, 500);
       }
     }
-  }, [params.selectedMarkerId, params.timestamp, markers]); // Add timestamp to dependencies
+  }, [params.selectedMarkerId, params.timestamp, markers]);
 
   useEffect(() => {
     if (params.openList) {
@@ -200,6 +201,38 @@ export default function MapScreen() {
       latitude: newRegion.latitude,
       longitude: newRegion.longitude,
     });
+  }, []);
+
+  const handleMapReady = useCallback(() => {
+    // Force region update when map is ready to ensure clustering works initially
+    if (mapRef.current) {
+      mapRef.current.getMapBoundaries().then((boundaries) => {
+        if (boundaries) {
+          const { northEast, southWest } = boundaries;
+          const latitudeDelta = northEast.latitude - southWest.latitude;
+          const longitudeDelta = northEast.longitude - southWest.longitude;
+          const centerLatitude = (northEast.latitude + southWest.latitude) / 2;
+          const centerLongitude = (northEast.longitude + southWest.longitude) / 2;
+
+          const newRegion = {
+            latitude: centerLatitude,
+            longitude: centerLongitude,
+            latitudeDelta,
+            longitudeDelta,
+          };
+
+          setRegion(newRegion);
+          setCurrentMapCenter({
+            latitude: centerLatitude,
+            longitude: centerLongitude,
+          });
+        }
+      }).catch(() => {
+        // Fallback: if getMapBoundaries fails, just trigger a minimal region update
+        // to force clustering recalculation
+        setRegion(prevRegion => ({ ...prevRegion }));
+      });
+    }
   }, []);
 
   const handleSearchAtCurrentLocation = useCallback(async () => {
@@ -334,7 +367,7 @@ export default function MapScreen() {
           anchor={{ x: 0.5, y: 0.5 }}
           centerOffset={{ x: 0, y: 0 }}
           zIndex={200}
-          flat={true}
+          flat={false}
           style={{ backgroundColor: 'transparent' }}
         >
           <View style={[
@@ -358,8 +391,8 @@ export default function MapScreen() {
       const iconColor = isParking ? '#22C55E' : '#3B82F6';
       const markerBackgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
       const isSelected = selectedMarker?.id === marker.id;
-      const markerBorderColor = isDarkMode ? '#fff' : '#000';
       const isMarkerFavourite = isFavourite(marker.id);
+      const markerBorderColor = isMarkerFavourite ? '#FFD700' : (isDarkMode ? '#fff' : '#000');
 
       // Use image markers on iOS to avoid gray circle issue
       if (shouldUseImageMarkers()) {
@@ -397,7 +430,7 @@ export default function MapScreen() {
           anchor={{ x: 0.5, y: 0.5 }}
           centerOffset={{ x: 0, y: 0 }}
           zIndex={isSelected ? 1000 : 100}
-          flat={true}
+          flat={false}
           style={{ backgroundColor: 'transparent' }}
         >
           <View style={[
@@ -465,6 +498,7 @@ export default function MapScreen() {
         style={StyleSheet.absoluteFill}
         initialRegion={region}
         onRegionChangeComplete={handleRegionChangeComplete}
+        onMapReady={handleMapReady}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}

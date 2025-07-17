@@ -58,7 +58,8 @@ const calculateClusterCenter = (markers: MapMarker[]) => {
 export const clusterMarkers = (
   markers: MapMarker[],
   latitudeDelta: number,
-  longitudeDelta: number
+  longitudeDelta: number,
+  selectedMarkerId?: string
 ): ClusteredMarker[] => {
   if (markers.length === 0) return [];
 
@@ -66,11 +67,17 @@ export const clusterMarkers = (
   const clustered: ClusteredMarker[] = [];
   const processed = new Set<string>();
 
-  for (const marker of markers) {
+  // Separate selected marker from clustering process
+  const selectedMarker = selectedMarkerId ? markers.find(m => m.id === selectedMarkerId) : null;
+  const markersToCluster = selectedMarkerId 
+    ? markers.filter(m => m.id !== selectedMarkerId)
+    : markers;
+
+  for (const marker of markersToCluster) {
     if (processed.has(marker.id)) continue;
 
-    // Find all markers within cluster distance
-    const nearbyMarkers = markers.filter(otherMarker => {
+    // Find all markers within cluster distance (excluding selected marker)
+    const nearbyMarkers = markersToCluster.filter(otherMarker => {
       if (processed.has(otherMarker.id) || otherMarker.id === marker.id) {
         return false;
       }
@@ -129,6 +136,11 @@ export const clusterMarkers = (
 
       clustered.push(clusterMarker);
     }
+  }
+
+  // Add selected marker as standalone (never clustered)
+  if (selectedMarker) {
+    clustered.push(selectedMarker);
   }
 
   return clustered;
