@@ -132,6 +132,9 @@ export default function RootLayout() {
         <Stack.Screen name="help" options={{ headerShown: false }} />
         <Stack.Screen name="terms" options={{ headerShown: false }} />
         <Stack.Screen name="privacy" options={{ headerShown: false }} />
+        <Stack.Screen name="profile-info" options={{ headerShown: false }} />
+        <Stack.Screen name="change-email" options={{ headerShown: false }} />
+        <Stack.Screen name="change-password" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={currentTheme === "dark" ? "light" : "dark"} />

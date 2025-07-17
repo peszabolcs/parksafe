@@ -1,19 +1,22 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { StyleSheet, ScrollView, View, TouchableOpacity, Alert, Modal, Dimensions, Animated, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { useProfileStore } from '@/stores/profileStore';
 import { router } from 'expo-router';
 
 const { height: screenHeight } = Dimensions.get('window');
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuthStore();
-  const { themeMode, setThemeMode } = useThemeStore();
+  const { themeMode, setThemeMode, currentTheme } = useThemeStore();
+  const { deleteAccount } = useProfileStore();
   const [showThemeModal, setShowThemeModal] = useState(false);
   const modalAnim = useRef(new Animated.Value(screenHeight)).current;
   
@@ -24,6 +27,7 @@ export default function SettingsScreen() {
   const borderColor = useThemeColor({ light: '#E5E7EB', dark: '#374151' }, 'background');
   const secondaryTextColor = useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'text');
   const shadowColor = useThemeColor({ light: '#000', dark: '#000' }, 'text');
+  const isDarkMode = currentTheme === 'dark';
 
   const themeOptions = [
     { value: 'light' as const, label: 'Világos', icon: 'sunny', description: 'Világos téma használata' },
@@ -86,6 +90,53 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Fiók törlése',
+      'Ez a művelet véglegesen törli a fiókját és az összes kapcsolódó adatot. Ez a művelet nem vonható vissza.\n\nBiztosan törölni szeretné a fiókját?',
+      [
+        { text: 'Mégse', style: 'cancel' },
+        { 
+          text: 'Fiók törlése', 
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Utolsó megerősítés',
+              'Ez tényleg az utolsó lehetőség a visszalépésre. A fiók törlése után minden adat elvész.\n\nValóban törölni szeretné a fiókját?',
+              [
+                { text: 'Mégsem', style: 'cancel' },
+                {
+                  text: 'Igen, törlés',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      const success = await deleteAccount();
+                      if (success) {
+                        Alert.alert(
+                          'Fiók törölve',
+                          'A fiók sikeresen törölve lett.',
+                          [
+                            {
+                              text: 'OK',
+                              // Ne navigáljunk manuálisan, az auth state változás automatikusan kezelje
+                              onPress: () => {}
+                            }
+                          ]
+                        );
+                      }
+                    } catch (error) {
+                      Alert.alert('Hiba', 'Nem sikerült törölni a fiókot');
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        }
+      ]
+    );
+  };
+
   const SettingsItem = ({ icon, title, subtitle, onPress, showArrow = true, customContent }: {
     icon: string;
     title: string;
@@ -131,15 +182,28 @@ export default function SettingsScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: borderColor }]}>
-          <ThemedText style={[styles.headerTitle, { color: textColor }]}>
-            Beállítások
-          </ThemedText>
-        </View>
+      {/* Header */}
+      <LinearGradient
+        colors={isDarkMode ? ['#0F172A', '#1E293B'] : ['#22C55E', '#16A34A']}
+        style={styles.headerGradient}
+      >
+        <SafeAreaView edges={['top']}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+            <ThemedText style={styles.headerTitle}>
+              Beállítások
+            </ThemedText>
+            <View style={styles.headerPlaceholder} />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* User Profile Section */}
           {user && (
             <>
@@ -149,7 +213,13 @@ export default function SettingsScreen() {
                   icon="person-outline"
                   title="Profilinformációk"
                   subtitle={user.email || 'Nem elérhető'}
-                  onPress={() => Alert.alert('Profil', 'Profilszerkesztés hamarosan elérhető')}
+                  onPress={() => router.push('/profile-info')}
+                />
+                <SettingsItem
+                  icon="key-outline"
+                  title="Jelszó módosítás"
+                  subtitle="Fiók biztonságának növelése"
+                  onPress={() => router.push('/change-password')}
                 />
                 <SettingsItem
                   icon="notifications-outline"
@@ -218,15 +288,31 @@ export default function SettingsScreen() {
               <View style={styles.section}>
                 <TouchableOpacity
                   style={[styles.settingsItem, styles.dangerItem, { backgroundColor: cardBackground, borderColor }]}
-                  onPress={handleSignOut}
+                  onPress={handleDeleteAccount}
                   activeOpacity={0.7}
                 >
                   <View style={styles.settingsItemLeft}>
                     <View style={[styles.iconContainer, { backgroundColor: '#FEF2F2' }]}>
-                      <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                      <Ionicons name="trash-outline" size={20} color="#EF4444" />
                     </View>
                     <View style={styles.textContainer}>
                       <ThemedText style={[styles.settingsTitle, { color: '#EF4444' }]}>
+                        Fiók törlése
+                      </ThemedText>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.settingsItem, { backgroundColor: cardBackground, borderColor }]}
+                  onPress={handleSignOut}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.settingsItemLeft}>
+                    <View style={[styles.iconContainer, { backgroundColor: borderColor }]}>
+                      <Ionicons name="log-out-outline" size={20} color={textColor} />
+                    </View>
+                    <View style={styles.textContainer}>
+                      <ThemedText style={[styles.settingsTitle, { color: textColor }]}>
                         Kijelentkezés
                       </ThemedText>
                     </View>
@@ -238,7 +324,6 @@ export default function SettingsScreen() {
 
           <View style={styles.bottomSpacing} />
         </ScrollView>
-      </SafeAreaView>
 
       {/* Theme Selection Modal */}
       <Modal
@@ -341,18 +426,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
+  headerGradient: {
     paddingBottom: 20,
-    borderBottomWidth: 1,
+  },
+  headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  backButton: {
+    padding: 4,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
+    color: 'white',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: 32,
   },
   scrollView: {
     flex: 1,
