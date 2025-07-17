@@ -9,13 +9,12 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useLocationStore } from '@/stores/locationStore';
 import { useFavouritesStore } from '@/stores/favouritesStore';
 import { MapMarker, getDistance } from '@/lib/markers';
-import { generateMarkerImageUri, shouldUseImageMarkers, clearMarkerCache } from '@/lib/markerUtils';
+import { clearMarkerCache } from '@/lib/markerUtils';
 import { useLocalSearchParams } from 'expo-router';
 import { 
   clusterMarkers, 
   isClusterMarker, 
   getClusterDominantType, 
-  getClusterBreakdown,
   ClusteredMarker,
   ClusterMarker 
 } from '@/lib/clustering';
@@ -85,16 +84,13 @@ export default function MapScreen() {
     return () => subscription?.remove();
   }, [modalAnim]);
 
-  // iOS memory management - clear marker cache periodically
+  // iOS memory management - simplified approach
   useEffect(() => {
     if (Platform.OS === 'ios') {
-      const memoryCleanup = setInterval(() => {
-        if (markers.length > 100) {
-          clearMarkerCache();
-        }
-      }, 60000); // Clear every minute if there are many markers
-
-      return () => clearInterval(memoryCleanup);
+      // Clear marker cache on mount and when markers change significantly
+      if (markers.length > 50) {
+        clearMarkerCache();
+      }
     }
   }, [markers.length]);
 
@@ -161,15 +157,25 @@ export default function MapScreen() {
     }
   }, [userLocation, currentMapCenter, clearSearchResults]);
 
-  // Cluster markers based on current zoom level (throttled for smooth performance)
+  // Cluster markers based on current zoom level (iOS: NO CLUSTERING - causes crash)
   const clusteredMarkers = useMemo(() => {
-    // Round zoom levels to reduce clustering calculations during smooth zoom gestures
+    // iOS: NO CLUSTERING AT ALL - any clustering algorithm crashes
+    if (Platform.OS === 'ios') {
+      console.log('iOS: NO CLUSTERING - using raw markers:', markers.length);
+      return markers;
+    }
+    
+    // Android: Use full clustering functionality
     const roundedLatDelta = Math.round(region.latitudeDelta * 1000) / 1000;
     const roundedLngDelta = Math.round(region.longitudeDelta * 1000) / 1000;
     
-    // Pass selected marker ID to prevent it from being clustered
+    // Skip clustering if markers array is empty or region is unstable
+    if (markers.length === 0 || roundedLatDelta === 0 || roundedLngDelta === 0) {
+      return markers;
+    }
+    
     return clusterMarkers(markers, roundedLatDelta, roundedLngDelta, selectedMarker?.id);
-  }, [markers, Math.round(region.latitudeDelta * 1000), Math.round(region.longitudeDelta * 1000), selectedMarker?.id]);
+  }, [markers, region.latitudeDelta, region.longitudeDelta, selectedMarker?.id]);
 
   const filteredMarkers = useMemo(() => {
     if (listFilter === 'all') return markers;
@@ -356,9 +362,11 @@ export default function MapScreen() {
     loadFavourites();
   }, [loadFavourites]);
 
-  // Clear marker cache on mount to ensure fresh markers
+  // Clear marker cache on mount for iOS stability
   useEffect(() => {
-    clearMarkerCache();
+    if (Platform.OS === 'ios') {
+      clearMarkerCache();
+    }
   }, []);
 
   const handleListItemPress = useCallback((marker: MapMarker) => {
@@ -376,28 +384,34 @@ export default function MapScreen() {
 
   const renderClusteredMarker = useCallback((clusteredMarker: ClusteredMarker) => {
     if (isClusterMarker(clusteredMarker)) {
-      // Render cluster marker
+      // Render cluster marker - use simple pin markers on iOS to prevent crash
       const dominantType = getClusterDominantType(clusteredMarker);
       const isParking = dominantType === 'parking';
       const clusterBackgroundColor = isParking ? '#22C55E' : '#3B82F6';
-      const clusterBorderColor = isDarkMode ? '#fff' : '#000';
 
+      // iOS: No cluster markers (clustering disabled)
+      if (Platform.OS === 'ios') {
+        return null; // Should never happen since clustering is disabled on iOS
+      }
+
+      // Android: Use view markers with clustering count
       return (
         <Marker
           key={clusteredMarker.id}
           coordinate={clusteredMarker.coordinate}
           onPress={() => handleClusterPress(clusteredMarker)}
+          tracksViewChanges={false}
           anchor={{ x: 0.5, y: 0.5 }}
           centerOffset={{ x: 0, y: 0 }}
           zIndex={200}
-          flat={false}
-          style={{ backgroundColor: 'transparent' }}
         >
           <View style={[
             styles.clusterContainer,
             {
               backgroundColor: clusterBackgroundColor,
-              borderColor: clusterBorderColor,
+              borderColor: '#fff',
+              shadowOpacity: 0.2,
+              elevation: 4,
             }
           ]}>
             <ThemedText style={styles.clusterText}>
@@ -407,7 +421,7 @@ export default function MapScreen() {
         </Marker>
       );
     } else {
-      // Render regular marker
+      // Render regular marker - use simple pin markers on iOS
       const marker = clusteredMarker as MapMarker;
       const isParking = marker.type === 'parking';
       const iconName = isParking ? 'bicycle' : 'build';
@@ -415,17 +429,10 @@ export default function MapScreen() {
       const markerBackgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
       const isSelected = selectedMarker?.id === marker.id;
       const isMarkerFavourite = isFavourite(marker.id);
-      const markerBorderColor = isMarkerFavourite ? '#FFD700' : (isDarkMode ? '#fff' : '#000');
+      const markerBorderColor = isMarkerFavourite ? '#FFD700' : '#fff';
 
-      // Use image markers on iOS to avoid gray circle issue
-      if (shouldUseImageMarkers()) {
-        const imageUri = generateMarkerImageUri(
-          marker.type,
-          isSelected,
-          isDarkMode,
-          isMarkerFavourite
-        );
-
+      // iOS: Test custom view markers (no clustering yet)
+      if (Platform.OS === 'ios') {
         return (
           <Marker
             key={marker.id}
@@ -433,15 +440,43 @@ export default function MapScreen() {
             title={marker.title}
             description={marker.description}
             onPress={() => handleMarkerPress(marker)}
-            image={{ uri: imageUri }}
             anchor={{ x: 0.5, y: 0.5 }}
-            centerOffset={{ x: 0, y: 0 }}
             zIndex={isSelected ? 1000 : 100}
-          />
+            tracksViewChanges={false}
+          >
+            <View style={[
+              styles.markerContainer, 
+              { 
+                backgroundColor: markerBackgroundColor,
+                borderColor: markerBorderColor,
+                borderWidth: isSelected ? 3 : 2,
+                // iOS: Minimal styling to test stability
+                shadowOpacity: 0,
+                elevation: 0,
+              }
+            ]}>
+              <Ionicons name={iconName as any} size={14} color={iconColor} />
+              {isMarkerFavourite && (
+                <View style={[
+                  styles.starOverlay, 
+                  { 
+                    position: 'absolute', 
+                    top: -4, 
+                    right: -4,
+                    backgroundColor: '#fff',
+                    shadowOpacity: 0,
+                    elevation: 0,
+                  }
+                ]}>
+                  <Ionicons name="star" size={12} color="#FFD700" />
+                </View>
+              )}
+            </View>
+          </Marker>
         );
       }
 
-      // Use custom view markers for all platforms
+      // Android: Use view markers with icons and styling
       return (
         <Marker
           key={marker.id}
@@ -449,12 +484,10 @@ export default function MapScreen() {
           title={marker.title}
           description={marker.description}
           onPress={() => handleMarkerPress(marker)}
-          tracksViewChanges={Platform.OS === 'ios' ? false : true}
+          tracksViewChanges={false}
           anchor={{ x: 0.5, y: 0.5 }}
           centerOffset={{ x: 0, y: 0 }}
           zIndex={isSelected ? 1000 : 100}
-          flat={false}
-          style={{ backgroundColor: 'transparent' }}
         >
           <View style={[
             styles.markerContainer, 
@@ -468,7 +501,17 @@ export default function MapScreen() {
           ]}>
             <Ionicons name={iconName as any} size={14} color={iconColor} />
             {isMarkerFavourite && (
-              <View style={[styles.starOverlay, { position: 'absolute', top: -4, right: -4 }]}>
+              <View style={[
+                styles.starOverlay, 
+                { 
+                  position: 'absolute', 
+                  top: -4, 
+                  right: -4,
+                  backgroundColor: '#fff',
+                  shadowOpacity: 0.2,
+                  elevation: 3,
+                }
+              ]}>
                 <Ionicons name="star" size={12} color="#FFD700" />
               </View>
             )}
@@ -476,11 +519,13 @@ export default function MapScreen() {
         </Marker>
       );
     }
-  }, [selectedMarker, isDarkMode, handleMarkerPress, handleClusterPress, isFavourite]);
+  }, [selectedMarker, handleMarkerPress, handleClusterPress, isFavourite]);
 
   // Memoize markers to reduce re-renders
   const renderedMarkers = useMemo(() => {
-    return clusteredMarkers.map(renderClusteredMarker);
+    const markers = clusteredMarkers.map(renderClusteredMarker);
+    console.log(`Rendering ${markers.length} markers (${clusteredMarkers.length} total) - iOS using simplified pin markers`);
+    return markers;
   }, [clusteredMarkers, renderClusteredMarker]);
 
   if (loading && markers.length === 0) {
@@ -498,11 +543,15 @@ export default function MapScreen() {
           toolbarEnabled={false}
           customMapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
                   mapType="standard"
-        rotateEnabled={Platform.OS === 'ios' ? false : true}
+        rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}
+        // @ts-ignore - Using deprecated zoom props as camera doesn't support min/max constraints
         maxZoomLevel={Platform.OS === 'ios' ? 18 : 20}
         minZoomLevel={Platform.OS === 'ios' ? 8 : 3}
+        loadingEnabled={true}
+        loadingIndicatorColor="#3B82F6"
+        loadingBackgroundColor={isDarkMode ? '#1F2937' : '#fff'}
       />
         
         <View style={[styles.loadingOverlay, { backgroundColor: backgroundColor + '90' }]}>
@@ -531,11 +580,15 @@ export default function MapScreen() {
         toolbarEnabled={false}
         customMapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         mapType="standard"
-        rotateEnabled={Platform.OS === 'ios' ? false : true}
+        rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}
+        // @ts-ignore - Using deprecated zoom props as camera doesn't support min/max constraints
         maxZoomLevel={Platform.OS === 'ios' ? 18 : 20}
         minZoomLevel={Platform.OS === 'ios' ? 8 : 3}
+        loadingEnabled={true}
+        loadingIndicatorColor="#3B82F6"
+        loadingBackgroundColor={isDarkMode ? '#1F2937' : '#fff'}
       >
         {renderedMarkers}
       </MapView>
@@ -884,18 +937,20 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
+        // iOS-specific optimizations for rotation stability
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
         backgroundColor: 'transparent',
+        // Prevent transform issues during rotation
+        transform: [{ perspective: 1000 }],
       },
       android: {
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
         elevation: 4,
         backgroundColor: 'transparent',
       },
@@ -1156,12 +1211,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
     ...Platform.select({
       ios: {
+        // iOS-specific optimizations for rotation stability
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+        // Prevent transform issues during rotation
+        transform: [{ perspective: 1000 }],
+      },
+      android: {
         shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 4,
       },
     }),
   },
