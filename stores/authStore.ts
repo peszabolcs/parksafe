@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { useProfileStore } from '@/stores/profileStore';
 
 interface AuthState {
   session: Session | null;
@@ -39,6 +40,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
           loading: false 
         });
 
+        // Load profile data if user is already signed in
+        if (initialSession?.user) {
+          useProfileStore.getState().loadProfile(initialSession.user.id);
+        }
+
         // Clean up any existing subscription
         if (authSubscription) {
           authSubscription.unsubscribe();
@@ -68,6 +74,16 @@ export const useAuthStore = create<AuthState>((set, get) => {
               user: newSession?.user ?? null,
               loading: false 
             });
+
+            // Load profile data when user signs in
+            if (newSession?.user && event === 'SIGNED_IN') {
+              useProfileStore.getState().loadProfile(newSession.user.id);
+            }
+            
+            // Clear profile data when user signs out
+            if (event === 'SIGNED_OUT') {
+              useProfileStore.getState().clearProfile();
+            }
 
             // Handle token refresh
             if (event === 'TOKEN_REFRESHED' && newSession) {
@@ -125,6 +141,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
         if ((get() as any).cleanupAuth) {
           (get() as any).cleanupAuth();
         }
+        
+        // Clear profile data
+        useProfileStore.getState().clearProfile();
         
         await supabase.auth.signOut();
         
