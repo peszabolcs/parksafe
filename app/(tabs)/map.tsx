@@ -57,9 +57,9 @@ export default function MapScreen() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [showListModal, setShowListModal] = useState(false);
   const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair'>('all');
+  const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
   
-  const screenHeight = Dimensions.get('window').height;
-  const modalAnim = useRef(new Animated.Value(screenHeight)).current; // Single animation value
+  const modalAnim = useRef(new Animated.Value(screenDimensions.height)).current; // Dynamic animation value
 
   const { userLocation, markers, loading, searchAtLocation, clearSearchResults } = useLocationStore();
   
@@ -75,7 +75,30 @@ export default function MapScreen() {
   const isDarkMode = currentTheme === 'dark';
   const params = useLocalSearchParams();
 
-  // Animation functions for modal
+  // Handle screen dimension changes for rotation support
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenDimensions(window);
+      modalAnim.setValue(window.height);
+    });
+    
+    return () => subscription?.remove();
+  }, [modalAnim]);
+
+  // iOS memory management - clear marker cache periodically
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      const memoryCleanup = setInterval(() => {
+        if (markers.length > 100) {
+          clearMarkerCache();
+        }
+      }, 60000); // Clear every minute if there are many markers
+
+      return () => clearInterval(memoryCleanup);
+    }
+  }, [markers.length]);
+
+  // Animation functions for modal with dynamic dimensions
   const openModal = useCallback(() => {
     setShowListModal(true);
     Animated.timing(modalAnim, {
@@ -87,18 +110,18 @@ export default function MapScreen() {
 
   const closeModal = useCallback(() => {
     Animated.timing(modalAnim, {
-      toValue: screenHeight,
+      toValue: screenDimensions.height,
       duration: 300,
       useNativeDriver: true,
     }).start(() => {
       setShowListModal(false);
-      modalAnim.setValue(screenHeight);
+      modalAnim.setValue(screenDimensions.height);
     });
-  }, [modalAnim, screenHeight]);
+  }, [modalAnim, screenDimensions.height]);
 
   // Interpolate values from single animation
   const backgroundOpacity = modalAnim.interpolate({
-    inputRange: [0, screenHeight],
+    inputRange: [0, screenDimensions.height],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
@@ -426,7 +449,7 @@ export default function MapScreen() {
           title={marker.title}
           description={marker.description}
           onPress={() => handleMarkerPress(marker)}
-          tracksViewChanges={true}
+          tracksViewChanges={Platform.OS === 'ios' ? false : true}
           anchor={{ x: 0.5, y: 0.5 }}
           centerOffset={{ x: 0, y: 0 }}
           zIndex={isSelected ? 1000 : 100}
@@ -474,11 +497,13 @@ export default function MapScreen() {
           showsScale={false}    
           toolbarEnabled={false}
           customMapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-          mapType="standard"
-          rotateEnabled={true}
-          scrollEnabled={true}
-          zoomEnabled={true}
-        />
+                  mapType="standard"
+        rotateEnabled={Platform.OS === 'ios' ? false : true}
+        scrollEnabled={true}
+        zoomEnabled={true}
+        maxZoomLevel={Platform.OS === 'ios' ? 18 : 20}
+        minZoomLevel={Platform.OS === 'ios' ? 8 : 3}
+      />
         
         <View style={[styles.loadingOverlay, { backgroundColor: backgroundColor + '90' }]}>
           <ActivityIndicator size="large" color="#3B82F6" />
@@ -506,9 +531,11 @@ export default function MapScreen() {
         toolbarEnabled={false}
         customMapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         mapType="standard"
-        rotateEnabled={true}
+        rotateEnabled={Platform.OS === 'ios' ? false : true}
         scrollEnabled={true}
         zoomEnabled={true}
+        maxZoomLevel={Platform.OS === 'ios' ? 18 : 20}
+        minZoomLevel={Platform.OS === 'ios' ? 8 : 3}
       >
         {renderedMarkers}
       </MapView>
