@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { StyleSheet, ScrollView, View, TouchableOpacity, Alert, Modal, Dimensions, Animated, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -19,6 +19,7 @@ export default function SettingsScreen() {
   const { deleteAccount } = useProfileStore();
   const [showThemeModal, setShowThemeModal] = useState(false);
   const modalAnim = useRef(new Animated.Value(screenHeight)).current;
+  const insets = useSafeAreaInsets();
   
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -29,16 +30,17 @@ export default function SettingsScreen() {
   const shadowColor = useThemeColor({ light: '#000', dark: '#000' }, 'text');
   const isDarkMode = currentTheme === 'dark';
 
-  const themeOptions = [
+  // Memoized theme options and label
+  const themeOptions = useMemo(() => [
     { value: 'light' as const, label: 'Világos', icon: 'sunny', description: 'Világos téma használata' },
     { value: 'dark' as const, label: 'Sötét', icon: 'moon', description: 'Sötét téma használata' },
     { value: 'system' as const, label: 'Rendszer', icon: 'phone-portrait', description: 'Rendszer beállítás követése' },
-  ];
+  ], []);
 
-  const getThemeLabel = () => {
+  const themeLabel = useMemo(() => {
     const selected = themeOptions.find(option => option.value === themeMode);
     return selected?.label || 'Rendszer';
-  };
+  }, [themeMode, themeOptions]);
 
   // Animation functions for modal
   const openThemeModal = useCallback(() => {
@@ -67,6 +69,9 @@ export default function SettingsScreen() {
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
+
+  // Optimized condition for bottom nav bar
+  const shouldShowBottomBar = showThemeModal && insets.bottom > 0;
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -137,7 +142,7 @@ export default function SettingsScreen() {
     );
   };
 
-  const SettingsItem = ({ icon, title, subtitle, onPress, showArrow = true, customContent }: {
+  const SettingsItem = useCallback(({ icon, title, subtitle, onPress, showArrow = true, customContent }: {
     icon: string;
     title: string;
     subtitle?: string;
@@ -172,13 +177,13 @@ export default function SettingsScreen() {
         )}
       </View>
     </TouchableOpacity>
-  );
+  ), [cardBackground, borderColor, textColor, secondaryTextColor]);
 
-  const SectionHeader = ({ title }: { title: string }) => (
+  const SectionHeader = useCallback(({ title }: { title: string }) => (
     <ThemedText style={[styles.sectionHeader, { color: textColor }]}>
       {title}
     </ThemedText>
-  );
+  ), [textColor]);
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -237,7 +242,7 @@ export default function SettingsScreen() {
             <SettingsItem
               icon="moon-outline"
               title="Téma"
-              subtitle={getThemeLabel()}
+              subtitle={themeLabel}
               onPress={openThemeModal}
             />
             <SettingsItem
@@ -325,6 +330,18 @@ export default function SettingsScreen() {
           <View style={styles.bottomSpacing} />
         </ScrollView>
 
+      {/* Bottom Navigation Bar - Optimized rendering */}
+      {shouldShowBottomBar && (
+        <Animated.View style={[
+          styles.bottomNavBar, 
+          { 
+            height: insets.bottom, 
+            backgroundColor: cardBackground,
+            opacity: backgroundOpacity
+          }
+        ]} />
+      )}
+
       {/* Theme Selection Modal */}
       <Modal
         visible={showThemeModal}
@@ -351,6 +368,7 @@ export default function SettingsScreen() {
               borderTopRightRadius: 18, 
               padding: 20, 
               minHeight: 350,
+              paddingBottom: 20,
               transform: [{ translateY: modalAnim }]
             }}
           >
@@ -513,6 +531,12 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100,
   },
+  bottomNavBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -566,4 +590,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
+
 });
