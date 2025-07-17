@@ -11,6 +11,14 @@ import { useFavouritesStore } from '@/stores/favouritesStore';
 import { MapMarker, getDistance } from '@/lib/markers';
 import { generateMarkerImageUri, shouldUseImageMarkers, clearMarkerCache } from '@/lib/markerUtils';
 import { useLocalSearchParams } from 'expo-router';
+import { 
+  clusterMarkers, 
+  isClusterMarker, 
+  getClusterDominantType, 
+  getClusterBreakdown,
+  ClusteredMarker,
+  ClusterMarker 
+} from '@/lib/clustering';
 
 const INITIAL_REGION = {
   latitude: 46.2530,
@@ -130,6 +138,16 @@ export default function MapScreen() {
     }
   }, [userLocation, currentMapCenter, clearSearchResults]);
 
+  // Cluster markers based on current zoom level (throttled for smooth performance)
+  const clusteredMarkers = useMemo(() => {
+    // Round zoom levels to reduce clustering calculations during smooth zoom gestures
+    const roundedLatDelta = Math.round(region.latitudeDelta * 1000) / 1000;
+    const roundedLngDelta = Math.round(region.longitudeDelta * 1000) / 1000;
+    
+    // Pass selected marker ID to prevent it from being clustered
+    return clusterMarkers(markers, roundedLatDelta, roundedLngDelta, selectedMarker?.id);
+  }, [markers, Math.round(region.latitudeDelta * 1000), Math.round(region.longitudeDelta * 1000), selectedMarker?.id]);
+
   const filteredMarkers = useMemo(() => {
     if (listFilter === 'all') return markers;
     if (listFilter === 'repair') return markers.filter(m => m.type === 'repairStation');
@@ -168,7 +186,7 @@ export default function MapScreen() {
         mapRef.current?.animateToRegion(newRegion, 500);
       }
     }
-  }, [params.selectedMarkerId, params.timestamp, markers]); // Add timestamp to dependencies
+  }, [params.selectedMarkerId, params.timestamp, markers]);
 
   useEffect(() => {
     if (params.openList) {
@@ -178,10 +196,43 @@ export default function MapScreen() {
   }, [params.openList, openModal]);
 
   const handleRegionChangeComplete = useCallback((newRegion: Region) => {
+    setRegion(newRegion);
     setCurrentMapCenter({
       latitude: newRegion.latitude,
       longitude: newRegion.longitude,
     });
+  }, []);
+
+  const handleMapReady = useCallback(() => {
+    // Force region update when map is ready to ensure clustering works initially
+    if (mapRef.current) {
+      mapRef.current.getMapBoundaries().then((boundaries) => {
+        if (boundaries) {
+          const { northEast, southWest } = boundaries;
+          const latitudeDelta = northEast.latitude - southWest.latitude;
+          const longitudeDelta = northEast.longitude - southWest.longitude;
+          const centerLatitude = (northEast.latitude + southWest.latitude) / 2;
+          const centerLongitude = (northEast.longitude + southWest.longitude) / 2;
+
+          const newRegion = {
+            latitude: centerLatitude,
+            longitude: centerLongitude,
+            latitudeDelta,
+            longitudeDelta,
+          };
+
+          setRegion(newRegion);
+          setCurrentMapCenter({
+            latitude: centerLatitude,
+            longitude: centerLongitude,
+          });
+        }
+      }).catch(() => {
+        // Fallback: if getMapBoundaries fails, just trigger a minimal region update
+        // to force clustering recalculation
+        setRegion(prevRegion => ({ ...prevRegion }));
+      });
+    }
   }, []);
 
   const handleSearchAtCurrentLocation = useCallback(async () => {
@@ -237,6 +288,19 @@ export default function MapScreen() {
     mapRef.current?.animateToRegion(newRegion, 500);
   }, []);
 
+  const handleClusterPress = useCallback((cluster: ClusterMarker) => {
+    // Zoom in gradually to separate the cluster
+    const zoomFactor = 0.6; // Slightly less aggressive zoom for smoother experience
+    const newRegion = {
+      latitude: cluster.coordinate.latitude,
+      longitude: cluster.coordinate.longitude,
+      latitudeDelta: Math.max(region.latitudeDelta * zoomFactor, 0.003),
+      longitudeDelta: Math.max(region.longitudeDelta * zoomFactor, 0.003),
+    };
+    
+    mapRef.current?.animateToRegion(newRegion, 600); // Smoother, longer animation
+  }, [region]);
+
   const closeFlyout = useCallback(() => {
     setSelectedMarker(null);
   }, []);
@@ -287,26 +351,74 @@ export default function MapScreen() {
     mapRef.current?.animateToRegion(newRegion, 500);
   }, [closeModal]);
 
-  const renderMarker = useCallback((marker: MapMarker) => {
-    const isParking = marker.type === 'parking';
-    const iconName = isParking ? 'bicycle' : 'build';
-    const iconColor = isParking ? '#22C55E' : '#3B82F6';
-    const markerBackgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
-    const isSelected = selectedMarker?.id === marker.id;
-    const markerBorderColor = isDarkMode ? '#fff' : '#000';
-    const isMarkerFavourite = isFavourite(marker.id);
+  const renderClusteredMarker = useCallback((clusteredMarker: ClusteredMarker) => {
+    if (isClusterMarker(clusteredMarker)) {
+      // Render cluster marker
+      const dominantType = getClusterDominantType(clusteredMarker);
+      const isParking = dominantType === 'parking';
+      const clusterBackgroundColor = isParking ? '#22C55E' : '#3B82F6';
+      const clusterBorderColor = isDarkMode ? '#fff' : '#000';
 
-
-    // Use image markers on iOS to avoid gray circle issue
-    if (shouldUseImageMarkers()) {
-      const imageUri = generateMarkerImageUri(
-        marker.type,
-        isSelected,
-        isDarkMode,
-        isMarkerFavourite
+      return (
+        <Marker
+          key={clusteredMarker.id}
+          coordinate={clusteredMarker.coordinate}
+          onPress={() => handleClusterPress(clusteredMarker)}
+          anchor={{ x: 0.5, y: 0.5 }}
+          centerOffset={{ x: 0, y: 0 }}
+          zIndex={200}
+          flat={false}
+          style={{ backgroundColor: 'transparent' }}
+        >
+          <View style={[
+            styles.clusterContainer,
+            {
+              backgroundColor: clusterBackgroundColor,
+              borderColor: clusterBorderColor,
+            }
+          ]}>
+            <ThemedText style={styles.clusterText}>
+              {clusteredMarker.count}
+            </ThemedText>
+          </View>
+        </Marker>
       );
+    } else {
+      // Render regular marker
+      const marker = clusteredMarker as MapMarker;
+      const isParking = marker.type === 'parking';
+      const iconName = isParking ? 'bicycle' : 'build';
+      const iconColor = isParking ? '#22C55E' : '#3B82F6';
+      const markerBackgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
+      const isSelected = selectedMarker?.id === marker.id;
+      const isMarkerFavourite = isFavourite(marker.id);
+      const markerBorderColor = isMarkerFavourite ? '#FFD700' : (isDarkMode ? '#fff' : '#000');
 
+      // Use image markers on iOS to avoid gray circle issue
+      if (shouldUseImageMarkers()) {
+        const imageUri = generateMarkerImageUri(
+          marker.type,
+          isSelected,
+          isDarkMode,
+          isMarkerFavourite
+        );
 
+        return (
+          <Marker
+            key={marker.id}
+            coordinate={marker.coordinate}
+            title={marker.title}
+            description={marker.description}
+            onPress={() => handleMarkerPress(marker)}
+            image={{ uri: imageUri }}
+            anchor={{ x: 0.5, y: 0.5 }}
+            centerOffset={{ x: 0, y: 0 }}
+            zIndex={isSelected ? 1000 : 100}
+          />
+        );
+      }
+
+      // Use custom view markers for all platforms
       return (
         <Marker
           key={marker.id}
@@ -314,55 +426,39 @@ export default function MapScreen() {
           title={marker.title}
           description={marker.description}
           onPress={() => handleMarkerPress(marker)}
-          image={{ uri: imageUri }}
+          tracksViewChanges={true}
           anchor={{ x: 0.5, y: 0.5 }}
           centerOffset={{ x: 0, y: 0 }}
           zIndex={isSelected ? 1000 : 100}
-        />
+          flat={false}
+          style={{ backgroundColor: 'transparent' }}
+        >
+          <View style={[
+            styles.markerContainer, 
+            { 
+              backgroundColor: markerBackgroundColor,
+              borderColor: markerBorderColor,
+              borderWidth: isSelected ? 3 : 2,
+              shadowOpacity: 0,
+              elevation: 0,
+            }
+          ]}>
+            <Ionicons name={iconName as any} size={14} color={iconColor} />
+            {isMarkerFavourite && (
+              <View style={[styles.starOverlay, { position: 'absolute', top: -4, right: -4 }]}>
+                <Ionicons name="star" size={12} color="#FFD700" />
+              </View>
+            )}
+          </View>
+        </Marker>
       );
     }
-
-    // Use custom view markers for all platforms
-    
-    return (
-      <Marker
-        key={marker.id}
-        coordinate={marker.coordinate}
-        title={marker.title}
-        description={marker.description}
-        onPress={() => handleMarkerPress(marker)}
-        tracksViewChanges={true}
-        anchor={{ x: 0.5, y: 0.5 }}
-        centerOffset={{ x: 0, y: 0 }}
-        zIndex={isSelected ? 1000 : 100}
-        flat={true}
-        style={{ backgroundColor: 'transparent' }}
-      >
-        <View style={[
-          styles.markerContainer, 
-          { 
-            backgroundColor: markerBackgroundColor, // Use the marker background color (green/blue)
-            borderColor: markerBorderColor,
-            borderWidth: isSelected ? 3 : 2,
-            shadowOpacity: 0, // Remove shadow that might cause gray background
-            elevation: 0, // Remove elevation on Android
-          }
-        ]}>
-          <Ionicons name={iconName as any} size={16} color={iconColor} />
-          {isMarkerFavourite && (
-            <View style={[styles.starOverlay, { position: 'absolute', top: -4, right: -4 }]}>
-              <Ionicons name="star" size={12} color="#FFD700" />
-            </View>
-          )}
-        </View>
-      </Marker>
-    );
-  }, [selectedMarker, isDarkMode, handleMarkerPress, isFavourite]);
+  }, [selectedMarker, isDarkMode, handleMarkerPress, handleClusterPress, isFavourite]);
 
   // Memoize markers to reduce re-renders
   const renderedMarkers = useMemo(() => {
-    return markers.map(renderMarker);
-  }, [markers, renderMarker]);
+    return clusteredMarkers.map(renderClusteredMarker);
+  }, [clusteredMarkers, renderClusteredMarker]);
 
   if (loading && markers.length === 0) {
     return (
@@ -402,6 +498,7 @@ export default function MapScreen() {
         style={StyleSheet.absoluteFill}
         initialRegion={region}
         onRegionChangeComplete={handleRegionChangeComplete}
+        onMapReady={handleMapReady}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
@@ -752,27 +849,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   markerContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#fff',
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 3,
-    overflow: 'hidden', // Ensure no overflow causing gray squares
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
         backgroundColor: 'transparent',
       },
       android: {
-        elevation: 5,
+        elevation: 4,
         backgroundColor: 'transparent',
       },
     }),
@@ -1023,6 +1120,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 3,
+  },
+  clusterContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 2 },
+      },
+    }),
+  },
+  clusterText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });
 
