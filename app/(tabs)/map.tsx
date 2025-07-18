@@ -186,8 +186,8 @@ export default function MapScreen() {
       return markers;
     }
     
-    return clusterMarkers(markers, roundedLatDelta, roundedLngDelta, selectedMarker?.id);
-  }, [markers, region.latitudeDelta, region.longitudeDelta, selectedMarker?.id]);
+    return clusterMarkers(markers, roundedLatDelta, roundedLngDelta);
+  }, [markers, region.latitudeDelta, region.longitudeDelta]);
 
   const filteredMarkers = useMemo(() => {
     if (listFilter === 'all') return markers;
@@ -400,7 +400,9 @@ export default function MapScreen() {
       // Render cluster marker - use simple pin markers on iOS to prevent crash
       const dominantType = getClusterDominantType(clusteredMarker);
       const isParking = dominantType === 'parking';
-      const clusterBackgroundColor = isParking ? '#22C55E' : '#3B82F6';
+      const isBicycleService = dominantType === 'bicycleService';
+      // More contrasting colors for clusters
+      const clusterBackgroundColor = isParking ? '#059669' : isBicycleService ? '#F97316' : '#1D4ED8';
 
       // iOS: No cluster markers (clustering disabled)
       if (Platform.OS === 'ios') {
@@ -439,9 +441,10 @@ export default function MapScreen() {
       const isParking = marker.type === 'parking';
       const isBicycleService = marker.type === 'bicycleService';
       const iconName = isParking ? 'bicycle' : isBicycleService ? 'storefront' : 'build';
-      const iconColor = isParking ? '#22C55E' : isBicycleService ? '#F97316' : '#3B82F6';
-      const markerBackgroundColor = isParking ? '#DCFCE7' : isBicycleService ? '#FED7AA' : '#DBEAFE';
-      const isSelected = selectedMarker?.id === marker.id;
+      // More contrasting colors for better visibility on map
+      const iconColor = isParking ? '#059669' : isBicycleService ? '#F97316' : '#1D4ED8'; // Darker green and blue
+      const markerBackgroundColor = isParking ? '#D1FAE5' : isBicycleService ? '#FED7AA' : '#DBEAFE';
+      // Note: We don't use isSelected for zIndex anymore to prevent marker disappearing
       const isMarkerFavourite = isFavourite(marker.id);
       const markerBorderColor = isMarkerFavourite ? '#FFD700' : '#fff';
 
@@ -455,7 +458,7 @@ export default function MapScreen() {
             description={marker.description}
             onPress={() => handleMarkerPress(marker)}
             anchor={{ x: 0.5, y: 0.5 }}
-            zIndex={isSelected ? 1000 : 100}
+            zIndex={100}
             tracksViewChanges={false}
           >
             <View style={[
@@ -463,7 +466,7 @@ export default function MapScreen() {
               { 
                 backgroundColor: markerBackgroundColor,
                 borderColor: markerBorderColor,
-                borderWidth: isSelected ? 3 : 2,
+                borderWidth: 2,
                 // iOS: Minimal styling to test stability
                 shadowOpacity: 0,
                 elevation: 0,
@@ -501,14 +504,14 @@ export default function MapScreen() {
           tracksViewChanges={false}
           anchor={{ x: 0.5, y: 0.5 }}
           centerOffset={{ x: 0, y: 0 }}
-          zIndex={isSelected ? 1000 : 100}
+          zIndex={100}
         >
           <View style={[
             styles.markerContainer, 
             { 
               backgroundColor: markerBackgroundColor,
               borderColor: markerBorderColor,
-              borderWidth: isSelected ? 3 : 2,
+              borderWidth: 2,
               shadowOpacity: 0,
               elevation: 0,
             }
@@ -533,7 +536,7 @@ export default function MapScreen() {
         </Marker>
       );
     }
-  }, [selectedMarker, handleMarkerPress, handleClusterPress, isFavourite]);
+  }, [handleMarkerPress, handleClusterPress, isFavourite]);
 
   // Memoize markers to reduce re-renders
   const renderedMarkers = useMemo(() => {
@@ -620,18 +623,18 @@ export default function MapScreen() {
           bottom: bottomPosition + 60, // Position above the FAB buttons
         }]}>
           <View style={[styles.flyoutHeader, { 
-            backgroundColor: selectedMarker.type === 'parking' ? 'rgba(34, 197, 94, 0.15)' : 
-                           selectedMarker.type === 'bicycleService' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-            borderBottomColor: selectedMarker.type === 'parking' ? 'rgba(34, 197, 94, 0.2)' : 
-                              selectedMarker.type === 'bicycleService' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+            backgroundColor: selectedMarker.type === 'parking' ? 'rgba(5, 150, 105, 0.15)' : 
+                           selectedMarker.type === 'bicycleService' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(29, 78, 216, 0.15)',
+            borderBottomColor: selectedMarker.type === 'parking' ? 'rgba(5, 150, 105, 0.2)' : 
+                              selectedMarker.type === 'bicycleService' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(29, 78, 216, 0.2)',
             paddingBottom: 12,
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
           }]}>
             <View style={styles.flyoutTitleRow}>
               <View style={[styles.flyoutIcon, { 
-                backgroundColor: selectedMarker.type === 'parking' ? '#22C55E' : 
-                               selectedMarker.type === 'bicycleService' ? '#F97316' : '#3B82F6',
+                backgroundColor: selectedMarker.type === 'parking' ? '#059669' : 
+                               selectedMarker.type === 'bicycleService' ? '#F97316' : '#1D4ED8',
                 shadowOpacity: 0.15,
                 shadowRadius: 6,
                 elevation: 4,
@@ -666,26 +669,26 @@ export default function MapScreen() {
             {selectedMarker.type === 'parking' ? (
               <View style={styles.parkingDetails}>
                 <View style={styles.detailRow}>
-                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
-                    <Ionicons name="bicycle" size={14} color="#22C55E" />
+                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(5, 150, 105, 0.1)' }]}>
+                    <Ionicons name="bicycle" size={14} color="#059669" />
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>Biciklitároló</ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
-                    <Ionicons name="shield-checkmark" size={14} color="#22C55E" />
+                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(5, 150, 105, 0.1)' }]}>
+                    <Ionicons name="shield-checkmark" size={14} color="#059669" />
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>Biztonságos tárolás</ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
-                    <Ionicons name="time" size={14} color="#22C55E" />
+                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(5, 150, 105, 0.1)' }]}>
+                    <Ionicons name="time" size={14} color="#059669" />
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>24/7 nyitva</ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
-                    <Ionicons name="card" size={14} color="#22C55E" />
+                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(5, 150, 105, 0.1)' }]}>
+                    <Ionicons name="card" size={14} color="#059669" />
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>Ingyenes</ThemedText>
                 </View>
@@ -736,26 +739,26 @@ export default function MapScreen() {
             ) : (
               <View style={styles.repairDetails}>
                 <View style={styles.detailRow}>
-                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                    <Ionicons name="construct" size={14} color="#3B82F6" />
+                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(29, 78, 216, 0.1)' }]}>
+                    <Ionicons name="construct" size={14} color="#1D4ED8" />
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>Teljes szerviz</ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                    <Ionicons name="time" size={14} color="#3B82F6" />
+                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(29, 78, 216, 0.1)' }]}>
+                    <Ionicons name="time" size={14} color="#1D4ED8" />
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>H-P: 8:00-18:00</ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                    <Ionicons name="call" size={14} color="#3B82F6" />
+                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(29, 78, 216, 0.1)' }]}>
+                    <Ionicons name="call" size={14} color="#1D4ED8" />
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>+36 62 123 4567</ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                    <Ionicons name="star" size={14} color="#3B82F6" />
+                  <View style={[styles.detailIcon, { backgroundColor: 'rgba(29, 78, 216, 0.1)' }]}>
+                    <Ionicons name="star" size={14} color="#1D4ED8" />
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>4.8/5 értékelés</ThemedText>
                 </View>
@@ -921,9 +924,9 @@ export default function MapScreen() {
                 >
                   <View style={{
                     width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 12,
-                    backgroundColor: item.type === 'parking' ? '#DCFCE7' : item.type === 'bicycleService' ? '#FED7AA' : '#DBEAFE',
+                    backgroundColor: item.type === 'parking' ? '#D1FAE5' : item.type === 'bicycleService' ? '#FED7AA' : '#DBEAFE',
                   }}>
-                    <Ionicons name={item.type === 'parking' ? 'bicycle' : item.type === 'bicycleService' ? 'storefront' : 'build'} size={18} color={item.type === 'parking' ? '#22C55E' : item.type === 'bicycleService' ? '#F97316' : '#3B82F6'} />
+                    <Ionicons name={item.type === 'parking' ? 'bicycle' : item.type === 'bicycleService' ? 'storefront' : 'build'} size={18} color={item.type === 'parking' ? '#059669' : item.type === 'bicycleService' ? '#F97316' : '#1D4ED8'} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontWeight: '600', fontSize: 15 }}>{item.title}</ThemedText>
