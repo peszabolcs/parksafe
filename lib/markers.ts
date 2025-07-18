@@ -7,7 +7,7 @@ export interface MapMarker {
     latitude: number;
     longitude: number;
   };
-  type: 'parking' | 'repairStation';
+  type: 'parking' | 'repairStation' | 'bicycleService';
   title: string;
   description: string;
   available: boolean;
@@ -16,6 +16,13 @@ export interface MapMarker {
   city?: string;
   pictureUrl?: string;
   distance?: number; // For nearby searches
+  // Bicycle service specific fields
+  phone?: string;
+  website?: string;
+  openingHours?: string;
+  services?: string[];
+  rating?: number;
+  priceRange?: string;
 }
 
 // Base interface for location data
@@ -39,6 +46,17 @@ export interface RepairStation extends BaseLocationData {
   pictureUrl: string;
 }
 
+// Interface for bicycle service data
+export interface BicycleService extends BaseLocationData {
+  phone?: string;
+  website?: string;
+  opening_hours?: string;
+  services?: string[];
+  rating?: number;
+  price_range?: string;
+  picture_url?: string;
+}
+
 // Unified validation function
 const validateLocationData = (item: any): boolean => {
   const isValid = item.id && item.name && 
@@ -59,8 +77,8 @@ const validateLocationData = (item: any): boolean => {
 
 // Unified mapping function for location data
 const mapToMarker = (
-  item: BaseLocationData | RepairStation, 
-  type: 'parking' | 'repairStation',
+  item: BaseLocationData | RepairStation | BicycleService, 
+  type: 'parking' | 'repairStation' | 'bicycleService',
   distance?: number
 ): MapMarker => {
   return {
@@ -79,6 +97,15 @@ const mapToMarker = (
       free: (item as RepairStation).free,
       pictureUrl: (item as RepairStation).pictureUrl,
     }),
+    ...(type === 'bicycleService' && {
+      phone: (item as BicycleService).phone,
+      website: (item as BicycleService).website,
+      openingHours: (item as BicycleService).opening_hours,
+      services: (item as BicycleService).services,
+      rating: (item as BicycleService).rating,
+      priceRange: (item as BicycleService).price_range,
+      pictureUrl: (item as BicycleService).picture_url,
+    }),
     ...(distance !== undefined && { distance })
   };
 };
@@ -87,7 +114,7 @@ const mapToMarker = (
 const fetchFromRPC = async (
   rpcName: string, 
   params?: any,
-  type?: 'parking' | 'repairStation'
+  type?: 'parking' | 'repairStation' | 'bicycleService'
 ): Promise<MapMarker[]> => {
   try {
     const { data, error } = await supabase.rpc(rpcName, params);
@@ -104,7 +131,8 @@ const fetchFromRPC = async (
     const validData = data.filter(validateLocationData);
     const mappedData = validData.map((item: any) => mapToMarker(
       item, 
-      type || (rpcName.includes('parking') ? 'parking' : 'repairStation'),
+      type || (rpcName.includes('parking') ? 'parking' : 
+               rpcName.includes('bicycle') ? 'bicycleService' : 'repairStation'),
       item.distance_meters
     ));
     
@@ -123,6 +151,11 @@ export const fetchParkingSpots = async (): Promise<MapMarker[]> => {
 // Fetch all repair stations
 export const fetchRepairStations = async (): Promise<MapMarker[]> => {
   return fetchFromRPC('get_all_repair_stations', undefined, 'repairStation');
+};
+
+// Fetch all bicycle services
+export const fetchBicycleServices = async (): Promise<MapMarker[]> => {
+  return fetchFromRPC('get_all_bicycle_services', undefined, 'bicycleService');
 };
 
 // Fetch nearby parking spots
@@ -155,19 +188,35 @@ export const fetchNearbyRepairStations = async (
   }, 'repairStation');
 };
 
-// Optimized fetch both types nearby with single call
+// Fetch nearby bicycle services
+export const fetchNearbyBicycleServices = async (
+  userLatitude: number, 
+  userLongitude: number, 
+  radiusMeters: number = 1000,
+  onlyAvailable: boolean = true
+): Promise<MapMarker[]> => {
+  return fetchFromRPC('find_nearby_bicycle_services', {
+    user_lat: userLatitude,
+    user_lng: userLongitude,
+    radius_meters: radiusMeters,
+    only_available: onlyAvailable
+  }, 'bicycleService');
+};
+
+// Optimized fetch all types nearby with single call
 export const fetchNearbyMarkers = async (
   userLatitude: number, 
   userLongitude: number, 
   radiusMeters: number = 5000,
   onlyAvailable: boolean = true
 ): Promise<MapMarker[]> => {
-  const [parkingSpots, repairStations] = await Promise.all([
+  const [parkingSpots, repairStations, bicycleServices] = await Promise.all([
     fetchNearbyParkingSpots(userLatitude, userLongitude, radiusMeters, onlyAvailable),
-    fetchNearbyRepairStations(userLatitude, userLongitude, radiusMeters, onlyAvailable)
+    fetchNearbyRepairStations(userLatitude, userLongitude, radiusMeters, onlyAvailable),
+    fetchNearbyBicycleServices(userLatitude, userLongitude, radiusMeters, onlyAvailable)
   ]);
   
-  const combinedMarkers = [...parkingSpots, ...repairStations];
+  const combinedMarkers = [...parkingSpots, ...repairStations, ...bicycleServices];
   const sortedMarkers = combinedMarkers.sort((a, b) => (a.distance || 0) - (b.distance || 0));
   
   return sortedMarkers;
@@ -176,12 +225,13 @@ export const fetchNearbyMarkers = async (
 // Generate all markers (fallback for non-location based usage)
 export const generateAllMarkers = async (): Promise<MapMarker[]> => {
   try {
-    const [parkingSpots, repairStations] = await Promise.all([
+    const [parkingSpots, repairStations, bicycleServices] = await Promise.all([
       fetchParkingSpots(),
-      fetchRepairStations()
+      fetchRepairStations(),
+      fetchBicycleServices()
     ]);
     
-    return [...parkingSpots, ...repairStations];
+    return [...parkingSpots, ...repairStations, ...bicycleServices];
   } catch (error) {
     console.error('Error generating all markers:', error);
     return [];

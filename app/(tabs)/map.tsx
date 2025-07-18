@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking, Modal, FlatList, Text, Pressable, Animated, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
@@ -55,10 +56,11 @@ export default function MapScreen() {
   const [currentMapCenter, setCurrentMapCenter] = useState<{latitude: number, longitude: number} | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [showListModal, setShowListModal] = useState(false);
-  const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair'>('all');
+  const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair' | 'bicycleService'>('all');
   const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
   
   const modalAnim = useRef(new Animated.Value(screenDimensions.height)).current; // Dynamic animation value
+  const insets = useSafeAreaInsets();
 
   const { userLocation, markers, loading, searchAtLocation, clearSearchResults } = useLocationStore();
   
@@ -73,6 +75,16 @@ export default function MapScreen() {
 
   const isDarkMode = currentTheme === 'dark';
   const params = useLocalSearchParams();
+
+  // Calculate bottom position for FABs taking into account iOS tab bar
+  const bottomPosition = useMemo(() => {
+    if (Platform.OS === 'ios') {
+      // iOS tab bar is typically 83px with safe area, 49px without
+      // Add extra padding to ensure buttons are visible above tab bar
+      return insets.bottom + 95; // 95px above the bottom safe area
+    }
+    return 38; // Android default
+  }, [insets.bottom]);
 
   // Handle screen dimension changes for rotation support
   useEffect(() => {
@@ -180,6 +192,7 @@ export default function MapScreen() {
   const filteredMarkers = useMemo(() => {
     if (listFilter === 'all') return markers;
     if (listFilter === 'repair') return markers.filter(m => m.type === 'repairStation');
+    if (listFilter === 'bicycleService') return markers.filter(m => m.type === 'bicycleService');
     return markers.filter(m => m.type === listFilter);
   }, [markers, listFilter]);
 
@@ -424,9 +437,10 @@ export default function MapScreen() {
       // Render regular marker - use simple pin markers on iOS
       const marker = clusteredMarker as MapMarker;
       const isParking = marker.type === 'parking';
-      const iconName = isParking ? 'bicycle' : 'build';
-      const iconColor = isParking ? '#22C55E' : '#3B82F6';
-      const markerBackgroundColor = isParking ? '#DCFCE7' : '#DBEAFE';
+      const isBicycleService = marker.type === 'bicycleService';
+      const iconName = isParking ? 'bicycle' : isBicycleService ? 'storefront' : 'build';
+      const iconColor = isParking ? '#22C55E' : isBicycleService ? '#F97316' : '#3B82F6';
+      const markerBackgroundColor = isParking ? '#DCFCE7' : isBicycleService ? '#FED7AA' : '#DBEAFE';
       const isSelected = selectedMarker?.id === marker.id;
       const isMarkerFavourite = isFavourite(marker.id);
       const markerBorderColor = isMarkerFavourite ? '#FFD700' : '#fff';
@@ -603,23 +617,28 @@ export default function MapScreen() {
           shadowOpacity: 0.25,
           shadowRadius: 16,
           elevation: 16,
+          bottom: bottomPosition + 60, // Position above the FAB buttons
         }]}>
           <View style={[styles.flyoutHeader, { 
-            backgroundColor: selectedMarker.type === 'parking' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-            borderBottomColor: selectedMarker.type === 'parking' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+            backgroundColor: selectedMarker.type === 'parking' ? 'rgba(34, 197, 94, 0.15)' : 
+                           selectedMarker.type === 'bicycleService' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+            borderBottomColor: selectedMarker.type === 'parking' ? 'rgba(34, 197, 94, 0.2)' : 
+                              selectedMarker.type === 'bicycleService' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(59, 130, 246, 0.2)',
             paddingBottom: 12,
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
           }]}>
             <View style={styles.flyoutTitleRow}>
               <View style={[styles.flyoutIcon, { 
-                backgroundColor: selectedMarker.type === 'parking' ? '#22C55E' : '#3B82F6',
+                backgroundColor: selectedMarker.type === 'parking' ? '#22C55E' : 
+                               selectedMarker.type === 'bicycleService' ? '#F97316' : '#3B82F6',
                 shadowOpacity: 0.15,
                 shadowRadius: 6,
                 elevation: 4,
               }]}>
                 <Ionicons 
-                  name={selectedMarker.type === 'parking' ? 'bicycle' : 'build'} 
+                  name={selectedMarker.type === 'parking' ? 'bicycle' : 
+                        selectedMarker.type === 'bicycleService' ? 'storefront' : 'build'} 
                   size={20} 
                   color="#fff" 
                 />
@@ -670,6 +689,49 @@ export default function MapScreen() {
                   </View>
                   <ThemedText style={[styles.detailText, { color: textColor }]}>Ingyenes</ThemedText>
                 </View>
+              </View>
+            ) : selectedMarker.type === 'bicycleService' ? (
+              <View style={styles.bicycleServiceDetails}>
+                {selectedMarker.rating && (
+                  <View style={styles.detailRow}>
+                    <View style={[styles.detailIcon, { backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
+                      <Ionicons name="star" size={14} color="#F97316" />
+                    </View>
+                    <ThemedText style={[styles.detailText, { color: textColor }]}>
+                      {selectedMarker.rating.toFixed(1)}/5.0 értékelés
+                    </ThemedText>
+                  </View>
+                )}
+                {selectedMarker.openingHours && (
+                  <View style={styles.detailRow}>
+                    <View style={[styles.detailIcon, { backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
+                      <Ionicons name="time" size={14} color="#F97316" />
+                    </View>
+                    <ThemedText style={[styles.detailText, { color: textColor }]}>
+                      {selectedMarker.openingHours}
+                    </ThemedText>
+                  </View>
+                )}
+                {selectedMarker.phone && (
+                  <View style={styles.detailRow}>
+                    <View style={[styles.detailIcon, { backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
+                      <Ionicons name="call" size={14} color="#F97316" />
+                    </View>
+                    <ThemedText style={[styles.detailText, { color: textColor }]}>
+                      {selectedMarker.phone}
+                    </ThemedText>
+                  </View>
+                )}
+                {selectedMarker.priceRange && (
+                  <View style={styles.detailRow}>
+                    <View style={[styles.detailIcon, { backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
+                      <Ionicons name="card" size={14} color="#F97316" />
+                    </View>
+                    <ThemedText style={[styles.detailText, { color: textColor }]}>
+                      {selectedMarker.priceRange}
+                    </ThemedText>
+                  </View>
+                )}
               </View>
             ) : (
               <View style={styles.repairDetails}>
@@ -791,29 +853,51 @@ export default function MapScreen() {
               style={{ flex: 1 }}
               onPress={(e) => e.stopPropagation()}
             >
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
-              {[
-                { key: 'all', label: 'Összes' },
-                { key: 'parking', label: 'Parkolók' },
-                { key: 'repair', label: 'Szervizek' },
-              ].map(f => (
-                <TouchableOpacity
-                  key={f.key}
-                  onPress={() => {
-                    setListFilter(f.key as 'all' | 'parking' | 'repair');
-                  }}
-                  style={{
-                    paddingVertical: 7,
-                    paddingHorizontal: 18,
-                    borderRadius: 20,
-                    marginHorizontal: 6,
-                    backgroundColor: listFilter === f.key ? '#3B82F6' : '#E5E7EB',
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <ThemedText style={{ color: listFilter === f.key ? '#fff' : '#222', fontWeight: '600', fontSize: 14 }}>{f.label}</ThemedText>
-                </TouchableOpacity>
-              ))}
+            <View style={{ marginBottom: 16 }}>
+              <FlatList
+                data={[
+                  { key: 'all', label: 'Összes' },
+                  { key: 'parking', label: 'Parkolók' },
+                  { key: 'repair', label: 'Szervizek' },
+                  { key: 'bicycleService', label: 'Boltok' },
+                ]}
+                keyExtractor={(item) => item.key}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ 
+                  paddingHorizontal: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexGrow: 1,
+                }}
+                renderItem={({ item: f }) => (
+                  <TouchableOpacity
+                    key={f.key}
+                    onPress={() => {
+                      setListFilter(f.key as 'all' | 'parking' | 'repair' | 'bicycleService');
+                    }}
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 20,
+                      borderRadius: 22,
+                      marginHorizontal: 6,
+                      backgroundColor: listFilter === f.key ? '#3B82F6' : '#E5E7EB',
+                      minWidth: 80,
+                      alignItems: 'center',
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <ThemedText style={{ 
+                      color: listFilter === f.key ? '#fff' : '#222', 
+                      fontWeight: '600', 
+                      fontSize: 14,
+                      textAlign: 'center',
+                    }}>
+                      {f.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+              />
             </View>
             <ThemedText style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12, textAlign: 'center' }}>Közeli helyek</ThemedText>
             <FlatList
@@ -837,13 +921,15 @@ export default function MapScreen() {
                 >
                   <View style={{
                     width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 12,
-                    backgroundColor: item.type === 'parking' ? '#DCFCE7' : '#DBEAFE',
+                    backgroundColor: item.type === 'parking' ? '#DCFCE7' : item.type === 'bicycleService' ? '#FED7AA' : '#DBEAFE',
                   }}>
-                    <Ionicons name={item.type === 'parking' ? 'bicycle' : 'build'} size={18} color={item.type === 'parking' ? '#22C55E' : '#3B82F6'} />
+                    <Ionicons name={item.type === 'parking' ? 'bicycle' : item.type === 'bicycleService' ? 'storefront' : 'build'} size={18} color={item.type === 'parking' ? '#22C55E' : item.type === 'bicycleService' ? '#F97316' : '#3B82F6'} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontWeight: '600', fontSize: 15 }}>{item.title}</ThemedText>
-                    <ThemedText style={{ fontSize: 12, color: '#666' }}>{item.type === 'parking' ? 'Parkoló' : 'Szerviz'} • {item.available ? 'Nyitva' : 'Zárva'}</ThemedText>
+                    <ThemedText style={{ fontSize: 12, color: '#666' }}>
+                      {item.type === 'parking' ? 'Parkoló' : item.type === 'bicycleService' ? 'Bicikli bolt' : 'Szerviz'} • {item.available ? 'Nyitva' : 'Zárva'}
+                    </ThemedText>
                   </View>
                   {userLocation && item.distance !== undefined && (
                     <ThemedText style={{ fontSize: 13, color: '#3B82F6', fontWeight: '500', marginLeft: 8 }}>{(item.distance / 1000).toFixed(2)} km</ThemedText>
@@ -888,7 +974,7 @@ export default function MapScreen() {
 
 
 
-      <View style={styles.fabGroupBottomCenter}>
+      <View style={[styles.fabGroupBottomCenter, { bottom: bottomPosition }]}>
         <TouchableOpacity
           style={[styles.fabWide, {
             backgroundColor: cardBackground,
@@ -907,7 +993,7 @@ export default function MapScreen() {
         </TouchableOpacity>
       </View>
       
-      <View style={styles.fabGroupBottomRight}>
+      <View style={[styles.fabGroupBottomRight, { bottom: bottomPosition }]}>
         <TouchableOpacity 
           style={[styles.fab, { 
             backgroundColor: cardBackground, 
@@ -993,7 +1079,7 @@ const styles = StyleSheet.create({
 
   fabGroupBottomCenter: {
     position: 'absolute',
-    bottom: 38,
+    // bottom will be set dynamically based on platform and safe area
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -1001,7 +1087,7 @@ const styles = StyleSheet.create({
   },
   fabGroupBottomRight: {
     position: 'absolute',
-    bottom: 38,
+    // bottom will be set dynamically based on platform and safe area
     right: 18,
     zIndex: 20,
   },
@@ -1048,7 +1134,7 @@ const styles = StyleSheet.create({
 
   flyoutContainer: {
     position: 'absolute',
-    bottom: 100,
+    // bottom will be set dynamically based on platform and safe area
     left: 16,
     right: 16,
     borderRadius: 16,
@@ -1116,6 +1202,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   repairDetails: {
+    marginBottom: 16,
+  },
+  bicycleServiceDetails: {
     marginBottom: 16,
   },
   detailRow: {
