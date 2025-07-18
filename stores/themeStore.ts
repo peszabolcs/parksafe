@@ -25,10 +25,21 @@ export const useThemeStore = create<ThemeState>((set, get) => {
         });
         
         const currentState = get();
-        set({
-          themeMode: mode,
-          currentTheme: mode === 'system' ? currentState.currentTheme : mode,
-        });
+        // When switching to system mode, immediately check system theme
+        if (mode === 'system') {
+          // Get system theme from react-native
+          const { Appearance } = require('react-native');
+          const systemTheme = Appearance.getColorScheme() || 'light';
+          set({
+            themeMode: mode,
+            currentTheme: systemTheme,
+          });
+        } else {
+          set({
+            themeMode: mode,
+            currentTheme: mode,
+          });
+        }
       } catch (error) {
         console.error('Error saving theme mode:', error);
       }
@@ -41,9 +52,19 @@ export const useThemeStore = create<ThemeState>((set, get) => {
           if (savedThemeMode && ['light', 'dark', 'system'].includes(savedThemeMode)) {
             themeMode = savedThemeMode as ThemeMode;
           }
+          
+          // If system mode, get the actual system theme
+          let currentTheme: 'light' | 'dark' = 'light';
+          if (themeMode === 'system') {
+            const { Appearance } = require('react-native');
+            currentTheme = Appearance.getColorScheme() || 'light';
+          } else {
+            currentTheme = themeMode;
+          }
+          
           set({
             themeMode,
-            currentTheme: themeMode === 'system' ? 'light' : themeMode, // Default to light, will be updated by updateSystemTheme
+            currentTheme,
             isLoading: false,
           });
         } catch (error) {
