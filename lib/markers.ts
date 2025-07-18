@@ -259,4 +259,43 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
 export const getDistanceFast = calculateDistance; // Use same function, simplified
 
 // Legacy alias for backward compatibility
-export const getDistance = calculateDistance; 
+export const getDistance = calculateDistance;
+
+// Get total counts for all location types
+export const getTotalLocationCounts = async (): Promise<{parking: number, repairStation: number, bicycleService: number, total: number}> => {
+  try {
+    const [parkingResponse, repairResponse, bicycleResponse] = await Promise.all([
+      supabase.from('parkingSpots').select('id', { count: 'exact', head: true }),
+      supabase.from('repairStation').select('id', { count: 'exact', head: true }),
+      supabase.from('bicycleService').select('id', { count: 'exact', head: true })
+    ]);
+
+    const parkingCount = parkingResponse.count || 0;
+    const repairCount = repairResponse.count || 0;
+    const bicycleCount = bicycleResponse.count || 0;
+    const total = parkingCount + repairCount + bicycleCount;
+
+    // Debug log to see the actual counts
+    console.log('Location counts:', {
+      parking: parkingCount,
+      repairStation: repairCount,
+      bicycleService: bicycleCount,
+      total
+    });
+
+    return {
+      parking: parkingCount,
+      repairStation: repairCount,
+      bicycleService: bicycleCount,
+      total
+    };
+  } catch (error) {
+    console.error('Error fetching total location counts:', error);
+    return {
+      parking: 0,
+      repairStation: 0,
+      bicycleService: 0,
+      total: 0
+    };
+  }
+}; 
