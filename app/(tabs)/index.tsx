@@ -114,7 +114,10 @@ export default function HomeScreen() {
               styles.primaryActionCard,
               { backgroundColor: cardBackgroundColor },
             ]}
-            onPress={() => router.push("/(tabs)/map")}
+            onPress={() => router.push({
+              pathname: "/(tabs)/map",
+              params: { filterType: "parking" }
+            })}
           >
             <LinearGradient
               colors={["#22C55E", "#16A34A"]}
@@ -140,7 +143,10 @@ export default function HomeScreen() {
               styles.primaryActionCard,
               { backgroundColor: cardBackgroundColor },
             ]}
-            onPress={() => router.push("/(tabs)/map")}
+            onPress={() => router.push({
+              pathname: "/(tabs)/map",
+              params: { filterType: "repairStation" }
+            })}
           >
             <LinearGradient
               colors={["#3B82F6", "#2563EB"]}
@@ -166,7 +172,10 @@ export default function HomeScreen() {
               styles.primaryActionCard,
               { backgroundColor: cardBackgroundColor },
             ]}
-            onPress={() => router.push("/(tabs)/map")}
+            onPress={() => router.push({
+              pathname: "/(tabs)/map",
+              params: { filterType: "bicycleService" }
+            })}
           >
             <LinearGradient
               colors={["#F97316", "#EA580C"]}

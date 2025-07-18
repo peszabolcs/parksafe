@@ -58,6 +58,13 @@ export default function MapScreen() {
   const [showListModal, setShowListModal] = useState(false);
   const [listFilter, setListFilter] = useState<'all' | 'parking' | 'repair' | 'bicycleService'>('all');
   const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [markerFilters, setMarkerFilters] = useState({
+    parking: true,
+    repairStation: true,
+    bicycleService: true,
+  });
+  const [mapType, setMapType] = useState<'standard' | 'hybrid'>('standard');
   
   const modalAnim = useRef(new Animated.Value(screenDimensions.height)).current; // Dynamic animation value
   const insets = useSafeAreaInsets();
@@ -169,12 +176,19 @@ export default function MapScreen() {
     }
   }, [userLocation, currentMapCenter, clearSearchResults]);
 
+  // Filter markers based on user selection
+  const filteredMarkers = useMemo(() => {
+    return markers.filter(marker => {
+      return markerFilters[marker.type];
+    });
+  }, [markers, markerFilters]);
+
   // Cluster markers based on current zoom level (iOS: NO CLUSTERING - causes crash)
   const clusteredMarkers = useMemo(() => {
     // iOS: NO CLUSTERING AT ALL - any clustering algorithm crashes
     if (Platform.OS === 'ios') {
-      console.log('iOS: NO CLUSTERING - using raw markers:', markers.length);
-      return markers;
+      console.log('iOS: NO CLUSTERING - using filtered markers:', filteredMarkers.length);
+      return filteredMarkers;
     }
     
     // Android: Use full clustering functionality
@@ -182,14 +196,14 @@ export default function MapScreen() {
     const roundedLngDelta = Math.round(region.longitudeDelta * 1000) / 1000;
     
     // Skip clustering if markers array is empty or region is unstable
-    if (markers.length === 0 || roundedLatDelta === 0 || roundedLngDelta === 0) {
-      return markers;
+    if (filteredMarkers.length === 0 || roundedLatDelta === 0 || roundedLngDelta === 0) {
+      return filteredMarkers;
     }
     
-    return clusterMarkers(markers, roundedLatDelta, roundedLngDelta);
-  }, [markers, region.latitudeDelta, region.longitudeDelta]);
+    return clusterMarkers(filteredMarkers, roundedLatDelta, roundedLngDelta);
+  }, [filteredMarkers, region.latitudeDelta, region.longitudeDelta]);
 
-  const filteredMarkers = useMemo(() => {
+  const listFilteredMarkers = useMemo(() => {
     if (listFilter === 'all') return markers;
     if (listFilter === 'repair') return markers.filter(m => m.type === 'repairStation');
     if (listFilter === 'bicycleService') return markers.filter(m => m.type === 'bicycleService');
@@ -236,6 +250,29 @@ export default function MapScreen() {
       openModal();
     }
   }, [params.openList, openModal]);
+
+  // Handle filter type parameter from home screen buttons
+  useEffect(() => {
+    if (params.filterType) {
+      // Reset all filters to false
+      const newFilters = {
+        parking: false,
+        repairStation: false,
+        bicycleService: false,
+      };
+      
+      // Enable only the selected filter type
+      if (params.filterType === 'parking') {
+        newFilters.parking = true;
+      } else if (params.filterType === 'repairStation') {
+        newFilters.repairStation = true;
+      } else if (params.filterType === 'bicycleService') {
+        newFilters.bicycleService = true;
+      }
+      
+      setMarkerFilters(newFilters);
+    }
+  }, [params.filterType]);
 
   const handleRegionChangeComplete = useCallback((newRegion: Region) => {
     setRegion(newRegion);
@@ -558,8 +595,8 @@ export default function MapScreen() {
           showsCompass={false}
           showsScale={false}    
           toolbarEnabled={false}
-          customMapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-                  mapType="standard"
+          customMapStyle={mapType === 'hybrid' ? [] : (isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE)}
+          mapType={mapType}
         rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}
@@ -595,8 +632,8 @@ export default function MapScreen() {
         showsCompass={false}
         showsScale={false}    
         toolbarEnabled={false}
-        customMapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-        mapType="standard"
+        customMapStyle={mapType === 'hybrid' ? [] : (isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE)}
+        mapType={mapType}
         rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}
@@ -904,7 +941,7 @@ export default function MapScreen() {
             </View>
             <ThemedText style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12, textAlign: 'center' }}>Közeli helyek</ThemedText>
             <FlatList
-              data={filteredMarkers}
+              data={listFilteredMarkers}
               keyExtractor={item => item.id}
               style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
@@ -949,6 +986,128 @@ export default function MapScreen() {
         </Animated.View>
       </Modal>
 
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.filterModalOverlay}>
+          <Pressable
+            style={styles.filterModalOverlayPress}
+            onPress={() => setShowFilterModal(false)}
+          />
+          <View style={[styles.filterModalContent, { backgroundColor: cardBackground }]}>
+            <View style={styles.filterModalHeader}>
+              <ThemedText style={[styles.filterModalTitle, { color: textColor }]}>
+                Szűrő beállítások
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(false)}
+                style={styles.filterModalClose}
+              >
+                <Ionicons name="close" size={24} color={textColor} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.filterSection}>
+              <ThemedText style={[styles.filterSectionTitle, { color: textColor }]}>
+                Megjelenített helyek
+              </ThemedText>
+              
+              <TouchableOpacity
+                style={styles.filterOption}
+                onPress={() => setMarkerFilters(prev => ({ ...prev, parking: !prev.parking }))}
+              >
+                <View style={[styles.filterOptionIcon, { backgroundColor: '#DCFCE7' }]}>
+                  <Ionicons name="bicycle" size={20} color="#059669" />
+                </View>
+                <ThemedText style={[styles.filterOptionText, { color: textColor }]}>
+                  Biciklitárolók
+                </ThemedText>
+                <View style={[styles.checkbox, markerFilters.parking && styles.checkboxChecked]}>
+                  {markerFilters.parking && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.filterOption}
+                onPress={() => setMarkerFilters(prev => ({ ...prev, repairStation: !prev.repairStation }))}
+              >
+                <View style={[styles.filterOptionIcon, { backgroundColor: '#DBEAFE' }]}>
+                  <Ionicons name="build" size={20} color="#1D4ED8" />
+                </View>
+                <ThemedText style={[styles.filterOptionText, { color: textColor }]}>
+                  Javítóállomások
+                </ThemedText>
+                <View style={[styles.checkbox, markerFilters.repairStation && styles.checkboxChecked]}>
+                  {markerFilters.repairStation && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.filterOption}
+                onPress={() => setMarkerFilters(prev => ({ ...prev, bicycleService: !prev.bicycleService }))}
+              >
+                <View style={[styles.filterOptionIcon, { backgroundColor: '#FED7AA' }]}>
+                  <Ionicons name="storefront" size={20} color="#F97316" />
+                </View>
+                <ThemedText style={[styles.filterOptionText, { color: textColor }]}>
+                  Bicikli boltok
+                </ThemedText>
+                <View style={[styles.checkbox, markerFilters.bicycleService && styles.checkboxChecked]}>
+                  {markerFilters.bicycleService && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.filterSection}>
+              <ThemedText style={[styles.filterSectionTitle, { color: textColor }]}>
+                Térkép nézet
+              </ThemedText>
+              
+              <TouchableOpacity
+                style={styles.filterOption}
+                onPress={() => setMapType('standard')}
+              >
+                <View style={[styles.filterOptionIcon, { backgroundColor: '#E5E7EB' }]}>
+                  <Ionicons name="map" size={20} color="#6B7280" />
+                </View>
+                <ThemedText style={[styles.filterOptionText, { color: textColor }]}>
+                  Utcai térkép
+                </ThemedText>
+                <View style={[styles.checkbox, mapType === 'standard' && styles.checkboxChecked]}>
+                  {mapType === 'standard' && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.filterOption}
+                onPress={() => setMapType('hybrid')}
+              >
+                <View style={[styles.filterOptionIcon, { backgroundColor: '#E5E7EB' }]}>
+                  <Ionicons name="globe" size={20} color="#6B7280" />
+                </View>
+                <ThemedText style={[styles.filterOptionText, { color: textColor }]}>
+                  Műholdas nézet
+                </ThemedText>
+                <View style={[styles.checkbox, mapType === 'hybrid' && styles.checkboxChecked]}>
+                  {mapType === 'hybrid' && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.filterApplyButton, { backgroundColor: '#3B82F6' }]}
+              onPress={() => setShowFilterModal(false)}
+            >
+              <ThemedText style={styles.filterApplyButtonText}>Alkalmaz</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Search Button - appears when user moves map away from their location */}
       {showSearchButton && (
         <View style={styles.fabGroupTopCenter}>
@@ -975,7 +1134,21 @@ export default function MapScreen() {
         </View>
       )}
 
-
+      {/* Filter Button - top right corner */}
+      <View style={styles.fabGroupTopRight}>
+        <TouchableOpacity
+          style={[styles.fab, {
+            backgroundColor: cardBackground,
+            shadowColor,
+            borderColor: borderColor,
+            borderWidth: 1
+          }]}
+          onPress={() => setShowFilterModal(true)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="options" size={22} color={textColor} />
+        </TouchableOpacity>
+      </View>
 
       <View style={[styles.fabGroupBottomCenter, { bottom: bottomPosition }]}>
         <TouchableOpacity
@@ -1077,6 +1250,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+    zIndex: 20,
+  },
+  fabGroupTopRight: {
+    position: 'absolute',
+    top: 60,
+    right: 18,
     zIndex: 20,
   },
 
@@ -1326,6 +1505,85 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
     textAlign: 'center',
+  },
+  filterModalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  filterModalOverlayPress: {
+    flex: 1,
+  },
+  filterModalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    minHeight: 400,
+  },
+  filterModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  filterModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  filterModalClose: {
+    padding: 4,
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  filterOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  filterOptionText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  filterApplyButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  filterApplyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
