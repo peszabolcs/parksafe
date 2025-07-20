@@ -13,12 +13,13 @@ import { MapMarker, getDistance } from '@/lib/markers';
 import { clearMarkerCache } from '@/lib/markerUtils';
 import { useLocalSearchParams } from 'expo-router';
 import { 
-  clusterMarkers, 
-  isClusterMarker, 
-  getClusterDominantType, 
-  ClusteredMarker,
-  ClusterMarker 
-} from '@/lib/clustering';
+  useExpoClustering,
+  isCluster,
+  getMarkerFromPoint,
+  getClusterInfo,
+  getClusterDominantType,
+  ClusteredFeature
+} from '@/lib/expoClustering';
 
 const INITIAL_REGION = {
   latitude: 46.2530,
@@ -183,25 +184,13 @@ export default function MapScreen() {
     });
   }, [markers, markerFilters]);
 
-  // Cluster markers based on current zoom level (iOS: NO CLUSTERING - causes crash)
+  // Use Expo-compatible clustering with supercluster
+  const { clusters, supercluster } = useExpoClustering(filteredMarkers, region);
+
   const clusteredMarkers = useMemo(() => {
-    // iOS: NO CLUSTERING AT ALL - any clustering algorithm crashes
-    if (Platform.OS === 'ios') {
-      console.log('iOS: NO CLUSTERING - using filtered markers:', filteredMarkers.length);
-      return filteredMarkers;
-    }
-    
-    // Android: Use full clustering functionality
-    const roundedLatDelta = Math.round(region.latitudeDelta * 1000) / 1000;
-    const roundedLngDelta = Math.round(region.longitudeDelta * 1000) / 1000;
-    
-    // Skip clustering if markers array is empty or region is unstable
-    if (filteredMarkers.length === 0 || roundedLatDelta === 0 || roundedLngDelta === 0) {
-      return filteredMarkers;
-    }
-    
-    return clusterMarkers(filteredMarkers, roundedLatDelta, roundedLngDelta);
-  }, [filteredMarkers, region.latitudeDelta, region.longitudeDelta]);
+    console.log('Using supercluster (Expo-compatible) - clusters:', clusters.length, 'original markers:', filteredMarkers.length);
+    return clusters;
+  }, [clusters, filteredMarkers.length]);
 
   const listFilteredMarkers = useMemo(() => {
     if (listFilter === 'all') return markers;
@@ -367,12 +356,13 @@ export default function MapScreen() {
     mapRef.current?.animateToRegion(newRegion, 500);
   }, []);
 
-  const handleClusterPress = useCallback((cluster: ClusterMarker) => {
+  const handleClusterPress = useCallback((cluster: ClusteredFeature) => {
     // Zoom in gradually to separate the cluster
     const zoomFactor = 0.6; // Slightly less aggressive zoom for smoother experience
+    const clusterInfo = getClusterInfo(cluster);
     const newRegion = {
-      latitude: cluster.coordinate.latitude,
-      longitude: cluster.coordinate.longitude,
+      latitude: clusterInfo.coordinate.latitude,
+      longitude: clusterInfo.coordinate.longitude,
       latitudeDelta: Math.max(region.latitudeDelta * zoomFactor, 0.003),
       longitudeDelta: Math.max(region.longitudeDelta * zoomFactor, 0.003),
     };
@@ -432,26 +422,22 @@ export default function MapScreen() {
     mapRef.current?.animateToRegion(newRegion, 500);
   }, [closeModal]);
 
-  const renderClusteredMarker = useCallback((clusteredMarker: ClusteredMarker) => {
-    if (isClusterMarker(clusteredMarker)) {
-      // Render cluster marker - use simple pin markers on iOS to prevent crash
-      const dominantType = getClusterDominantType(clusteredMarker);
+  const renderClusteredMarker = useCallback((feature: ClusteredFeature, _index: number) => {
+    if (isCluster(feature)) {
+      // Render cluster marker
+      const clusterInfo = getClusterInfo(feature);
+      
+      // Get dominant type for proper color coding
+      const dominantType = getClusterDominantType(supercluster, clusterInfo.clusterId);
       const isParking = dominantType === 'parking';
       const isBicycleService = dominantType === 'bicycleService';
-      // More contrasting colors for clusters
       const clusterBackgroundColor = isParking ? '#059669' : isBicycleService ? '#F97316' : '#1D4ED8';
 
-      // iOS: No cluster markers (clustering disabled)
-      if (Platform.OS === 'ios') {
-        return null; // Should never happen since clustering is disabled on iOS
-      }
-
-      // Android: Use view markers with clustering count
       return (
         <Marker
-          key={clusteredMarker.id}
-          coordinate={clusteredMarker.coordinate}
-          onPress={() => handleClusterPress(clusteredMarker)}
+          key={`cluster-${clusterInfo.clusterId}`}
+          coordinate={clusterInfo.coordinate}
+          onPress={() => handleClusterPress(feature)}
           tracksViewChanges={false}
           anchor={{ x: 0.5, y: 0.5 }}
           centerOffset={{ x: 0, y: 0 }}
@@ -462,75 +448,27 @@ export default function MapScreen() {
             {
               backgroundColor: clusterBackgroundColor,
               borderColor: '#fff',
-              shadowOpacity: 0.2,
-              elevation: 4,
+              shadowOpacity: Platform.OS === 'ios' ? 0 : 0.2,
+              elevation: Platform.OS === 'ios' ? 0 : 4,
             }
           ]}>
             <ThemedText style={styles.clusterText}>
-              {clusteredMarker.count}
+              {clusterInfo.pointCount}
             </ThemedText>
           </View>
         </Marker>
       );
     } else {
-      // Render regular marker - use simple pin markers on iOS
-      const marker = clusteredMarker as MapMarker;
+      // Render regular marker
+      const marker = getMarkerFromPoint(feature);
       const isParking = marker.type === 'parking';
       const isBicycleService = marker.type === 'bicycleService';
       const iconName = isParking ? 'bicycle' : isBicycleService ? 'storefront' : 'build';
-      // More contrasting colors for better visibility on map
-      const iconColor = isParking ? '#059669' : isBicycleService ? '#F97316' : '#1D4ED8'; // Darker green and blue
+      const iconColor = isParking ? '#059669' : isBicycleService ? '#F97316' : '#1D4ED8';
       const markerBackgroundColor = isParking ? '#D1FAE5' : isBicycleService ? '#FED7AA' : '#DBEAFE';
-      // Note: We don't use isSelected for zIndex anymore to prevent marker disappearing
       const isMarkerFavourite = isFavourite(marker.id);
       const markerBorderColor = isMarkerFavourite ? '#FFD700' : '#fff';
 
-      // iOS: Test custom view markers (no clustering yet)
-      if (Platform.OS === 'ios') {
-        return (
-          <Marker
-            key={marker.id}
-            coordinate={marker.coordinate}
-            title={marker.title}
-            description={marker.description}
-            onPress={() => handleMarkerPress(marker)}
-            anchor={{ x: 0.5, y: 0.5 }}
-            zIndex={100}
-            tracksViewChanges={false}
-          >
-            <View style={[
-              styles.markerContainer, 
-              { 
-                backgroundColor: markerBackgroundColor,
-                borderColor: markerBorderColor,
-                borderWidth: 2,
-                // iOS: Minimal styling to test stability
-                shadowOpacity: 0,
-                elevation: 0,
-              }
-            ]}>
-              <Ionicons name={iconName as any} size={14} color={iconColor} />
-              {isMarkerFavourite && (
-                <View style={[
-                  styles.starOverlay, 
-                  { 
-                    position: 'absolute', 
-                    top: -4, 
-                    right: -4,
-                    backgroundColor: '#fff',
-                    shadowOpacity: 0,
-                    elevation: 0,
-                  }
-                ]}>
-                  <Ionicons name="star" size={12} color="#FFD700" />
-                </View>
-              )}
-            </View>
-          </Marker>
-        );
-      }
-
-      // Android: Use view markers with icons and styling
       return (
         <Marker
           key={marker.id}
@@ -538,10 +476,9 @@ export default function MapScreen() {
           title={marker.title}
           description={marker.description}
           onPress={() => handleMarkerPress(marker)}
-          tracksViewChanges={false}
           anchor={{ x: 0.5, y: 0.5 }}
-          centerOffset={{ x: 0, y: 0 }}
           zIndex={100}
+          tracksViewChanges={false}
         >
           <View style={[
             styles.markerContainer, 
@@ -549,8 +486,8 @@ export default function MapScreen() {
               backgroundColor: markerBackgroundColor,
               borderColor: markerBorderColor,
               borderWidth: 2,
-              shadowOpacity: 0,
-              elevation: 0,
+              shadowOpacity: Platform.OS === 'ios' ? 0 : 0.2,
+              elevation: Platform.OS === 'ios' ? 0 : 3,
             }
           ]}>
             <Ionicons name={iconName as any} size={14} color={iconColor} />
@@ -562,8 +499,8 @@ export default function MapScreen() {
                   top: -4, 
                   right: -4,
                   backgroundColor: '#fff',
-                  shadowOpacity: 0.2,
-                  elevation: 3,
+                  shadowOpacity: Platform.OS === 'ios' ? 0 : 0.2,
+                  elevation: Platform.OS === 'ios' ? 0 : 3,
                 }
               ]}>
                 <Ionicons name="star" size={12} color="#FFD700" />
@@ -573,12 +510,12 @@ export default function MapScreen() {
         </Marker>
       );
     }
-  }, [handleMarkerPress, handleClusterPress, isFavourite]);
+  }, [handleMarkerPress, handleClusterPress, isFavourite, supercluster]);
 
   // Memoize markers to reduce re-renders
   const renderedMarkers = useMemo(() => {
-    const markers = clusteredMarkers.map(renderClusteredMarker);
-    console.log(`Rendering ${markers.length} markers (${clusteredMarkers.length} total) - iOS using simplified pin markers`);
+    const markers = clusteredMarkers.map((feature, index) => renderClusteredMarker(feature, index));
+    console.log(`Rendering ${markers.length} markers (${clusteredMarkers.length} total) - Using react-native-clusterer`);
     return markers;
   }, [clusteredMarkers, renderClusteredMarker]);
 
