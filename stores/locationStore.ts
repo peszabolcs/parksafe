@@ -165,15 +165,69 @@ export const useLocationStore = create<LocationState>((set, get) => {
     refresh: async () => {
       const state = get();
       
-      // Quick refresh: use current location if available
-      if (state.userLocation) {
-        set({ loading: true, error: null });
+      set({ loading: true, error: null });
 
+      try {
+        // Force fresh location update - clear cache first
+        locationCache = null;
+        
+        // Get fresh location permission first
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          set({ error: 'Location permission denied', loading: false });
+          return;
+        }
+
+        let userLocation;
+        
+        try {
+          // First try: Current location with good accuracy
+          const location = await Promise.race([
+            Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            }),
+            new Promise<never>((_, reject) => {
+              setTimeout(() => reject(new Error('Location timeout')), 8000);
+            })
+          ]);
+
+          userLocation = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+          
+          console.log('Fresh location acquired:', userLocation);
+          
+        } catch (locationError) {
+          console.error('Fresh location error:', locationError);
+          // Fallback to last known if fresh fails
+          const lastKnown = await Location.getLastKnownPositionAsync();
+          if (lastKnown && lastKnown.coords) {
+            userLocation = {
+              latitude: lastKnown.coords.latitude,
+              longitude: lastKnown.coords.longitude,
+            };
+            console.log('Using last known location as fallback');
+          } else {
+            // Use default location if all fails
+            userLocation = {
+              latitude: 46.2530,
+              longitude: 20.1484,
+            };
+            console.log('Using default location (Szeged)');
+          }
+        }
+
+        // Update cache and state
+        locationCache = userLocation;
+        set({ userLocation });
+
+        // Fetch markers for the new location
         try {
           const homeMarkers = await Promise.race([
-            fetchNearbyMarkers(state.userLocation.latitude, state.userLocation.longitude, 5000, true),
+            fetchNearbyMarkers(userLocation.latitude, userLocation.longitude, 5000, true),
             new Promise<never>((_, reject) => {
-              setTimeout(() => reject(new Error('Refresh timeout')), 6000);
+              setTimeout(() => reject(new Error('Markers timeout')), 6000);
             })
           ]);
 
@@ -181,12 +235,13 @@ export const useLocationStore = create<LocationState>((set, get) => {
           set({ homeMarkers, loading: false });
           updateCombinedMarkers();
         } catch (error) {
-          console.error('Location refresh failed:', error);
-          set({ error: 'Failed to refresh locations', loading: false });
+          console.error('Markers refresh failed:', error);
+          set({ loading: false });
         }
-      } else {
-        // No location, run full initialization
-        await state.initialize();
+
+      } catch (error) {
+        console.error('Location refresh failed:', error);
+        set({ error: 'Failed to refresh location', loading: false });
       }
     },
 

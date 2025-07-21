@@ -43,7 +43,10 @@ export const markersToPoints = (markers: MapMarker[]): ClusterPoint[] => {
 const getZoomLevel = (latitudeDelta: number): number => {
   // Convert latitude delta to zoom level (0-20)
   const zoom = Math.log2(360 / latitudeDelta);
-  return Math.max(0, Math.min(20, Math.floor(zoom)));
+  // Használjuk a kerekített értéket, de biztosítsuk hogy ne "lyukak" legyenek
+  const clampedZoom = Math.max(0, Math.min(20, zoom));
+  // Ne floor-oljuk le, hanem használjuk a pontos értéket
+  return clampedZoom;
 };
 
 // Hook for using clustering in components
@@ -59,12 +62,14 @@ export const useExpoClustering = (
   const clusters = useMemo(() => {
     const points = markersToPoints(markers);
     
-    // Create SuperCluster instance
+    // Create SuperCluster instance optimized for stability
     const supercluster = new Supercluster({
-      radius: 60, // Cluster radius in pixels
-      maxZoom: 17, // Max zoom level for clustering
+      radius: 50, // Nagyobb radius - kevesebb cluster
+      maxZoom: 15, // Még alacsonyabb max zoom - korai szétválás
       minZoom: 0,  // Min zoom level for clustering
-      minPoints: 2, // Minimum points to form a cluster
+      minPoints: 4, // Még több pont kell - kevesebb cluster
+      extent: 256, // Kisebb extent - kevesebb pontosság, több stabilitás
+      nodeSize: 32, // Kisebb node size - gyorsabb
     });
 
     // Load points into SuperCluster
@@ -84,8 +89,20 @@ export const useExpoClustering = (
     // Get clusters for current bounds and zoom
     const clusteredFeatures = supercluster.getClusters(bounds, zoom);
 
+    // Debug information
+    console.log(`Clustering debug:`, {
+      zoom: zoom.toFixed(2),
+      latitudeDelta: region.latitudeDelta.toFixed(6),
+      inputMarkers: points.length,
+      clusteredFeatures: clusteredFeatures.length,
+      bounds: bounds.map(b => b.toFixed(4))
+    });
+
+    // Fallback: ha nincs eredmény, mutassuk az eredeti markereket
+    const finalClusters = clusteredFeatures.length > 0 ? clusteredFeatures : points;
+
     return {
-      clusters: clusteredFeatures,
+      clusters: finalClusters,
       supercluster,
     };
   }, [markers, region.latitude, region.longitude, region.latitudeDelta, region.longitudeDelta]);
