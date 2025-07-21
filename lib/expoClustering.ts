@@ -27,11 +27,15 @@ export interface ClusterFeature {
 
 export type ClusteredFeature = ClusterPoint | ClusterFeature;
 
-// Convert MapMarker to SuperCluster point format
+// Convert MapMarker to SuperCluster point format with type grouping
 export const markersToPoints = (markers: MapMarker[]): ClusterPoint[] => {
   return markers.map((marker) => ({
     type: 'Feature',
-    properties: marker,
+    properties: {
+      ...marker,
+      // Add marker type as cluster category to ensure same types cluster together
+      cluster_category: marker.type,
+    },
     geometry: {
       type: 'Point',
       coordinates: [marker.coordinate.longitude, marker.coordinate.latitude],
@@ -62,20 +66,7 @@ export const useExpoClustering = (
   const clusters = useMemo(() => {
     const points = markersToPoints(markers);
     
-    // Create SuperCluster instance optimized for stability
-    const supercluster = new Supercluster({
-      radius: 50, // Nagyobb radius - kevesebb cluster
-      maxZoom: 15, // Még alacsonyabb max zoom - korai szétválás
-      minZoom: 0,  // Min zoom level for clustering
-      minPoints: 4, // Még több pont kell - kevesebb cluster
-      extent: 256, // Kisebb extent - kevesebb pontosság, több stabilitás
-      nodeSize: 32, // Kisebb node size - gyorsabb
-    });
-
-    // Load points into SuperCluster
-    supercluster.load(points);
-
-    // Get current zoom level
+    // Get current zoom level and bounds first
     const zoom = getZoomLevel(region.latitudeDelta);
 
     // Calculate bounds for current region
@@ -85,25 +76,98 @@ export const useExpoClustering = (
       region.longitude + region.longitudeDelta / 2, // east
       region.latitude + region.latitudeDelta / 2,   // north
     ] as [number, number, number, number];
+    
+    // Debug: Check all unique marker types in the data
+    const allTypes = new Set(points.map(p => p.properties.type));
+    console.log("All marker types found:", Array.from(allTypes));
+    
+    // Group markers by type first, then cluster each type separately
+    const markersByType = {
+      parking: points.filter(p => p.properties.type === 'parking'),
+      bicycleService: points.filter(p => p.properties.type === 'bicycleService'),
+      repairStation: points.filter(p => p.properties.type === 'repairStation'),
+    };
 
-    // Get clusters for current bounds and zoom
-    const clusteredFeatures = supercluster.getClusters(bounds, zoom);
+    // Debug: Show how many markers of each type we have
+    console.log("Markers grouped by type:", {
+      parking: markersByType.parking.length,
+      bicycleService: markersByType.bicycleService.length,
+      repairStation: markersByType.repairStation.length,
+      total: points.length
+    });
+
+    let allClusters: any[] = [];
+
+    // Cluster each type separately
+    Object.entries(markersByType).forEach(([type, typePoints]) => {
+      if (typePoints.length === 0) return;
+      
+      console.log(`Clustering ${typePoints.length} markers of type ${type}`);
+
+      // Special case: if there's only 1 marker of this type, just add it directly
+      if (typePoints.length === 1) {
+        console.log(`Type ${type}: Only 1 marker, adding directly as individual marker`);
+        allClusters = allClusters.concat(typePoints);
+        return;
+      }
+
+      const supercluster = new Supercluster({
+        radius: 50,
+        maxZoom: 18, // Higher maxZoom to ensure individual markers show at high zoom levels
+        minZoom: 0,
+        minPoints: 2, // Legalább 2 ugyanolyan típus kell
+        extent: 256,
+        nodeSize: 32,
+      });
+
+      supercluster.load(typePoints);
+      
+      const typeClusters = supercluster.getClusters(bounds, zoom);
+      
+      console.log(`Type ${type} produced ${typeClusters.length} clusters/markers from ${typePoints.length} input points`);
+      
+      // Debug: show what types of results we got
+      const clusterCount = typeClusters.filter(c => c.properties && 'cluster' in c.properties).length;
+      const individualCount = typeClusters.length - clusterCount;
+      console.log(`Type ${type}: ${clusterCount} clusters, ${individualCount} individual markers`);
+      
+      // Add type information to clusters
+      const enhancedClusters = typeClusters.map(cluster => {
+        if (cluster.properties && 'cluster' in cluster.properties) {
+          // It's a cluster, add type info
+          return {
+            ...cluster,
+            properties: {
+              ...cluster.properties,
+              cluster_category: type,
+            }
+          };
+        } else {
+          // It's an individual marker
+          return cluster;
+        }
+      });
+
+      allClusters = allClusters.concat(enhancedClusters);
+    });
 
     // Debug information
-    console.log(`Clustering debug:`, {
+    console.log(`Type-based clustering debug:`, {
       zoom: zoom.toFixed(2),
       latitudeDelta: region.latitudeDelta.toFixed(6),
       inputMarkers: points.length,
-      clusteredFeatures: clusteredFeatures.length,
-      bounds: bounds.map(b => b.toFixed(4))
+      finalClusters: allClusters.length,
+      parkingMarkers: markersByType.parking.length,
+      bicycleServiceMarkers: markersByType.bicycleService.length,
+      repairStationMarkers: markersByType.repairStation.length,
     });
 
     // Fallback: ha nincs eredmény, mutassuk az eredeti markereket
-    const finalClusters = clusteredFeatures.length > 0 ? clusteredFeatures : points;
+    const finalClusters = allClusters.length > 0 ? allClusters : points;
 
     return {
       clusters: finalClusters,
-      supercluster,
+      supercluster: null, // No single supercluster instance
     };
   }, [markers, region.latitude, region.longitude, region.latitudeDelta, region.longitudeDelta]);
 

@@ -485,21 +485,28 @@ export default function MapScreen() {
       
       console.log("Clustering with region:", searchRegion);
       
-      // Manual clustering implementation
+      // Type-based clustering implementation - cluster each type separately
       const points = markersToPoints(freshFiltered);
       console.log("Created points:", points.length);
       
-      const supercluster = new Supercluster({
-        radius: 50,
-        maxZoom: 15,
-        minZoom: 0,
-        minPoints: 4,
-        extent: 256,
-        nodeSize: 32,
-      });
+      // Debug: Check all unique marker types in the data
+      const allTypes = new Set(points.map(p => p.properties.type));
+      console.log("All marker types found in search:", Array.from(allTypes));
       
-      supercluster.load(points);
-      console.log("SuperCluster loaded");
+      // Group markers by type
+      const markersByType = {
+        parking: points.filter(p => p.properties.type === 'parking'),
+        bicycleService: points.filter(p => p.properties.type === 'bicycleService'),
+        repairStation: points.filter(p => p.properties.type === 'repairStation'),
+      };
+      
+      console.log("Markers by type:", {
+        parking: markersByType.parking.length,
+        bicycleService: markersByType.bicycleService.length,
+        repairStation: markersByType.repairStation.length,
+        total: points.length,
+        unmatched: points.length - (markersByType.parking.length + markersByType.bicycleService.length + markersByType.repairStation.length)
+      });
       
       const zoom = Math.log2(360 / searchRegion.latitudeDelta);
       const clampedZoom = Math.max(0, Math.min(20, zoom));
@@ -511,8 +518,54 @@ export default function MapScreen() {
         searchRegion.latitude + searchRegion.latitudeDelta / 2,
       ] as [number, number, number, number];
       
-      const clusteredFeatures = supercluster.getClusters(bounds, clampedZoom);
-      const finalClusters = clusteredFeatures.length > 0 ? clusteredFeatures : points;
+      let allClusters: any[] = [];
+      
+      // Cluster each type separately
+      Object.entries(markersByType).forEach(([type, typePoints]) => {
+        if (typePoints.length === 0) return;
+        
+        console.log(`Search clustering ${typePoints.length} markers of type ${type}`);
+
+        // Special case: if there's only 1 marker of this type, just add it directly
+        if (typePoints.length === 1) {
+          console.log(`Search: Type ${type} only has 1 marker, adding directly`);
+          allClusters = allClusters.concat(typePoints);
+          return;
+        }
+
+        const supercluster = new Supercluster({
+          radius: 50,
+          maxZoom: 18, // Higher maxZoom to ensure individual markers show at high zoom levels
+          minZoom: 0,
+          minPoints: 2,
+          extent: 256,
+          nodeSize: 32,
+        });
+
+        supercluster.load(typePoints);
+        const typeClusters = supercluster.getClusters(bounds, clampedZoom);
+        
+        console.log(`Search: Type ${type} produced ${typeClusters.length} results from ${typePoints.length} input points`);
+        
+        // Add type information to clusters
+        const enhancedClusters = typeClusters.map(cluster => {
+          if (cluster.properties && 'cluster' in cluster.properties) {
+            return {
+              ...cluster,
+              properties: {
+                ...cluster.properties,
+                cluster_category: type,
+              }
+            };
+          } else {
+            return cluster;
+          }
+        });
+
+        allClusters = allClusters.concat(enhancedClusters);
+      });
+      
+      const finalClusters = allClusters.length > 0 ? allClusters : points;
       
       console.log("Final clustering result:", finalClusters.length, "clusters from", freshFiltered.length, "markers");
       
@@ -605,19 +658,8 @@ export default function MapScreen() {
         return markerFilters[marker.type];
       });
       
-      // Manual clustering implementation (same as in search)
+      // Manual clustering implementation with type-based clustering
       const points = markersToPoints(currentFiltered);
-      
-      const supercluster = new Supercluster({
-        radius: 50,
-        maxZoom: 15,
-        minZoom: 0,
-        minPoints: 4,
-        extent: 256,
-        nodeSize: 32,
-      });
-      
-      supercluster.load(points);
       
       const zoom = Math.log2(360 / newRegion.latitudeDelta);
       const clampedZoom = Math.max(0, Math.min(20, zoom));
@@ -629,8 +671,61 @@ export default function MapScreen() {
         newRegion.latitude + newRegion.latitudeDelta / 2,
       ] as [number, number, number, number];
       
-      const clusteredFeatures = supercluster.getClusters(bounds, clampedZoom);
-      const finalClusters = clusteredFeatures.length > 0 ? clusteredFeatures : points;
+      // Group markers by type
+      const markersByType = {
+        parking: points.filter(p => p.properties.type === 'parking'),
+        bicycleService: points.filter(p => p.properties.type === 'bicycleService'),
+        repairStation: points.filter(p => p.properties.type === 'repairStation'),
+      };
+      
+      let allClusters: any[] = [];
+
+      // Cluster each type separately
+      Object.entries(markersByType).forEach(([type, typePoints]) => {
+        if (typePoints.length === 0) return;
+        
+        console.log(`Zoom clustering ${typePoints.length} markers of type ${type}`);
+
+        // Special case: if there's only 1 marker of this type, just add it directly
+        if (typePoints.length === 1) {
+          console.log(`Zoom: Type ${type} only has 1 marker, adding directly`);
+          allClusters = allClusters.concat(typePoints);
+          return;
+        }
+
+        const supercluster = new Supercluster({
+          radius: 50,
+          maxZoom: 18, // Higher maxZoom to ensure individual markers show at high zoom levels
+          minZoom: 0,
+          minPoints: 2,
+          extent: 256,
+          nodeSize: 32,
+        });
+
+        supercluster.load(typePoints);
+        const typeClusters = supercluster.getClusters(bounds, clampedZoom);
+        
+        console.log(`Zoom: Type ${type} produced ${typeClusters.length} results from ${typePoints.length} input points`);
+        
+        // Add type information to clusters
+        const enhancedClusters = typeClusters.map((cluster: any) => {
+          if (cluster.properties && 'cluster' in cluster.properties) {
+            return {
+              ...cluster,
+              properties: {
+                ...cluster.properties,
+                cluster_category: type,
+              }
+            };
+          } else {
+            return cluster;
+          }
+        });
+
+        allClusters = allClusters.concat(enhancedClusters);
+      });
+      
+      const finalClusters = allClusters.length > 0 ? allClusters : points;
       
       console.log("Re-clustering for zoom:", finalClusters.length, "clusters");
       
@@ -705,9 +800,16 @@ export default function MapScreen() {
     (feature: any, index: number) => {
       // Check if it's a cluster first
       if (isCluster(feature)) {
-        // Render cluster marker
+        // Render cluster marker with type-specific color
         const clusterInfo = getClusterInfo(feature);
-        const clusterBackgroundColor = "#059669";
+        
+        // Get cluster type from properties to determine color
+        const clusterType = (feature as any).properties?.cluster_category || 'parking';
+        const clusterBackgroundColor = clusterType === "parking" 
+          ? "#059669" 
+          : clusterType === "bicycleService" 
+          ? "#F97316" 
+          : "#1D4ED8";
 
         return (
           <Marker
