@@ -3,13 +3,12 @@ import { ThemedView } from "@/components/ThemedView";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import {
   ClusteredFeature,
+  ClusterFeature,
   getClusterInfo,
   getMarkerFromPoint,
   isCluster,
-  useExpoClustering,
-  markersToPoints,
+  clusterMarkers,
 } from "@/lib/expoClustering";
-import Supercluster from 'supercluster';
 import { MapMarker, getDistance } from "@/lib/markers";
 import { clearMarkerCache } from "@/lib/markerUtils";
 import { useFavouritesStore } from "@/stores/favouritesStore";
@@ -289,12 +288,7 @@ export default function MapScreen() {
     }
   }, [userLocation, currentMapCenter, clearSearchResults]);
 
-  // Filter markers based on user selection
-  const filteredMarkers = useMemo(() => {
-    return markers.filter((marker) => {
-      return markerFilters[marker.type];
-    });
-  }, [markers, markerFilters]);
+  // Remove unused filteredMarkers - we filter inline where needed
 
   // State to control when to render markers (only on search)
   const [shouldRenderMarkers, setShouldRenderMarkers] = useState(false);
@@ -307,7 +301,7 @@ export default function MapScreen() {
       return [];
     }
     
-    console.log("Using frozen clusters:", frozenClusters.length, "clusters");
+    console.log("Using simple markers/clusters:", frozenClusters.length, "total");
     return frozenClusters;
   }, [frozenClusters, shouldRenderMarkers]);
 
@@ -351,7 +345,8 @@ export default function MapScreen() {
             return markerFilters[marker.type];
           });
           
-          const clusteringResult = useExpoClustering(initialFiltered, newRegion);
+          // Simple initial load - no aggressive clustering
+          const clusteringResult = clusterMarkers(initialFiltered, newRegion);
           setFrozenClusters(clusteringResult.clusters);
           setShouldRenderMarkers(true);
         }
@@ -410,11 +405,16 @@ export default function MapScreen() {
   }, [params.filterType]);
 
   const handleRegionChangeComplete = useCallback((newRegion: Region) => {
+    // KRITIKUS: Ne cluster-eljünk automatikusan - ez okozza a crasheket
     setRegion(newRegion);
     setCurrentMapCenter({
       latitude: newRegion.latitude,
       longitude: newRegion.longitude,
     });
+    
+    // FONTOS: Itt NEM renderelünk újra semmit!
+    // Csak a search gombra reagálunk
+    console.log('Map moved - NO automatic re-clustering');
   }, []);
 
   const handleMapReady = useCallback(() => {
@@ -485,97 +485,32 @@ export default function MapScreen() {
       
       console.log("Clustering with region:", searchRegion);
       
-      // Type-based clustering implementation - cluster each type separately
-      const points = markersToPoints(freshFiltered);
-      console.log("Created points:", points.length);
+      // Use the pure clustering function with error handling
+      const clusteringResult = clusterMarkers(freshFiltered, searchRegion);
       
-      // Debug: Check all unique marker types in the data
-      const allTypes = new Set(points.map(p => p.properties.type));
-      console.log("All marker types found in search:", Array.from(allTypes));
+      // Validate clustering result
+      if (!clusteringResult || !clusteringResult.clusters) {
+        console.error("Invalid clustering result:", clusteringResult);
+        Alert.alert("Hiba", "Nem sikerült feldolgozni a markereket.");
+        return;
+      }
       
-      // Group markers by type
-      const markersByType = {
-        parking: points.filter(p => p.properties.type === 'parking'),
-        bicycleService: points.filter(p => p.properties.type === 'bicycleService'),
-        repairStation: points.filter(p => p.properties.type === 'repairStation'),
-      };
+      if (!Array.isArray(clusteringResult.clusters)) {
+        console.error("Clusters is not an array:", clusteringResult.clusters);
+        Alert.alert("Hiba", "Hibás marker adatstruktúra.");
+        return;
+      }
       
-      console.log("Markers by type:", {
-        parking: markersByType.parking.length,
-        bicycleService: markersByType.bicycleService.length,
-        repairStation: markersByType.repairStation.length,
-        total: points.length,
-        unmatched: points.length - (markersByType.parking.length + markersByType.bicycleService.length + markersByType.repairStation.length)
-      });
+      console.log("Final clustering result:", clusteringResult.clusters.length, "clusters from", freshFiltered.length, "markers");
       
-      const zoom = Math.log2(360 / searchRegion.latitudeDelta);
-      const clampedZoom = Math.max(0, Math.min(20, zoom));
-      
-      const bounds = [
-        searchRegion.longitude - searchRegion.longitudeDelta / 2,
-        searchRegion.latitude - searchRegion.latitudeDelta / 2,
-        searchRegion.longitude + searchRegion.longitudeDelta / 2,
-        searchRegion.latitude + searchRegion.latitudeDelta / 2,
-      ] as [number, number, number, number];
-      
-      let allClusters: any[] = [];
-      
-      // Cluster each type separately
-      Object.entries(markersByType).forEach(([type, typePoints]) => {
-        if (typePoints.length === 0) return;
-        
-        console.log(`Search clustering ${typePoints.length} markers of type ${type}`);
-
-        // Special case: if there's only 1 marker of this type, just add it directly
-        if (typePoints.length === 1) {
-          console.log(`Search: Type ${type} only has 1 marker, adding directly`);
-          allClusters = allClusters.concat(typePoints);
-          return;
-        }
-
-        const supercluster = new Supercluster({
-          radius: 50,
-          maxZoom: 18, // Higher maxZoom to ensure individual markers show at high zoom levels
-          minZoom: 0,
-          minPoints: 2,
-          extent: 256,
-          nodeSize: 32,
-        });
-
-        supercluster.load(typePoints);
-        const typeClusters = supercluster.getClusters(bounds, clampedZoom);
-        
-        console.log(`Search: Type ${type} produced ${typeClusters.length} results from ${typePoints.length} input points`);
-        
-        // Add type information to clusters
-        const enhancedClusters = typeClusters.map(cluster => {
-          if (cluster.properties && 'cluster' in cluster.properties) {
-            return {
-              ...cluster,
-              properties: {
-                ...cluster.properties,
-                cluster_category: type,
-              }
-            };
-          } else {
-            return cluster;
-          }
-        });
-
-        allClusters = allClusters.concat(enhancedClusters);
-      });
-      
-      const finalClusters = allClusters.length > 0 ? allClusters : points;
-      
-      console.log("Final clustering result:", finalClusters.length, "clusters from", freshFiltered.length, "markers");
-      
-      // Freeze the clusters - they won't change until next search
-      setFrozenClusters(finalClusters);
-      
-      // Enable marker rendering
-      setShouldRenderMarkers(true);
-      
-      console.log("Search completed successfully - frozen clusters will now be visible");
+      // Simple marker update - let React Native Maps handle the rest
+      try {
+        setFrozenClusters(clusteringResult.clusters);
+        setShouldRenderMarkers(true);
+        console.log("Search completed successfully - markers should now be visible");
+      } catch (error) {
+        console.error("Error setting markers:", error);
+      }
     } catch (error) {
       console.error("Search error:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -641,105 +576,28 @@ export default function MapScreen() {
   }, []);
 
   const handleClusterPress = useCallback(
-    (cluster: ClusteredFeature) => {
-      // Agresszívebb zoom hogy biztosan szétváljon
-      const zoomFactor = 0.3; // Még agresszívebb zoom
+    (cluster: ClusterFeature) => {
+      // Egyszerű zoom be - NE legyen újra clustering!
       const clusterInfo = getClusterInfo(cluster);
       const newRegion = {
         latitude: clusterInfo.coordinate.latitude,
         longitude: clusterInfo.coordinate.longitude,
-        latitudeDelta: Math.max(region.latitudeDelta * zoomFactor, 0.0005), // Kisebb minimum
-        longitudeDelta: Math.max(region.longitudeDelta * zoomFactor, 0.0005),
+        latitudeDelta: 0.01, // Fix zoom level
+        longitudeDelta: 0.01,
       };
 
-      // Re-cluster at the new zoom level using manual clustering (no hooks in callbacks!)
-      const { markers: currentMarkers } = useLocationStore.getState();
-      const currentFiltered = currentMarkers.filter((marker) => {
-        return markerFilters[marker.type];
-      });
-      
-      // Manual clustering implementation with type-based clustering
-      const points = markersToPoints(currentFiltered);
-      
-      const zoom = Math.log2(360 / newRegion.latitudeDelta);
-      const clampedZoom = Math.max(0, Math.min(20, zoom));
-      
-      const bounds = [
-        newRegion.longitude - newRegion.longitudeDelta / 2,
-        newRegion.latitude - newRegion.latitudeDelta / 2,
-        newRegion.longitude + newRegion.longitudeDelta / 2,
-        newRegion.latitude + newRegion.latitudeDelta / 2,
-      ] as [number, number, number, number];
-      
-      // Group markers by type
-      const markersByType = {
-        parking: points.filter(p => p.properties.type === 'parking'),
-        bicycleService: points.filter(p => p.properties.type === 'bicycleService'),
-        repairStation: points.filter(p => p.properties.type === 'repairStation'),
-      };
-      
-      let allClusters: any[] = [];
-
-      // Cluster each type separately
-      Object.entries(markersByType).forEach(([type, typePoints]) => {
-        if (typePoints.length === 0) return;
-        
-        console.log(`Zoom clustering ${typePoints.length} markers of type ${type}`);
-
-        // Special case: if there's only 1 marker of this type, just add it directly
-        if (typePoints.length === 1) {
-          console.log(`Zoom: Type ${type} only has 1 marker, adding directly`);
-          allClusters = allClusters.concat(typePoints);
-          return;
-        }
-
-        const supercluster = new Supercluster({
-          radius: 50,
-          maxZoom: 18, // Higher maxZoom to ensure individual markers show at high zoom levels
-          minZoom: 0,
-          minPoints: 2,
-          extent: 256,
-          nodeSize: 32,
-        });
-
-        supercluster.load(typePoints);
-        const typeClusters = supercluster.getClusters(bounds, clampedZoom);
-        
-        console.log(`Zoom: Type ${type} produced ${typeClusters.length} results from ${typePoints.length} input points`);
-        
-        // Add type information to clusters
-        const enhancedClusters = typeClusters.map((cluster: any) => {
-          if (cluster.properties && 'cluster' in cluster.properties) {
-            return {
-              ...cluster,
-              properties: {
-                ...cluster.properties,
-                cluster_category: type,
-              }
-            };
-          } else {
-            return cluster;
-          }
-        });
-
-        allClusters = allClusters.concat(enhancedClusters);
-      });
-      
-      const finalClusters = allClusters.length > 0 ? allClusters : points;
-      
-      console.log("Re-clustering for zoom:", finalClusters.length, "clusters");
-      
-      // Update frozen clusters with new zoom level clusters
-      setFrozenClusters(finalClusters);
+      console.log("Cluster pressed - simple zoom in, markers stay frozen");
       
       mapRef.current?.animateToRegion(newRegion, 600);
     },
-    [region, markerFilters]
+    []
   );
 
   const closeFlyout = useCallback(() => {
     setSelectedMarker(null);
   }, []);
+
+  // Removed complex progressive loading - keeping it simple like geocaching apps
 
   const handleDirections = useCallback(() => {
     if (selectedMarker) {
@@ -813,13 +671,22 @@ export default function MapScreen() {
 
         return (
           <Marker
-            key={`cluster-${clusterInfo.clusterId}-${index}`}
+            key={`cluster-${clusterInfo.clusterId || 'unknown'}-${index}-${Math.round(clusterInfo.coordinate.latitude * 100000)}-${Math.round(clusterInfo.coordinate.longitude * 100000)}`}
             coordinate={clusterInfo.coordinate}
-            onPress={() => handleClusterPress(feature)}
-            tracksViewChanges={false}
+            onPress={() => handleClusterPress(feature as ClusterFeature)}
+            tracksViewChanges={false} // CRITICAL: Always false for performance
             anchor={{ x: 0.5, y: 0.5 }}
             centerOffset={{ x: 0, y: 0 }}
             zIndex={200}
+            // iOS-specific crash prevention optimizations
+            {...(Platform.OS === 'ios' && {
+              shouldRasterizeIOS: true,
+              optimized: true,
+              // Critical iOS stability fixes
+              shadowOpacity: 0,
+              shadowRadius: 0,
+              elevation: 0
+            })}
           >
             <View
               style={[
@@ -828,10 +695,10 @@ export default function MapScreen() {
                   backgroundColor: clusterBackgroundColor,
                   borderColor: "#fff",
                   borderWidth: 2,
-                  // Platform-specific shadow optimizations
-                  shadowOpacity: Platform.OS === 'ios' ? 0 : 0.2,
-                  shadowRadius: Platform.OS === 'ios' ? 0 : 4,
-                  elevation: Platform.OS === 'ios' ? 0 : 4,
+                  // Platform-specific shadow optimizations - iOS shadows cause crashes
+                  shadowOpacity: 0, // Always 0 for stability
+                  shadowRadius: 0,
+                  elevation: Platform.OS === 'ios' ? 0 : 2, // Reduced Android elevation
                 },
               ]}
             >
@@ -868,14 +735,23 @@ export default function MapScreen() {
 
       return (
         <Marker
-          key={`marker-${marker.id}`}
+          key={`${marker.type}-${marker.id || 'unknown'}-${Math.round(marker.coordinate.latitude * 100000)}-${Math.round(marker.coordinate.longitude * 100000)}`}
           coordinate={marker.coordinate}
           title={marker.title}
           description={marker.description}
           onPress={() => handleMarkerPress(marker)}
           anchor={{ x: 0.5, y: 0.5 }}
           zIndex={100}
-          tracksViewChanges={false}
+          tracksViewChanges={false} // CRITICAL: Always false for performance
+          // iOS-specific crash prevention optimizations  
+          {...(Platform.OS === 'ios' && {
+            shouldRasterizeIOS: true,
+            optimized: true,
+            // Critical iOS stability fixes
+            shadowOpacity: 0,
+            shadowRadius: 0,
+            elevation: 0
+          })}
         >
           <View
             style={[
@@ -884,10 +760,10 @@ export default function MapScreen() {
                 backgroundColor: markerBackgroundColor,
                 borderColor: markerBorderColor,
                 borderWidth: 2,
-                // Platform-specific shadow optimizations
-                shadowOpacity: Platform.OS === 'ios' ? 0 : 0.2,
-                shadowRadius: Platform.OS === 'ios' ? 0 : 3,
-                elevation: Platform.OS === 'ios' ? 0 : 3,
+                // Platform-specific shadow optimizations - iOS shadows cause crashes
+                shadowOpacity: 0, // Always 0 for stability
+                shadowRadius: 0,
+                elevation: Platform.OS === 'ios' ? 0 : 2, // Reduced Android elevation
               },
             ]}
           >
@@ -897,9 +773,9 @@ export default function MapScreen() {
                 style={[
                   styles.starOverlay,
                   {
-                    shadowOpacity: Platform.OS === 'ios' ? 0 : 0.2,
-                    shadowRadius: Platform.OS === 'ios' ? 0 : 2,
-                    elevation: Platform.OS === 'ios' ? 0 : 3,
+                    shadowOpacity: 0, // Always 0 for stability
+                    shadowRadius: 0,
+                    elevation: Platform.OS === 'ios' ? 0 : 2, // Reduced Android elevation
                   },
                 ]}
               >
@@ -926,24 +802,94 @@ export default function MapScreen() {
     return INITIAL_REGION;
   }, [userLocation]);
 
-  // Ultra-safe marker rendering with strict limits
+  // Simple marker rendering with proper validation
   const renderedMarkers = useMemo(() => {
-    // Strict iOS limits to prevent crashes
-    const maxMarkers = Platform.OS === 'ios' ? 20 : 50;
-    const safeMarkers = clusteredMarkers.slice(0, maxMarkers);
+    // Reasonable limits like geocaching apps
+    const maxMarkers = Platform.OS === 'ios' ? 200 : 500;
+    
+    // Smart marker selection: prioritize clusters and screen center proximity
+    const sortedMarkers = [...clusteredMarkers].sort((a, b) => {
+      const centerLat = region.latitude;
+      const centerLng = region.longitude;
+      
+      // Extract coordinates from features
+      const aCoord = a.geometry?.coordinates || [0, 0];
+      const bCoord = b.geometry?.coordinates || [0, 0];
+      
+      // Prioritize clusters over individual markers (clusters show more data)
+      const aIsCluster = a.properties && 'cluster' in a.properties && a.properties.cluster;
+      const bIsCluster = b.properties && 'cluster' in b.properties && b.properties.cluster;
+      
+      if (aIsCluster && !bIsCluster) return -1; // a (cluster) comes first
+      if (!aIsCluster && bIsCluster) return 1;  // b (cluster) comes first
+      
+      // If both are clusters or both are individual, sort by distance from center
+      const aDistance = Math.pow(aCoord[1] - centerLat, 2) + Math.pow(aCoord[0] - centerLng, 2);
+      const bDistance = Math.pow(bCoord[1] - centerLat, 2) + Math.pow(bCoord[0] - centerLng, 2);
+      
+      return aDistance - bDistance;
+    });
+    
+    // Use all sorted markers up to limit
+    const safeMarkers = sortedMarkers.slice(0, maxMarkers);
     
     const markers = safeMarkers.map((feature, index) => {
       try {
+        // Validate feature data before rendering
+        if (!feature || !feature.geometry || !feature.geometry.coordinates) {
+          console.warn('Invalid feature data:', feature);
+          return null;
+        }
+        
+        const coords = feature.geometry.coordinates;
+        if (!Array.isArray(coords) || coords.length !== 2) {
+          console.warn('Invalid coordinates:', coords);
+          return null;
+        }
+        
+        const [lng, lat] = coords;
+        if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+          console.warn('Invalid coordinate values:', { lat, lng });
+          return null;
+        }
+        
         return renderMarker(feature, index);
       } catch (error) {
-        console.error('Marker render error:', error);
+        console.error('Marker render error:', error, 'Feature:', feature);
+        // Geocaching app pattern: Emergency stop on critical iOS errors
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('insertObject') || 
+            errorMessage.includes('NSArray') ||
+            errorMessage.includes('insertReactSubview') ||
+            errorMessage.includes('AIRMap')) {
+          console.error('CRITICAL: iOS MapView crash detected - emergency stop');
+          // Emergency recovery: clear all markers and show alert
+          setShouldRenderMarkers(false);
+          setFrozenClusters([]);
+          Alert.alert(
+            "Térkép hiba", 
+            "A térkép újraindítására van szükség a stabil működés érdekében.",
+            [{ text: "OK", onPress: () => {
+              // Force re-initialization after user acknowledgment
+              setTimeout(() => {
+                console.log("Emergency recovery: ready for new search");
+              }, 1000);
+            }}]
+          );
+          return null;
+        }
         return null;
       }
     }).filter(Boolean);
     
+    // Debug info about marker rendering
+    const clusterCount = safeMarkers.filter(m => m.properties && 'cluster' in m.properties && m.properties.cluster).length;
+    const individualCount = safeMarkers.length - clusterCount;
+    
     console.log(
-      `Rendering ${markers.length}/${safeMarkers.length} markers (max: ${maxMarkers}) - Platform: ${Platform.OS}`
+      `Rendering markers: ${clusterCount} clusters + ${individualCount} individual = ${safeMarkers.length}/${clusteredMarkers.length} total (max: ${maxMarkers}) - Platform: ${Platform.OS}`
     );
+    
     return markers;
   }, [clusteredMarkers, renderMarker]);
 

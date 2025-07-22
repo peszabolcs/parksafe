@@ -123,8 +123,10 @@ export const useLocationStore = create<LocationState>((set, get) => {
           
           // Continue fetching fresh data in background
           setTimeout(() => {
-            fetchNearbyMarkers(userLocation!.latitude, userLocation!.longitude, 5000, true)
+            console.log('Background refresh of home markers...');
+            fetchNearbyMarkers(userLocation!.latitude, userLocation!.longitude, 10000, false) // 10km, all markers
               .then(markers => {
+                console.log(`Background fetch found ${markers.length} markers`);
                 homeMarkersCache = markers;
                 set({ homeMarkers: markers });
                 updateCombinedMarkers();
@@ -135,11 +137,13 @@ export const useLocationStore = create<LocationState>((set, get) => {
         }
 
         // Step 3: Fetch home markers with timeout
+        console.log(`Fetching home markers for location: (${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)})`);
+        
         const markersPromise = fetchNearbyMarkers(
           userLocation.latitude,
           userLocation.longitude,
-          5000, // 5km radius
-          true   // only available
+          10000, // Increased to 10km radius
+          false   // Include non-available markers too
         );
 
         const timeoutPromise = new Promise<never>((_, reject) => {
@@ -224,12 +228,23 @@ export const useLocationStore = create<LocationState>((set, get) => {
 
         // Fetch markers for the new location
         try {
+          console.log(`Refreshing home markers at (${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)})`);
+          
           const homeMarkers = await Promise.race([
-            fetchNearbyMarkers(userLocation.latitude, userLocation.longitude, 5000, true),
+            fetchNearbyMarkers(userLocation.latitude, userLocation.longitude, 10000, false), // 10km, include all
             new Promise<never>((_, reject) => {
-              setTimeout(() => reject(new Error('Markers timeout')), 6000);
+              setTimeout(() => reject(new Error('Markers timeout')), 8000); // Longer timeout
             })
           ]);
+          
+          console.log(`Refresh found ${homeMarkers.length} home markers`);
+          
+          // Debug: Show marker distribution
+          const typeDistribution = homeMarkers.reduce((acc, marker) => {
+            acc[marker.type] = (acc[marker.type] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+          console.log('Home marker distribution:', typeDistribution);
 
           homeMarkersCache = homeMarkers;
           set({ homeMarkers, loading: false });
@@ -251,12 +266,25 @@ export const useLocationStore = create<LocationState>((set, get) => {
       try {
         console.log('Searching at location:', { latitude, longitude });
         
+        // Use larger radius when searching manually - user probably zoomed out
+        const dynamicRadius = 15000; // 15km for manual searches
+        console.log(`Using search radius: ${dynamicRadius}m`);
+        
         const searchResults = await Promise.race([
-          fetchNearbyMarkers(latitude, longitude, 5000, true),
+          fetchNearbyMarkers(latitude, longitude, dynamicRadius, false), // Include non-available too
           new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('Search timeout')), 6000);
+            setTimeout(() => reject(new Error('Search timeout')), 8000); // Longer timeout for larger area
           })
         ]);
+        
+        console.log(`Search found ${searchResults.length} markers at (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+        
+        // Debug: Show marker distribution
+        const typeDistribution = searchResults.reduce((acc, marker) => {
+          acc[marker.type] = (acc[marker.type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        console.log('Search marker distribution:', typeDistribution);
 
         // Add search results to existing markers (don't replace home markers)
         set({ searchMarkers: searchResults, loading: false });
