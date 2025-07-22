@@ -1,5 +1,9 @@
 // Optimized marker data and distance calculation for ParkSafe
 import { supabase } from './supabase';
+import { parseCoordinate, testWKBParsing } from './wkbParser';
+
+// Test WKB parsing on module load
+testWKBParsing();
 
 export interface MapMarker {
   id: string;
@@ -57,18 +61,55 @@ export interface BicycleService extends BaseLocationData {
   picture_url?: string;
 }
 
+// Process raw database data with WKB coordinates
+const processRawLocationData = (item: any): any => {
+  // If we have WKB coordinates, parse them
+  if (item.coordinate && typeof item.coordinate === 'string') {
+    const parsedCoord = parseCoordinate(item.coordinate);
+    if (parsedCoord) {
+      return {
+        ...item,
+        latitude: parsedCoord.latitude,
+        longitude: parsedCoord.longitude,
+      };
+    }
+  }
+  
+  // If we already have lat/lng, use them
+  if (item.lat && item.lon) {
+    return {
+      ...item,
+      latitude: item.lat,
+      longitude: item.lon,
+    };
+  }
+  
+  // If we have latitude/longitude, use them
+  if (item.latitude && item.longitude) {
+    return item;
+  }
+  
+  return null;
+};
+
 // Unified validation function
 const validateLocationData = (item: any): boolean => {
-  const isValid = item.id && item.name && 
-         typeof item.latitude === 'number' && 
-         typeof item.longitude === 'number';
+  const processed = processRawLocationData(item);
+  if (!processed) {
+    console.warn('Could not process location data:', item);
+    return false;
+  }
+  
+  const isValid = processed.id && processed.name && 
+         typeof processed.latitude === 'number' && 
+         typeof processed.longitude === 'number';
   
   if (!isValid) {
-    console.warn('Invalid location data:', { 
-      id: item.id, 
-      name: item.name, 
-      lat: typeof item.latitude, 
-      lng: typeof item.longitude 
+    console.warn('Invalid location data after processing:', { 
+      id: processed.id, 
+      name: processed.name, 
+      lat: typeof processed.latitude, 
+      lng: typeof processed.longitude 
     });
   }
   
@@ -77,34 +118,39 @@ const validateLocationData = (item: any): boolean => {
 
 // Unified mapping function for location data
 const mapToMarker = (
-  item: BaseLocationData | RepairStation | BicycleService, 
+  item: any, 
   type: 'parking' | 'repairStation' | 'bicycleService',
   distance?: number
 ): MapMarker => {
+  const processed = processRawLocationData(item);
+  if (!processed) {
+    throw new Error('Could not process location data for mapping');
+  }
+  
   return {
-    id: item.id,
+    id: processed.id,
     coordinate: {
-      latitude: item.latitude,
-      longitude: item.longitude
+      latitude: processed.latitude,
+      longitude: processed.longitude
     },
     type,
-    title: item.name,
-    description: item.description || '',
-    available: item.available ?? true,
-    covered: item.covered,
-    city: item.city,
+    title: processed.name,
+    description: processed.description || '',
+    available: processed.available ?? true,
+    covered: processed.covered,
+    city: processed.city,
     ...(type === 'repairStation' && {
-      free: (item as RepairStation).free,
-      pictureUrl: (item as RepairStation).pictureUrl,
+      free: processed.free,
+      pictureUrl: processed.pictureUrl,
     }),
     ...(type === 'bicycleService' && {
-      phone: (item as BicycleService).phone,
-      website: (item as BicycleService).website,
-      openingHours: (item as BicycleService).opening_hours,
-      services: (item as BicycleService).services,
-      rating: (item as BicycleService).rating,
-      priceRange: (item as BicycleService).price_range,
-      pictureUrl: (item as BicycleService).picture_url,
+      phone: processed.phone,
+      website: processed.website,
+      openingHours: processed.opening_hours,
+      services: processed.services,
+      rating: processed.rating,
+      priceRange: processed.price_range,
+      pictureUrl: processed.picture_url,
     }),
     ...(distance !== undefined && { distance })
   };
@@ -125,17 +171,30 @@ const fetchFromRPC = async (
     }
 
     if (!data?.length) {
+      console.log(`No data returned from ${rpcName}`);
       return [];
     }
     
-    const validData = data.filter(validateLocationData);
-    const mappedData = validData.map((item: any) => mapToMarker(
-      item, 
-      type || (rpcName.includes('parking') ? 'parking' : 
-               rpcName.includes('bicycle') ? 'bicycleService' : 'repairStation'),
-      item.distance_meters
-    ));
+    console.log(`Raw data from ${rpcName}:`, data.slice(0, 2)); // Log first 2 items
     
+    const validData = data.filter(validateLocationData);
+    console.log(`Valid data after processing:`, validData.length);
+    
+    const mappedData = validData.map((item: any) => {
+      try {
+        return mapToMarker(
+          item, 
+          type || (rpcName.includes('parking') ? 'parking' : 
+                   rpcName.includes('bicycle') ? 'bicycleService' : 'repairStation'),
+          item.distance_meters
+        );
+      } catch (error) {
+        console.error('Error mapping item:', error, item);
+        return null;
+      }
+    }).filter(Boolean);
+    
+    console.log(`Successfully mapped ${mappedData.length} markers`);
     return mappedData;
   } catch (error) {
     console.error(`Exception in ${rpcName}:`, error);
@@ -236,6 +295,59 @@ export const generateAllMarkers = async (): Promise<MapMarker[]> => {
     console.error('Error generating all markers:', error);
     return [];
   }
+};
+
+// Test function with sample data
+export const generateTestMarkers = (): MapMarker[] => {
+  const sampleData = [
+    {
+      "id": "0d36f5b3-23e6-4e02-aef3-514efc9a1807",
+      "coordinate": "0101000020E6100000D735B5C766123340F9A3A833F7BF4740",
+      "name": "biciklitároló",
+      "description": null,
+      "available": true,
+      "city": "",
+      "covered": false,
+      "created_at": "2025-07-17 14:49:53.820401+00",
+      "updated_at": "2025-07-17 14:49:53.820401+00",
+      "lon": null,
+      "lat": null
+    },
+    {
+      "id": "5ee9d20e-9388-4624-8b92-9d1b154dc34b",
+      "coordinate": "0101000020E6100000D184DCFB0A1233406D73637AC2BF4740",
+      "name": "biciklitároló",
+      "description": null,
+      "available": true,
+      "city": "",
+      "covered": false,
+      "created_at": "2025-07-17 14:49:53.820401+00",
+      "updated_at": "2025-07-17 14:49:53.820401+00",
+      "lon": null,
+      "lat": null
+    }
+  ];
+
+  console.log('Processing test data...');
+  const markers: MapMarker[] = [];
+  
+  for (const item of sampleData) {
+    try {
+      const processed = processRawLocationData(item);
+      if (processed) {
+        const marker = mapToMarker(processed, 'parking');
+        markers.push(marker);
+        console.log('Created marker:', marker);
+      } else {
+        console.log('Failed to process item:', item);
+      }
+    } catch (error) {
+      console.error('Error processing test item:', error, item);
+    }
+  }
+  
+  console.log('Generated test markers:', markers.length);
+  return markers;
 };
 
 // Optimized distance calculation (Haversine formula)
