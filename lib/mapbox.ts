@@ -29,7 +29,7 @@ export const MAP_CONFIG = {
   styles: {
     street: 'mapbox://styles/mapbox/streets-v12',
     satellite: 'mapbox://styles/mapbox/satellite-v9',
-    light: 'mapbox://styles/mapbox/light-v11',
+    light: 'mapbox://styles/mapbox/streets-v12',
     dark: 'mapbox://styles/mapbox/dark-v11',
   },
   

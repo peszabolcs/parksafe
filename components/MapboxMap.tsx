@@ -12,6 +12,7 @@ import { useLocationStore } from '@/stores/locationStore';
 import { useFavouritesStore } from '@/stores/favouritesStore';
 import { MapMarker, getDistance } from '@/lib/markers';
 import { MapMarker as MapMarkerType } from '@/lib/markers';
+import { MAP_CONFIG } from '@/lib/mapbox';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_KEY;
 if (MAPBOX_ACCESS_TOKEN) {
@@ -352,7 +353,13 @@ export const MapboxMap: React.FC = () => {
         scrollEnabled={true}
         zoomEnabled={true}
         pitchEnabled={false}
-        styleURL={isDarkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11'}
+        styleURL={
+          mapType === 'hybrid' 
+            ? MAP_CONFIG.styles.satellite 
+            : isDarkMode 
+              ? MAP_CONFIG.styles.dark 
+              : MAP_CONFIG.styles.light
+        }
       >
         <Camera
           ref={cameraRef}
