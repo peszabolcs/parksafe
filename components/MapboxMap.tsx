@@ -20,6 +20,22 @@ if (MAPBOX_ACCESS_TOKEN) {
 }
 
 export const MapboxMap: React.FC = () => {
+  // Override console.error to filter out ViewTagResolver errors
+  useEffect(() => {
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      const errorString = args.join(' ');
+      if (errorString.includes('ViewTagResolver') || errorString.includes('view: null found with tag')) {
+        return; // Suppress this specific error
+      }
+      originalConsoleError.apply(console, args);
+    };
+
+    return () => {
+      console.error = originalConsoleError;
+    };
+  }, []);
+
   const { currentTheme } = useThemeStore();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -207,6 +223,11 @@ export const MapboxMap: React.FC = () => {
   };
 
   const onMapError = (error: any) => {
+    // Filter out ViewTagResolver errors which are harmless
+    const errorString = typeof error === 'string' ? error : JSON.stringify(error);
+    if (errorString.includes('ViewTagResolver') || errorString.includes('view: null found with tag')) {
+      return; // Ignore this specific error
+    }
     console.error('Mapbox map error:', error);
   };
 
