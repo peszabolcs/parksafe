@@ -123,8 +123,10 @@ export const useLocationStore = create<LocationState>((set, get) => {
           
           // Continue fetching fresh data in background
           setTimeout(() => {
-            fetchNearbyMarkers(userLocation!.latitude, userLocation!.longitude, 5000, true)
+            console.log('Background refresh of home markers...');
+            fetchNearbyMarkers(userLocation!.latitude, userLocation!.longitude, 10000, false) // 10km, all markers
               .then(markers => {
+                console.log(`Background fetch found ${markers.length} markers`);
                 homeMarkersCache = markers;
                 set({ homeMarkers: markers });
                 updateCombinedMarkers();
@@ -135,11 +137,13 @@ export const useLocationStore = create<LocationState>((set, get) => {
         }
 
         // Step 3: Fetch home markers with timeout
+        console.log(`Fetching home markers for location: (${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)})`);
+        
         const markersPromise = fetchNearbyMarkers(
           userLocation.latitude,
           userLocation.longitude,
-          5000, // 5km radius
-          true   // only available
+          10000, // Increased to 10km radius
+          false   // Include non-available markers too
         );
 
         const timeoutPromise = new Promise<never>((_, reject) => {
@@ -165,28 +169,94 @@ export const useLocationStore = create<LocationState>((set, get) => {
     refresh: async () => {
       const state = get();
       
-      // Quick refresh: use current location if available
-      if (state.userLocation) {
-        set({ loading: true, error: null });
+      set({ loading: true, error: null });
 
+      try {
+        // Force fresh location update - clear cache first
+        locationCache = null;
+        
+        // Get fresh location permission first
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          set({ error: 'Location permission denied', loading: false });
+          return;
+        }
+
+        let userLocation;
+        
         try {
-          const homeMarkers = await Promise.race([
-            fetchNearbyMarkers(state.userLocation.latitude, state.userLocation.longitude, 5000, true),
+          // First try: Current location with good accuracy
+          const location = await Promise.race([
+            Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            }),
             new Promise<never>((_, reject) => {
-              setTimeout(() => reject(new Error('Refresh timeout')), 6000);
+              setTimeout(() => reject(new Error('Location timeout')), 8000);
             })
           ]);
+
+          userLocation = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+          
+          console.log('Fresh location acquired:', userLocation);
+          
+        } catch (locationError) {
+          console.error('Fresh location error:', locationError);
+          // Fallback to last known if fresh fails
+          const lastKnown = await Location.getLastKnownPositionAsync();
+          if (lastKnown && lastKnown.coords) {
+            userLocation = {
+              latitude: lastKnown.coords.latitude,
+              longitude: lastKnown.coords.longitude,
+            };
+            console.log('Using last known location as fallback');
+          } else {
+            // Use default location if all fails
+            userLocation = {
+              latitude: 46.2530,
+              longitude: 20.1484,
+            };
+            console.log('Using default location (Szeged)');
+          }
+        }
+
+        // Update cache and state
+        locationCache = userLocation;
+        set({ userLocation });
+
+        // Fetch markers for the new location
+        try {
+          console.log(`Refreshing home markers at (${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)})`);
+          
+          const homeMarkers = await Promise.race([
+            fetchNearbyMarkers(userLocation.latitude, userLocation.longitude, 10000, false), // 10km, include all
+            new Promise<never>((_, reject) => {
+              setTimeout(() => reject(new Error('Markers timeout')), 8000); // Longer timeout
+            })
+          ]);
+          
+          console.log(`Refresh found ${homeMarkers.length} home markers`);
+          
+          // Debug: Show marker distribution
+          const typeDistribution = homeMarkers.reduce((acc, marker) => {
+            acc[marker.type] = (acc[marker.type] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+          console.log('Home marker distribution:', typeDistribution);
 
           homeMarkersCache = homeMarkers;
           set({ homeMarkers, loading: false });
           updateCombinedMarkers();
         } catch (error) {
-          console.error('Location refresh failed:', error);
-          set({ error: 'Failed to refresh locations', loading: false });
+          console.error('Markers refresh failed:', error);
+          set({ loading: false });
         }
-      } else {
-        // No location, run full initialization
-        await state.initialize();
+
+      } catch (error) {
+        console.error('Location refresh failed:', error);
+        set({ error: 'Failed to refresh location', loading: false });
       }
     },
 
@@ -196,12 +266,25 @@ export const useLocationStore = create<LocationState>((set, get) => {
       try {
         console.log('Searching at location:', { latitude, longitude });
         
+        // Use larger radius when searching manually - user probably zoomed out
+        const dynamicRadius = 15000; // 15km for manual searches
+        console.log(`Using search radius: ${dynamicRadius}m`);
+        
         const searchResults = await Promise.race([
-          fetchNearbyMarkers(latitude, longitude, 5000, true),
+          fetchNearbyMarkers(latitude, longitude, dynamicRadius, false), // Include non-available too
           new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('Search timeout')), 6000);
+            setTimeout(() => reject(new Error('Search timeout')), 8000); // Longer timeout for larger area
           })
         ]);
+        
+        console.log(`Search found ${searchResults.length} markers at (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+        
+        // Debug: Show marker distribution
+        const typeDistribution = searchResults.reduce((acc, marker) => {
+          acc[marker.type] = (acc[marker.type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        console.log('Search marker distribution:', typeDistribution);
 
         // Add search results to existing markers (don't replace home markers)
         set({ searchMarkers: searchResults, loading: false });

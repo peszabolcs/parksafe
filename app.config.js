@@ -19,7 +19,10 @@ export default ({ config }) => ({
     bundleIdentifier: "com.parksafe.app",
     config: {
       ...config.ios?.config,
-      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+      // Mapbox configuration for iOS
+      mapbox: {
+        publicKey: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_KEY,
+      },
     },
   },
   android: {
@@ -27,8 +30,9 @@ export default ({ config }) => ({
     package: "com.parksafe.app",
     config: {
       ...config.android?.config,
-      googleMaps: {
-        apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+      // Mapbox configuration for Android
+      mapbox: {
+        publicKey: process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_KEY,
       },
     },
   },
@@ -51,6 +55,12 @@ export default ({ config }) => ({
       "expo-location",
       {
         "locationAlwaysAndWhenInUsePermission": "Allow ParkSafe to use your location to find nearby parking spots and repair shops."
+      }
+    ],
+    [
+      "@rnmapbox/maps",
+      {
+        "mapboxPublicKey": process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_KEY,
       }
     ]
   ]
