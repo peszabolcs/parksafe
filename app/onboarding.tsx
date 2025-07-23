@@ -63,7 +63,7 @@ const onboardingData = [
     subtitle:
       "Most már ismered az összes funkciót! Kezdd el felfedezni a várost biztonságos parkolással!",
     icon: "rocket",
-    gradient: ["#a8edea", "#fed6e3"],
+    gradient: ["#8E2DE2", "#4A00E0"],
     particles: 20,
     delay: 1200,
   },
@@ -154,8 +154,6 @@ export default function OnboardingScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Progress animation (separate from glow to avoid conflicts)
@@ -199,23 +197,7 @@ export default function OnboardingScreen() {
       }),
     ]).start();
 
-    // Continuous logo rotation - independent loop
-    const startLogoRotation = () => {
-      logoRotate.setValue(0);
-      const rotateLoop = () => {
-        Animated.timing(logoRotate, {
-          toValue: 1,
-          duration: 8000,
-          useNativeDriver: true,
-        }).start(rotateLoop);
-      };
-      rotateLoop();
-    };
-
-    // Start logo rotation only once to avoid conflicts
-    if (currentIndex === 0) {
-      startLogoRotation();
-    }
+    // Logo remains static - no rotation
 
     // Glow effect animation - completely separate from width animations
     const startGlowAnimation = () => {
@@ -335,13 +317,6 @@ export default function OnboardingScreen() {
 
   const currentSlide = onboardingData[currentIndex];
 
-  const logoRotation = logoRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
-
-  // No need for interpolation - glowOpacityAnim already animates between 0.3 and 0.8
-
   return (
     <View style={styles.container}>
       <StatusBar
@@ -369,14 +344,7 @@ export default function OnboardingScreen() {
       >
         {/* Header with logo and controls */}
         <View style={styles.header}>
-          <Animated.View
-            style={[
-              styles.logoContainer,
-              {
-                transform: [{ rotate: logoRotation }],
-              },
-            ]}
-          >
+          <View style={styles.logoContainer}>
             <Image
               source={require("../assets/images/logo.png")}
               style={styles.headerLogo}
@@ -385,7 +353,7 @@ export default function OnboardingScreen() {
             <Animated.View
               style={[styles.logoGlow, { opacity: glowOpacityAnim }]}
             />
-          </Animated.View>
+          </View>
 
           {!isLastSlide && (
             <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
