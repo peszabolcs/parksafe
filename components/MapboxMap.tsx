@@ -338,12 +338,14 @@ export const MapboxMap: React.FC = () => {
         style={styles.map}
         onDidFinishLoadingMap={onMapLoaded}
         onDidFailLoadingMap={onMapError}
-        onRegionIsChanging={(feature) => {
-          const center = feature.geometry.coordinates;
-          setCurrentMapCenter({
-            latitude: center[1],
-            longitude: center[0],
-          });
+        onMapIdle={(event) => {
+          if (event.properties && event.properties.center) {
+            const center = event.properties.center;
+            setCurrentMapCenter({
+              latitude: center[1],
+              longitude: center[0],
+            });
+          }
         }}
         logoEnabled={false}
         attributionEnabled={false}
