@@ -371,92 +371,236 @@ export const MapboxMap: React.FC = () => {
           animationDuration={2000}
         />
 
-                {filteredMarkers.length > 0 && (
-        <ShapeSource
-            id="database-markers"
-            shape={convertMarkersToGeoJSON(filteredMarkers)}
-            cluster={true}
-            clusterRadius={50}
-            clusterMaxZoom={14}
-            clusterProperties={{
-              parking: ['+', ['case', ['==', ['get', 'type'], 'parking'], 1, 0]],
-              repairStation: ['+', ['case', ['==', ['get', 'type'], 'repairStation'], 1, 0]],
-              bicycleService: ['+', ['case', ['==', ['get', 'type'], 'bicycleService'], 1, 0]],
-            }}
-            onPress={(feature) => {
-              if (feature.features && feature.features.length > 0) {
-                const markerData = feature.features[0];
-                const marker = markers.find(m => m.id === markerData.properties?.id);
-                if (marker) {
-                  handleMarkerPress(marker);
-                }
-              }
-            }}
-          >
-            <CircleLayer
-              id="clusters"
-              filter={['has', 'point_count']}
-              style={{
-                circleRadius: 12,
-                circleColor: [
-                  'step',
-                  ['get', 'point_count'],
-                  '#51bbd6', 10,
-                  '#f1f075', 50,
-                  '#f28cb1', 100,
-                  '#e55e5e'
-                ],
-                circleStrokeColor: '#FFFFFF',
-                circleStrokeWidth: 2,
-              }}
-            />
+                {/* Parking Markers */}
+                {filteredMarkers.filter(m => m.type === 'parking').length > 0 && (
+                  <ShapeSource
+                    id="parking-markers"
+                    shape={convertMarkersToGeoJSON(filteredMarkers.filter(m => m.type === 'parking'))}
+                    cluster={true}
+                    clusterRadius={50}
+                    clusterMaxZoom={14}
+                    onPress={(feature) => {
+                      if (feature.features && feature.features.length > 0) {
+                        const markerData = feature.features[0];
+                        const marker = markers.find(m => m.id === markerData.properties?.id);
+                        if (marker) {
+                          handleMarkerPress(marker);
+                        }
+                      }
+                    }}
+                  >
+                    <CircleLayer
+                      id="parking-clusters"
+                      filter={['has', 'point_count']}
+                      style={{
+                        circleRadius: 12,
+                        circleColor: [
+                          'step',
+                          ['get', 'point_count'],
+                          '#059669', 10,
+                          '#059669', 50,
+                          '#059669', 100,
+                          '#059669'
+                        ],
+                        circleStrokeColor: '#FFFFFF',
+                        circleStrokeWidth: 2,
+                      }}
+                    />
 
-            <SymbolLayer
-              id="cluster-count"
-              filter={['has', 'point_count']}
-              style={{
-                textField: ['get', 'point_count'],
-                textFont: ['Arial Unicode MS Bold'],
-                textSize: 12,
-                textColor: '#FFFFFF',
-                textHaloColor: '#000000',
-                textHaloWidth: 1,
-              }}
-            />
+                    <SymbolLayer
+                      id="parking-cluster-count"
+                      filter={['has', 'point_count']}
+                      style={{
+                        textField: ['get', 'point_count'],
+                        textFont: ['Arial Unicode MS Bold'],
+                        textSize: 12,
+                        textColor: '#FFFFFF',
+                        textHaloColor: '#000000',
+                        textHaloWidth: 1,
+                      }}
+                    />
 
-            <CircleLayer
-              id="unclustered-points"
-              filter={['!', ['has', 'point_count']]}
-              style={{
-                circleRadius: 12,
-                circleColor: [
-                  'case',
-                  ['==', ['get', 'type'], 'parking'], '#059669',
-                  ['==', ['get', 'type'], 'repairStation'], '#1D4ED8',
-                  ['==', ['get', 'type'], 'bicycleService'], '#F97316',
-                  '#6B7280'
-                ],
-                circleStrokeColor: '#FFFFFF',
-                circleStrokeWidth: 2,
-              }}
-            />
-            
-            <SymbolLayer
-              id="marker-text"
-              filter={['!', ['has', 'point_count']]}
-              style={{
-                textField: ['get', 'name'],
-                textFont: ['Arial Unicode MS Regular'],
-                textSize: 10,
-                textColor: '#000000',
-                textHaloColor: '#FFFFFF',
-                textHaloWidth: 1,
-                textOffset: [0, 1.2],
-                textAnchor: 'top',
-              }}
-            />
-          </ShapeSource>
-        )}
+                    <CircleLayer
+                      id="parking-unclustered"
+                      filter={['!', ['has', 'point_count']]}
+                      style={{
+                        circleRadius: 12,
+                        circleColor: '#059669',
+                        circleStrokeColor: '#FFFFFF',
+                        circleStrokeWidth: 2,
+                      }}
+                    />
+                    
+                    <SymbolLayer
+                      id="parking-marker-text"
+                      filter={['!', ['has', 'point_count']]}
+                      style={{
+                        textField: ['get', 'name'],
+                        textFont: ['Arial Unicode MS Regular'],
+                        textSize: 10,
+                        textColor: '#000000',
+                        textHaloColor: '#FFFFFF',
+                        textHaloWidth: 1,
+                        textOffset: [0, 1.2],
+                        textAnchor: 'top',
+                      }}
+                    />
+                  </ShapeSource>
+                )}
+
+                {/* Repair Station Markers */}
+                {filteredMarkers.filter(m => m.type === 'repairStation').length > 0 && (
+                  <ShapeSource
+                    id="repair-markers"
+                    shape={convertMarkersToGeoJSON(filteredMarkers.filter(m => m.type === 'repairStation'))}
+                    cluster={true}
+                    clusterRadius={50}
+                    clusterMaxZoom={14}
+                    onPress={(feature) => {
+                      if (feature.features && feature.features.length > 0) {
+                        const markerData = feature.features[0];
+                        const marker = markers.find(m => m.id === markerData.properties?.id);
+                        if (marker) {
+                          handleMarkerPress(marker);
+                        }
+                      }
+                    }}
+                  >
+                    <CircleLayer
+                      id="repair-clusters"
+                      filter={['has', 'point_count']}
+                      style={{
+                        circleRadius: 12,
+                        circleColor: [
+                          'step',
+                          ['get', 'point_count'],
+                          '#1D4ED8', 10,
+                          '#1D4ED8', 50,
+                          '#1D4ED8', 100,
+                          '#1D4ED8'
+                        ],
+                        circleStrokeColor: '#FFFFFF',
+                        circleStrokeWidth: 2,
+                      }}
+                    />
+
+                    <SymbolLayer
+                      id="repair-cluster-count"
+                      filter={['has', 'point_count']}
+                      style={{
+                        textField: ['get', 'point_count'],
+                        textFont: ['Arial Unicode MS Bold'],
+                        textSize: 12,
+                        textColor: '#FFFFFF',
+                        textHaloColor: '#000000',
+                        textHaloWidth: 1,
+                      }}
+                    />
+
+                    <CircleLayer
+                      id="repair-unclustered"
+                      filter={['!', ['has', 'point_count']]}
+                      style={{
+                        circleRadius: 12,
+                        circleColor: '#1D4ED8',
+                        circleStrokeColor: '#FFFFFF',
+                        circleStrokeWidth: 2,
+                      }}
+                    />
+                    
+                    <SymbolLayer
+                      id="repair-marker-text"
+                      filter={['!', ['has', 'point_count']]}
+                      style={{
+                        textField: ['get', 'name'],
+                        textFont: ['Arial Unicode MS Regular'],
+                        textSize: 10,
+                        textColor: '#000000',
+                        textHaloColor: '#FFFFFF',
+                        textHaloWidth: 1,
+                        textOffset: [0, 1.2],
+                        textAnchor: 'top',
+                      }}
+                    />
+                  </ShapeSource>
+                )}
+
+                {/* Bicycle Service Markers */}
+                {filteredMarkers.filter(m => m.type === 'bicycleService').length > 0 && (
+                  <ShapeSource
+                    id="bicycle-service-markers"
+                    shape={convertMarkersToGeoJSON(filteredMarkers.filter(m => m.type === 'bicycleService'))}
+                    cluster={true}
+                    clusterRadius={50}
+                    clusterMaxZoom={14}
+                    onPress={(feature) => {
+                      if (feature.features && feature.features.length > 0) {
+                        const markerData = feature.features[0];
+                        const marker = markers.find(m => m.id === markerData.properties?.id);
+                        if (marker) {
+                          handleMarkerPress(marker);
+                        }
+                      }
+                    }}
+                  >
+                    <CircleLayer
+                      id="bicycle-service-clusters"
+                      filter={['has', 'point_count']}
+                      style={{
+                        circleRadius: 12,
+                        circleColor: [
+                          'step',
+                          ['get', 'point_count'],
+                          '#F97316', 10,
+                          '#F97316', 50,
+                          '#F97316', 100,
+                          '#F97316'
+                        ],
+                        circleStrokeColor: '#FFFFFF',
+                        circleStrokeWidth: 2,
+                      }}
+                    />
+
+                    <SymbolLayer
+                      id="bicycle-service-cluster-count"
+                      filter={['has', 'point_count']}
+                      style={{
+                        textField: ['get', 'point_count'],
+                        textFont: ['Arial Unicode MS Bold'],
+                        textSize: 12,
+                        textColor: '#FFFFFF',
+                        textHaloColor: '#000000',
+                        textHaloWidth: 1,
+                      }}
+                    />
+
+                    <CircleLayer
+                      id="bicycle-service-unclustered"
+                      filter={['!', ['has', 'point_count']]}
+                      style={{
+                        circleRadius: 12,
+                        circleColor: '#F97316',
+                        circleStrokeColor: '#FFFFFF',
+                        circleStrokeWidth: 2,
+                      }}
+                    />
+                    
+                    <SymbolLayer
+                      id="bicycle-service-marker-text"
+                      filter={['!', ['has', 'point_count']]}
+                      style={{
+                        textField: ['get', 'name'],
+                        textFont: ['Arial Unicode MS Regular'],
+                        textSize: 10,
+                        textColor: '#000000',
+                        textHaloColor: '#FFFFFF',
+                        textHaloWidth: 1,
+                        textOffset: [0, 1.2],
+                        textAnchor: 'top',
+                      }}
+                    />
+                  </ShapeSource>
+                )}
 
         {userLocationData && (
           <ShapeSource
