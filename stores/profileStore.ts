@@ -8,7 +8,6 @@ export interface UserProfile {
   full_name: string | null;
   avatar_url: string | null;
   phone: string | null;
-  bio: string | null;
   website: string | null;
   location: string | null;
   created_at: string;
@@ -93,13 +92,12 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
           full_name: profileData.full_name,
           avatar_url: profileData.avatar_url,
           phone: profileData.phone,
-          bio: profileData.bio,
           website: profileData.website,
           location: profileData.location,
           created_at: profileData.created_at,
           updated_at: profileData.updated_at,
-          email_confirmed_at: userData.user.email_confirmed_at,
-          last_sign_in_at: userData.user.last_sign_in_at,
+          email_confirmed_at: userData.user.email_confirmed_at || null,
+          last_sign_in_at: userData.user.last_sign_in_at || null,
         };
         set({ profile: fullProfile, loading: false });
       } else {
@@ -118,17 +116,21 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      // Update profile directly without using RPC to avoid bio column issue  
       const { data, error } = await supabase
-        .rpc('update_user_profile', {
-          user_id: profile.id,
-          new_username: updates.username || null,
-          new_full_name: updates.full_name || null,
-          new_avatar_url: updates.avatar_url || null,
-          new_phone: updates.phone || null,
-          new_bio: null,
-          new_website: null,
-          new_location: updates.location || null
-        });
+        .from('profiles')
+        .update({
+          username: updates.username,
+          full_name: updates.full_name,
+          avatar_url: updates.avatar_url,
+          phone: updates.phone,
+          website: updates.website,
+          location: updates.location,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', profile.id)
+        .select()
+        .single();
 
       if (error) {
         console.error('Error updating profile:', error);
@@ -136,15 +138,15 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         return false;
       }
 
-      if (data && !data.error) {
+      if (data) {
         // Update local state with new data
         set({ 
-          profile: { ...profile, ...data, updated_at: new Date().toISOString() },
+          profile: { ...profile, ...data },
           loading: false 
         });
         return true;
       } else {
-        set({ error: data?.error || 'Ismeretlen hiba', loading: false });
+        set({ error: 'Ismeretlen hiba', loading: false });
         return false;
       }
     } catch (error) {
@@ -206,7 +208,6 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       }
 
       console.log('Upload successful');
-      const data = { path: fileName };
 
       // Get public URL
       const { data: publicData } = supabase.storage

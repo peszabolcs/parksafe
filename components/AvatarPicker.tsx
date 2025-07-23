@@ -146,37 +146,39 @@ export function AvatarPicker({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={[
-          styles.avatarContainer,
-          {
-            width: size,
-            height: size,
-            backgroundColor: cardBackground,
-            borderColor: borderColor,
-          }
-        ]}
-        onPress={showImagePicker}
-        disabled={disabled || uploading}
-        activeOpacity={0.7}
-      >
-        {uploading ? (
-          <ActivityIndicator size="large" color="#3B82F6" />
-        ) : currentAvatarUrl ? (
-          <Image
-            source={{ uri: currentAvatarUrl }}
-            style={[styles.avatar, { width: size - 4, height: size - 4 }]}
-          />
-        ) : (
-          <Ionicons name="person" size={size * 0.4} color={secondaryTextColor} />
-        )}
+      <View style={styles.avatarWrapper}>
+        <TouchableOpacity
+          style={[
+            styles.avatarContainer,
+            {
+              width: size,
+              height: size,
+              backgroundColor: cardBackground,
+              borderColor: borderColor,
+            }
+          ]}
+          onPress={showImagePicker}
+          disabled={disabled || uploading}
+          activeOpacity={0.7}
+        >
+          {uploading ? (
+            <ActivityIndicator size="large" color="#3B82F6" />
+          ) : currentAvatarUrl ? (
+            <Image
+              source={{ uri: currentAvatarUrl }}
+              style={[styles.avatar, { width: size - 4, height: size - 4 }]}
+            />
+          ) : (
+            <Ionicons name="person" size={size * 0.4} color={secondaryTextColor} />
+          )}
+        </TouchableOpacity>
         
         {!uploading && (
           <View style={[styles.editBadge, { backgroundColor: '#3B82F6' }]}>
             <Ionicons name="camera" size={16} color="white" />
           </View>
         )}
-      </TouchableOpacity>
+      </View>
       
       <TouchableOpacity
         style={styles.changeButton}
@@ -197,12 +199,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 20,
   },
+  avatarWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarContainer: {
     borderRadius: 60,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
     overflow: 'hidden',
   },
   avatar: {
@@ -210,8 +216,8 @@ const styles = StyleSheet.create({
   },
   editBadge: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
+    bottom: -2,
+    right: -2,
     width: 32,
     height: 32,
     borderRadius: 16,
