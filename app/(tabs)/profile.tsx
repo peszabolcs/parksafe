@@ -10,6 +10,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeStore } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileStore } from '@/stores/profileStore';
+import { onboardingDebug } from '@/lib/onboardingDebug';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -139,6 +140,32 @@ export default function ProfileScreen() {
                 }
               ]
             );
+          }
+        }
+      ]
+    );
+  };
+
+  const handleShowOnboarding = async () => {
+    Alert.alert(
+      'Onboarding teszt',
+      'Szeretnéd megnézni az onboarding képernyőket?',
+      [
+        { text: 'Mégse', style: 'cancel' },
+        {
+          text: 'Igen, mutasd',
+          onPress: async () => {
+            try {
+              // Clear current user's onboarding flag
+              if (user?.id) {
+                await onboardingDebug.resetUserOnboarding(user.id);
+              }
+              // Navigate to onboarding
+              router.push('/onboarding');
+            } catch (error) {
+              console.error('Error showing onboarding:', error);
+              Alert.alert('Hiba', 'Nem sikerült megnyitni az onboardingot');
+            }
           }
         }
       ]
@@ -298,6 +325,23 @@ export default function ProfileScreen() {
             onPress={() => router.push('/terms')}
           />
         </View>
+
+        {/* Development Section - Only in DEV mode */}
+        {__DEV__ && (
+          <>
+            <ThemedText style={[styles.sectionHeader, { color: textColor }]}>
+              🚧 Fejlesztői eszközök
+            </ThemedText>
+            <View style={styles.section}>
+              <SettingsItem
+                icon="play-outline"
+                title="Onboarding megtekintése"
+                subtitle="Onboarding képernyők tesztelése"
+                onPress={handleShowOnboarding}
+              />
+            </View>
+          </>
+        )}
 
         {/* Account Actions */}
         <ThemedText style={[styles.sectionHeader, { color: textColor }]}>

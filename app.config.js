@@ -4,7 +4,7 @@ export default ({ config }) => ({
   slug: "parksafe",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  icon: "./assets/images/logo.png",
   userInterfaceStyle: "automatic",
   splash: {
     image: "./assets/images/splash-icon.png",

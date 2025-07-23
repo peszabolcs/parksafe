@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useProfileStore } from '@/stores/profileStore';
@@ -78,6 +79,17 @@ export const useAuthStore = create<AuthState>((set, get) => {
             // Load profile data when user signs in
             if (newSession?.user && event === 'SIGNED_IN') {
               useProfileStore.getState().loadProfile(newSession.user.id);
+              
+              // Set user-specific onboarding flag if global onboarding was completed
+              try {
+                const globalOnboarding = await AsyncStorage.getItem('hasSeenOnboarding_global');
+                if (globalOnboarding === 'true') {
+                  const userOnboardingKey = `hasSeenOnboarding_${newSession.user.id}`;
+                  await AsyncStorage.setItem(userOnboardingKey, 'true');
+                }
+              } catch (error) {
+                console.error('Error setting user onboarding flag:', error);
+              }
             }
             
             // Clear profile data when user signs out

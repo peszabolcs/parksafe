@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/stores/authStore';
 import { useLocationStore } from '@/stores/locationStore';
 
@@ -32,7 +33,17 @@ export class AppStartup {
     try {
       console.log('App startup: Beginning initialization');
       
-      // Step 1: Check authentication
+      // Step 1: Check if user has seen onboarding
+      const hasSeenOnboarding = await this.checkOnboardingStatus();
+      
+      if (!hasSeenOnboarding) {
+        console.log('App startup: First time user, showing onboarding');
+        router.replace('/onboarding');
+        this.isInitialized = true;
+        return;
+      }
+      
+      // Step 2: Check authentication
       const hasValidSession = await this.checkAuthentication();
 
       if (!hasValidSession) {
@@ -45,10 +56,10 @@ export class AppStartup {
 
       console.log('App startup: Valid session found, proceeding to home');
       
-      // Step 2: User exists - start data fetching in background
+      // Step 3: User exists - start data fetching in background
       this.startDataFetching();
       
-      // Step 3: Navigate to home (data will load in background)
+      // Step 4: Navigate to home (data will load in background)
       router.replace('/(tabs)');
       
       this.isInitialized = true;
@@ -59,6 +70,31 @@ export class AppStartup {
       this.isInitialized = true;
     } finally {
       this.initializationPromise = null;
+    }
+  }
+
+  private async checkOnboardingStatus(): Promise<boolean> {
+    try {
+      // First check if user is authenticated to get user-specific onboarding status
+      const authStore = useAuthStore.getState();
+      await authStore.initializeAuth();
+      
+      const currentState = useAuthStore.getState();
+      const userId = currentState.user?.id;
+      
+      if (userId) {
+        // User is logged in - check user-specific onboarding status
+        const userOnboardingKey = `hasSeenOnboarding_${userId}`;
+        const hasSeenOnboarding = await AsyncStorage.getItem(userOnboardingKey);
+        return hasSeenOnboarding === 'true';
+      } else {
+        // No user logged in - check global onboarding status for first-time app users
+        const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding_global');
+        return hasSeenOnboarding === 'true';
+      }
+    } catch (error) {
+      console.error('Onboarding check failed:', error);
+      return false;
     }
   }
 

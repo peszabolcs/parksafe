@@ -13,6 +13,7 @@ import "react-native-reanimated";
 import "../lib/polyfills";
 
 import { appStartup } from "@/lib/startup";
+import "@/lib/onboardingDebug"; // Import debug helper
 import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
 
@@ -125,6 +126,7 @@ export default function RootLayout() {
     <ThemeProvider value={navigationTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="register" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
