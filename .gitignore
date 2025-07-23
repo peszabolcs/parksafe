@@ -23,11 +23,13 @@ ios/Pods/
 ios/Podfile.lock
 ios/*.xcworkspace/xcuserdata/
 ios/*.xcodeproj/xcuserdata/
+ios
 
 # Build artifacts
 *.apk
 *.ipa
 *.aab
+expo-env.d.ts
 
 # Native
 .kotlin/
