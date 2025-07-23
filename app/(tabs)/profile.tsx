@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Alert, Modal, Dimensions, Animated, Pressable } from 'react-native';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Alert, Modal, Dimensions, Animated, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/ThemedText';
@@ -20,7 +20,14 @@ export default function ProfileScreen() {
   const modalAnim = useRef(new Animated.Value(screenHeight)).current;
   const { user, signOut } = useAuthStore();
   const { themeMode, setThemeMode, currentTheme } = useThemeStore();
-  const { deleteAccount } = useProfileStore();
+  const { profile, loadProfile, deleteAccount } = useProfileStore();
+
+  // Load profile when user changes
+  useEffect(() => {
+    if (user?.id) {
+      loadProfile(user.id);
+    }
+  }, [user?.id, loadProfile]);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -199,7 +206,14 @@ export default function ProfileScreen() {
         <ThemedView style={[styles.profileCard, { backgroundColor: cardBackground, shadowColor: '#000' }]}> 
           <View style={styles.avatarRow}>
             <View style={[styles.avatarCircle, { backgroundColor: avatarBg }]}> 
-              <Ionicons name="person-outline" size={48} color={secondaryTextColor} />
+              {profile?.avatar_url ? (
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Ionicons name="person-outline" size={48} color={secondaryTextColor} />
+              )}
             </View>
             <View style={styles.profileInfo}>
               <ThemedText style={[styles.profileName, { color: textColor }]} type="subtitle">
@@ -479,6 +493,11 @@ const styles = StyleSheet.create({
   },
   profileEmail: {
     fontSize: 15,
+  },
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   sectionHeader: {
     fontSize: 16,
