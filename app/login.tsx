@@ -11,13 +11,13 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
-import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
 interface ValidationErrors {
   email?: string;
@@ -43,29 +43,10 @@ export default function LoginScreen() {
   const textColor = useThemeColor({}, 'text');
   const labelColor = useThemeColor({ light: '#374151', dark: '#D1D5DB' }, 'text');
   const placeholderColor = useThemeColor({ light: '#9CA3AF', dark: '#6B7280' }, 'text');
-  const successColor = '#10B981';
   const backgroundColor = useThemeColor({}, 'background');
 
-  // Google OAuth configuration
-  const redirectUri = 'https://qxaglwwcaqovyyuopkxi.supabase.co/auth/v1/callback';
-
-  const discovery = {
-    authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenEndpoint: 'https://oauth2.googleapis.com/token',
-  };
-
-  const [, , promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: '945343903925-q87c6knt6aid2idm8v0500gflogikm3l.apps.googleusercontent.com',
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri,
-      responseType: AuthSession.ResponseType.Code,
-      extraParams: {
-        access_type: 'offline',
-      },
-    },
-    discovery
-  );
+  // Configure WebBrowser for OAuth
+  WebBrowser.maybeCompleteAuthSession();
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -143,27 +124,38 @@ export default function LoginScreen() {
     setValidationErrors({});
     
     try {
-      const result = await promptAsync();
+      const redirectTo = 'parksafe://auth/callback';
       
-      if (result.type === 'success') {
-        const { code } = result.params;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        handleAuthError(error.message);
+        return;
+      }
+
+      if (data.url) {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
         
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
-          token: code,
-        });
-        
-        if (error) {
-          handleAuthError(error.message);
-        } else {
+        if (result.type === 'success') {
+          // The session should be automatically handled by Supabase
           await handleAuthSuccess();
+        } else if (result.type === 'cancel') {
+          // User cancelled - no error needed
+        } else {
+          handleAuthError('Google bejelentkezés sikertelen. Kérjük, próbálja újra.');
         }
-      } else if (result.type === 'cancel') {
-        // User cancelled the auth flow - no need to show error
-      } else {
-        handleAuthError('Google bejelentkezés sikertelen. Kérjük, próbálja újra.');
       }
     } catch (err) {
+      console.error('Google login error:', err);
       handleAuthError('Váratlan hiba történt a Google bejelentkezés során.');
     } finally {
       setGoogleLoading(false);
