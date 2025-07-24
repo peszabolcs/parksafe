@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useProfileStore } from '@/stores/profileStore';
@@ -10,6 +11,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
   initializeAuth: () => Promise<void>;
+  forceSessionUpdate: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
@@ -78,6 +80,17 @@ export const useAuthStore = create<AuthState>((set, get) => {
             // Load profile data when user signs in
             if (newSession?.user && event === 'SIGNED_IN') {
               useProfileStore.getState().loadProfile(newSession.user.id);
+              
+              // Set user-specific onboarding flag if global onboarding was completed
+              try {
+                const globalOnboarding = await AsyncStorage.getItem('hasSeenOnboarding_global');
+                if (globalOnboarding === 'true') {
+                  const userOnboardingKey = `hasSeenOnboarding_${newSession.user.id}`;
+                  await AsyncStorage.setItem(userOnboardingKey, 'true');
+                }
+              } catch (error) {
+                console.error('Error setting user onboarding flag:', error);
+              }
             }
             
             // Clear profile data when user signs out
@@ -170,6 +183,35 @@ export const useAuthStore = create<AuthState>((set, get) => {
       } catch (error) {
         console.error('Error refreshing session:', error);
         throw error;
+      }
+    },
+
+    forceSessionUpdate: async () => {
+      try {
+        console.log('Forcing session update...');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (currentSession) {
+          console.log('Force update: Session found, updating store');
+          set({ 
+            session: currentSession, 
+            user: currentSession.user,
+            loading: false 
+          });
+
+          // Load profile data
+          useProfileStore.getState().loadProfile(currentSession.user.id);
+        } else {
+          console.log('Force update: No session found');
+          set({ 
+            session: null, 
+            user: null,
+            loading: false 
+          });
+        }
+      } catch (error) {
+        console.error('Error forcing session update:', error);
+        set({ loading: false });
       }
     },
   };

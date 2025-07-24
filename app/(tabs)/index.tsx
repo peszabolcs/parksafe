@@ -3,6 +3,7 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 import { getTotalLocationCounts } from "@/lib/markers";
 import { useAuthStore } from "@/stores/authStore";
 import { useLocationStore } from "@/stores/locationStore";
+import { useProfileStore } from "@/stores/profileStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function HomeScreen() {
   const { markers, loading, error } = useLocationStore();
   const { session, user } = useAuthStore();
+  const { profile } = useProfileStore();
   const { currentTheme } = useThemeStore();
   const [totalLocations, setTotalLocations] = useState(0);
   const [locationCountsLoading, setLocationCountsLoading] = useState(true);
@@ -71,7 +73,7 @@ export default function HomeScreen() {
             <View>
               <ThemedText style={styles.headerGreeting}>
                 {isLoggedIn
-                  ? `Helló, ${user?.user_metadata?.username || "Felhasználó"}!`
+                  ? `Helló, ${profile?.username || profile?.full_name || "Felhasználó"}!`
                   : "Üdvözöljük!"}
               </ThemedText>
               <ThemedText style={styles.headerTitle}>ParkSafe</ThemedText>

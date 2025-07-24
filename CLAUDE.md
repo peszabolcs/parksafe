@@ -27,6 +27,61 @@ The app requires these environment variables:
 - `EXPO_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
 - `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` - Google Maps API key for location services
+- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` - Google OAuth iOS client ID (optional, for future native auth)
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` - Google OAuth web client ID (optional, for reference)
+
+### Google OAuth Setup
+For Google authentication to work, you need to configure both Google Cloud Console and Supabase:
+
+#### 1. Google Cloud Console Setup
+Create **two** OAuth 2.0 clients:
+
+**iOS Client:**
+- Application type: **iOS**  
+- Bundle ID: `com.parksafe.app`
+- Result: iOS Client ID (no secret provided)
+
+**Web Client (for Supabase):**
+- Application type: **Web application**
+- Authorized redirect URIs: `https://xkboeigznjtpdycqfzyq.supabase.co/auth/v1/callback`
+- Result: Web Client ID + Client Secret
+
+#### 2. Supabase Configuration
+- Go to Authentication → Providers → Google
+- Enable Google provider
+- Use the **Web Client ID** and **Web Client Secret** from above
+- **Important**: Use the WEB credentials, not iOS credentials
+
+#### 3. Supabase Redirect URLs Setup  
+Add these redirect URLs in Supabase Authentication → URL Configuration:
+- `parksafe://auth/callback` (for mobile app deep linking)
+- `https://parksafe.hu/success` (for web fallback)
+- `https://parksafe.hu/error` (for web error handling)
+
+#### 4. Deep Link Setup
+The app uses `parksafe://` scheme for OAuth callbacks:
+- Defined in `app.json` under `scheme`
+- iOS Bundle ID: `com.parksafe.app`  
+- Auth callback route: `/auth/callback`
+- Deep link URL: `parksafe://auth/callback`
+
+#### 5. Google OAuth Flow
+1. User clicks "Bejelentkezés Google-lel"
+2. Opens Google OAuth in WebBrowser
+3. After successful auth, redirects to `parksafe://auth/callback`
+4. App checks if profile is complete (username, phone)
+5. If incomplete → `/complete-profile` screen
+6. If complete → `/(tabs)` main app
+
+#### 6. Profile Completion
+Google OAuth provides limited data:
+- ✅ Email, Name, Avatar URL
+- ❌ Phone number, Date of birth, Username
+
+The `/complete-profile` screen collects missing required fields:
+- Username (unique, min 3 chars)
+- Phone number (international format)  
+- Date of birth (min age 13)
 
 ## Architecture Overview
 

@@ -4,12 +4,12 @@ export default ({ config }) => ({
   slug: "parksafe",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  icon: "./assets/images/logo.png",
   userInterfaceStyle: "automatic",
   splash: {
-    image: "./assets/images/splash-icon.png",
+    image: "./assets/images/logo.png",
     resizeMode: "contain",
-    backgroundColor: "#ffffff"
+    backgroundColor: "#4CAF50"
   },
   assetBundlePatterns: [
     "**/*"
@@ -38,17 +38,17 @@ export default ({ config }) => ({
   },
   web: {
     bundler: "metro",
-    favicon: "./assets/images/favicon.png"
+    favicon: "./assets/images/logo.png"
   },
   plugins: [
     "expo-router",
     [
       "expo-splash-screen",
       {
-        "image": "./assets/images/splash-icon.png",
+        "image": "./assets/images/logo.png",
         "imageWidth": 200,
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#4CAF50"
       }
     ],
     [

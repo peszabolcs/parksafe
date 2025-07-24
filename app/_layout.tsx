@@ -5,6 +5,7 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as Linking from 'expo-linking';
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
@@ -13,6 +14,7 @@ import "react-native-reanimated";
 import "../lib/polyfills";
 
 import { appStartup } from "@/lib/startup";
+import "@/lib/onboardingDebug"; // Import debug helper
 import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
 
@@ -46,6 +48,41 @@ export default function RootLayout() {
       updateSystemTheme(systemColorScheme as "light" | "dark");
     }
   }, [systemColorScheme, updateSystemTheme]);
+
+  // Handle deep linking for OAuth callbacks
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      console.log('Deep link received:', url);
+      
+      if (url.includes('parksafe://auth/callback') || url.includes('auth/callback')) {
+        // OAuth callback - navigate to callback screen
+        console.log('OAuth callback detected, navigating to callback screen');
+        // Small delay to ensure everything is ready
+        setTimeout(() => {
+          router.replace('/auth/callback');
+        }, 100);
+      } else {
+        console.log('Deep link received but not OAuth callback:', url);
+      }
+    };
+
+    // Handle initial URL if app was opened with a link
+    const getInitialURL = async () => {
+      const initialURL = await Linking.getInitialURL();
+      if (initialURL) {
+        handleDeepLink(initialURL);
+      }
+    };
+
+    getInitialURL();
+
+    // Listen for incoming links while app is running
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => subscription.remove();
+  }, [router]);
 
   // Initial app startup
   useEffect(() => {
@@ -125,8 +162,11 @@ export default function RootLayout() {
     <ThemeProvider value={navigationTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="register" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen name="complete-profile" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="help" options={{ headerShown: false }} />
