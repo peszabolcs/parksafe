@@ -173,7 +173,7 @@ export default function ProfileScreen() {
   };
 
   const userEmail = user?.email;
-  const username = user?.user_metadata?.username;
+  const username = profile?.username || profile?.full_name || user?.user_metadata?.full_name;
 
   const SettingsItem = useCallback(({ icon, title, subtitle, onPress, showArrow = true, customContent }: {
     icon: string;
@@ -292,7 +292,7 @@ export default function ProfileScreen() {
           <SettingsItem
             icon="person-outline"
             title="Profilinformációk"
-            subtitle={userEmail || 'Nem elérhető'}
+            subtitle={username || 'Felhasználónév beállítása szükséges'}
             onPress={() => router.push('/profile-info')}
           />
           <SettingsItem

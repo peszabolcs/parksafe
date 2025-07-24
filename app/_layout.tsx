@@ -54,10 +54,15 @@ export default function RootLayout() {
     const handleDeepLink = async (url: string) => {
       console.log('Deep link received:', url);
       
-      if (url.includes('parksafe://auth/callback')) {
+      if (url.includes('parksafe://auth/callback') || url.includes('auth/callback')) {
         // OAuth callback - navigate to callback screen
         console.log('OAuth callback detected, navigating to callback screen');
-        router.replace('/auth/callback');
+        // Small delay to ensure everything is ready
+        setTimeout(() => {
+          router.replace('/auth/callback');
+        }, 100);
+      } else {
+        console.log('Deep link received but not OAuth callback:', url);
       }
     };
 
@@ -161,6 +166,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="register" options={{ headerShown: false }} />
         <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen name="complete-profile" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="help" options={{ headerShown: false }} />

@@ -10,6 +10,7 @@ export interface UserProfile {
   phone: string | null;
   website: string | null;
   location: string | null;
+  dob: string | null;
   created_at: string;
   updated_at: string;
   email_confirmed_at: string | null;
@@ -94,6 +95,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
           phone: profileData.phone,
           website: profileData.website,
           location: profileData.location,
+          dob: profileData.dob,
           created_at: profileData.created_at,
           updated_at: profileData.updated_at,
           email_confirmed_at: userData.user.email_confirmed_at || null,

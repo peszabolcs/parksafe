@@ -16,10 +16,11 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import CountryFlag from 'react-native-country-flag';
 import { useAuthStore } from '@/stores/authStore';
+import { handleGoogleAuth } from '@/lib/googleAuth';
 
 const COUNTRY_CODES = [
   { code: '+36', country: 'HU' },
@@ -47,6 +48,7 @@ function getCountryFromPhone(phone: string) {
 }
 
 export default function RegisterScreen() {
+  const segments = useSegments();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -56,11 +58,12 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dobDate, setDobDate] = useState<Date | null>(null);
-  const { refreshSession } = useAuthStore();
+  const { forceSessionUpdate } = useAuthStore();
 
   const usernameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
@@ -194,6 +197,73 @@ export default function RegisterScreen() {
       console.error('Registration error:', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAuthSuccess() {
+    try {
+      console.log('handleAuthSuccess called in register');
+      
+      // Force auth store to update with the new session
+      await forceSessionUpdate();
+      
+      // Give a moment for auth state to stabilize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if we need to complete profile
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log('Checking profile completion for user:', session.user.email);
+        
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('username, phone')
+            .eq('id', session.user.id)
+            .single();
+          
+          console.log('Profile data:', profileData);
+          
+          if (!profileData?.username || !profileData?.phone) {
+            console.log('Profile incomplete, redirecting to complete-profile');
+            router.replace('/complete-profile');
+          } else {
+            console.log('Profile complete, auth state listener should handle navigation...');
+            // Let the auth state listener handle navigation to /(tabs)
+          }
+        } catch (profileError) {
+          console.error('Error checking profile:', profileError);
+          console.log('Profile check failed, assuming incomplete');
+          router.replace('/complete-profile');
+        }
+      } else {
+        console.log('No session found after OAuth');
+        setError('Session nem jött létre.');
+      }
+    } catch (error) {
+      console.error('Failed to initialize auth after register:', error);
+      setError('Hiba a bejelentkezés feldolgozása során.');
+    }
+  }
+
+  async function handleGoogleRegister() {
+    setGoogleLoading(true);
+    setError('');
+    setValidationErrors({});
+    
+    try {
+      const result = await handleGoogleAuth('register');
+      
+      if (result.success) {
+        await handleAuthSuccess();
+      } else {
+        setError(result.error || 'Google regisztráció sikertelen.');
+      }
+    } catch (err) {
+      console.error('Google register error:', err);
+      setError('Váratlan hiba történt a Google regisztráció során.');
+    } finally {
+      setGoogleLoading(false);
     }
   }
 
@@ -581,6 +651,31 @@ export default function RegisterScreen() {
                 <ThemedText style={styles.buttonText}>Regisztráció</ThemedText>
               )}
             </TouchableOpacity>
+            
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <ThemedText style={[styles.dividerText, { color: placeholderColor }]}>
+                vagy
+              </ThemedText>
+              <View style={styles.dividerLine} />
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.googleButton, (loading || googleLoading) && styles.buttonDisabled]} 
+              onPress={handleGoogleRegister} 
+              disabled={loading || googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#374151" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={20} color="#DB4437" />
+                  <ThemedText style={styles.googleButtonText}>
+                    Regisztráció Google-lel
+                  </ThemedText>
+                </>
+              )}
+            </TouchableOpacity>
 
             <View style={styles.footer}>
               <ThemedText style={[styles.footerText, { color: placeholderColor }]}>
@@ -692,6 +787,38 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 16,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  googleButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    minHeight: 52,
+    gap: 12,
+  },
+  googleButtonText: {
+    color: '#374151',
+    fontWeight: '600',
     fontSize: 16,
   },
   footer: {

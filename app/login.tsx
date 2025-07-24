@@ -14,10 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
+import { handleGoogleAuth } from '@/lib/googleAuth';
 
 interface ValidationErrors {
   email?: string;
@@ -25,6 +24,7 @@ interface ValidationErrors {
 }
 
 export default function LoginScreen() {
+  const segments = useSegments();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +32,7 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const { initializeAuth } = useAuthStore();
+  const { forceSessionUpdate } = useAuthStore();
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -45,8 +45,6 @@ export default function LoginScreen() {
   const placeholderColor = useThemeColor({ light: '#9CA3AF', dark: '#6B7280' }, 'text');
   const backgroundColor = useThemeColor({}, 'background');
 
-  // Configure WebBrowser for OAuth
-  WebBrowser.maybeCompleteAuthSession();
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -74,10 +72,48 @@ export default function LoginScreen() {
 
   async function handleAuthSuccess() {
     try {
-      // Re-initialize auth to set up the listener and get the new session
-      await initializeAuth();
+      console.log('handleAuthSuccess called');
+      
+      // Force auth store to update with the new session
+      await forceSessionUpdate();
+      
+      // Give a moment for auth state to stabilize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if we need to complete profile
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log('Checking profile completion for user:', session.user.email);
+        
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('username, phone')
+            .eq('id', session.user.id)
+            .single();
+          
+          console.log('Profile data:', profileData);
+          
+          if (!profileData?.username || !profileData?.phone) {
+            console.log('Profile incomplete, redirecting to complete-profile');
+            router.replace('/complete-profile');
+          } else {
+            console.log('Profile complete, auth state listener should handle navigation...');
+            // Instead of manual navigation, let the auth listener in _layout.tsx handle it
+            // The auth store should now have the updated session and trigger navigation
+          }
+        } catch (profileError) {
+          console.error('Error checking profile:', profileError);
+          console.log('Profile check failed, assuming incomplete');
+          router.replace('/complete-profile');
+        }
+      } else {
+        console.log('No session found after OAuth');
+        handleAuthError('Session nem jött létre.');
+      }
     } catch (error) {
       console.error('Failed to initialize auth after login:', error);
+      handleAuthError('Hiba a bejelentkezés feldolgozása során.');
     }
   }
 
@@ -124,35 +160,12 @@ export default function LoginScreen() {
     setValidationErrors({});
     
     try {
-      const redirectTo = 'parksafe://auth/callback';
+      const result = await handleGoogleAuth('login');
       
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-
-      if (error) {
-        handleAuthError(error.message);
-        return;
-      }
-
-      if (data.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-        
-        if (result.type === 'success') {
-          // The session should be automatically handled by Supabase
-          await handleAuthSuccess();
-        } else if (result.type === 'cancel') {
-          // User cancelled - no error needed
-        } else {
-          handleAuthError('Google bejelentkezés sikertelen. Kérjük, próbálja újra.');
-        }
+      if (result.success) {
+        await handleAuthSuccess();
+      } else {
+        handleAuthError(result.error || 'Google bejelentkezés sikertelen.');
       }
     } catch (err) {
       console.error('Google login error:', err);

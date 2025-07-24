@@ -11,6 +11,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
   initializeAuth: () => Promise<void>;
+  forceSessionUpdate: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
@@ -182,6 +183,35 @@ export const useAuthStore = create<AuthState>((set, get) => {
       } catch (error) {
         console.error('Error refreshing session:', error);
         throw error;
+      }
+    },
+
+    forceSessionUpdate: async () => {
+      try {
+        console.log('Forcing session update...');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (currentSession) {
+          console.log('Force update: Session found, updating store');
+          set({ 
+            session: currentSession, 
+            user: currentSession.user,
+            loading: false 
+          });
+
+          // Load profile data
+          useProfileStore.getState().loadProfile(currentSession.user.id);
+        } else {
+          console.log('Force update: No session found');
+          set({ 
+            session: null, 
+            user: null,
+            loading: false 
+          });
+        }
+      } catch (error) {
+        console.error('Error forcing session update:', error);
+        set({ loading: false });
       }
     },
   };

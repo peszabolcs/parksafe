@@ -65,6 +65,24 @@ The app uses `parksafe://` scheme for OAuth callbacks:
 - Auth callback route: `/auth/callback`
 - Deep link URL: `parksafe://auth/callback`
 
+#### 5. Google OAuth Flow
+1. User clicks "Bejelentkezés Google-lel"
+2. Opens Google OAuth in WebBrowser
+3. After successful auth, redirects to `parksafe://auth/callback`
+4. App checks if profile is complete (username, phone)
+5. If incomplete → `/complete-profile` screen
+6. If complete → `/(tabs)` main app
+
+#### 6. Profile Completion
+Google OAuth provides limited data:
+- ✅ Email, Name, Avatar URL
+- ❌ Phone number, Date of birth, Username
+
+The `/complete-profile` screen collects missing required fields:
+- Username (unique, min 3 chars)
+- Phone number (international format)  
+- Date of birth (min age 13)
+
 ## Architecture Overview
 
 ### State Management
