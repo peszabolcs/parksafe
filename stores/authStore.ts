@@ -32,7 +32,19 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
       try {
         // Get initial session
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        // Handle invalid refresh token errors
+        if (sessionError && sessionError.message.includes('Invalid Refresh Token')) {
+          console.log('Invalid refresh token detected, clearing stored session');
+          await supabase.auth.signOut();
+          set({ 
+            session: null, 
+            user: null,
+            loading: false 
+          });
+          return;
+        }
         
         console.log('Initial session check:', initialSession ? 'Session found' : 'No session');
         
@@ -118,6 +130,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
                   const { data, error } = await supabase.auth.refreshSession();
                   if (error) {
                     console.error('Error refreshing token:', error);
+                    // If refresh token is invalid, sign out the user
+                    if (error.message.includes('Invalid Refresh Token')) {
+                      console.log('Invalid refresh token during auto-refresh, signing out');
+                      await get().signOut();
+                    }
                   } else {
                     console.log('Token refreshed automatically');
                   }
@@ -178,6 +195,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
           console.error('Error refreshing session:', error);
+          // If refresh token is invalid, sign out the user
+          if (error.message.includes('Invalid Refresh Token')) {
+            console.log('Invalid refresh token in refreshSession, signing out');
+            await get().signOut();
+          }
           throw error;
         }
       } catch (error) {
