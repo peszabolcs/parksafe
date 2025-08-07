@@ -21,6 +21,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import CountryFlag from 'react-native-country-flag';
 import { useAuthStore } from '@/stores/authStore';
 import { handleGoogleAuth } from '@/lib/googleAuth';
+import { handleError } from '@/lib/errorHandler';
+import { NetworkErrorBanner } from '@/components/NetworkErrorBanner';
 
 const COUNTRY_CODES = [
   { code: '+36', country: 'HU' },
@@ -152,6 +154,9 @@ export default function RegisterScreen() {
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: undefined }));
     }
+    if (error) {
+      setError('');
+    }
   };
 
   async function handleRegister() {
@@ -177,7 +182,8 @@ export default function RegisterScreen() {
       });
       
       if (signUpError) {
-        setError(signUpError.message);
+        const errorResult = handleError(signUpError);
+        setError(errorResult.userMessage);
         return;
       }
       
@@ -193,8 +199,9 @@ export default function RegisterScreen() {
         ]
       );
     } catch (err) {
-      setError('Váratlan hiba történt. Kérjük, próbálja újra.');
-      console.error('Registration error:', err);
+      const errorResult = handleError(err);
+      setError(errorResult.userMessage);
+      console.error('Registration error:', errorResult.userMessage);
     } finally {
       setLoading(false);
     }
@@ -232,7 +239,8 @@ export default function RegisterScreen() {
             // Let the auth state listener handle navigation to /(tabs)
           }
         } catch (profileError) {
-          console.error('Error checking profile:', profileError);
+          const errorResult = handleError(profileError);
+          console.error('Error checking profile:', errorResult.userMessage);
           console.log('Profile check failed, assuming incomplete');
           router.replace('/complete-profile');
         }
@@ -241,8 +249,9 @@ export default function RegisterScreen() {
         setError('Session nem jött létre.');
       }
     } catch (error) {
-      console.error('Failed to initialize auth after register:', error);
-      setError('Hiba a bejelentkezés feldolgozása során.');
+      const errorResult = handleError(error);
+      console.error('Failed to initialize auth after register:', errorResult.userMessage);
+      setError(errorResult.userMessage);
     }
   }
 
@@ -257,11 +266,13 @@ export default function RegisterScreen() {
       if (result.success) {
         await handleAuthSuccess();
       } else {
-        setError(result.error || 'Google regisztráció sikertelen.');
+        const errorResult = handleError(result.error || 'Google regisztráció sikertelen.');
+        setError(errorResult.userMessage);
       }
     } catch (err) {
-      console.error('Google register error:', err);
-      setError('Váratlan hiba történt a Google regisztráció során.');
+      const errorResult = handleError(err);
+      console.error('Google register error:', errorResult.userMessage);
+      setError(errorResult.userMessage);
     } finally {
       setGoogleLoading(false);
     }
@@ -336,6 +347,7 @@ export default function RegisterScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <NetworkErrorBanner />
           <View style={styles.form}>
             <View style={styles.header}>
               <ThemedText style={styles.title} type="title">Regisztráció</ThemedText>
