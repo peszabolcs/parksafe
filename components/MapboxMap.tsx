@@ -815,7 +815,7 @@ export const MapboxMap: React.FC = () => {
                     shadowRadius: 4,
                     elevation: 2,
                   },
-                ]}] 
+                ]}
                 activeOpacity={0.85}
                 onPress={() => handleFavouriteToggle(selectedMarker)}
               >
