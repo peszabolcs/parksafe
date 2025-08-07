@@ -797,32 +797,25 @@ export const MapboxMap: React.FC = () => {
           <View style={[styles.flyoutContent, { paddingBottom: 20 }]}>
             <View style={styles.buttonRow}>
               <TouchableOpacity
-                style={[styles.actionButtonModern, {
-                  backgroundColor: selectedMarker.available ? '#22C55E' : '#EF4444',
-                  flex: 1,
-                  marginRight: 5,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: selectedMarker.available ? 1 : 0.7,
-                }]}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="eye" size={16} color="#fff" style={{ marginRight: 6 }} />
-                <ThemedText style={styles.actionButtonModernText}>
-                  {selectedMarker.available ? 'View' : 'Not Available'}
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.actionButtonModern, {
-                  backgroundColor: isFavourite(selectedMarker.id) ? '#FFD700' : '#fff',
-                  borderWidth: 2,
-                  borderColor: '#FFD700',
-                  width: 50,
-                  marginHorizontal: 5,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }]} 
+                style={[
+                  {
+                    backgroundColor: isFavourite(selectedMarker.id)
+                      ? "#FFD700"
+                      : "#fff",
+                    borderWidth: 2,
+                    borderColor: "#FFD700",
+                    width: 54,
+                    height: 44,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 0,
+                    margin: 0,
+                    shadowOpacity: 0.08,
+                    shadowRadius: 4,
+                    elevation: 2,
+                  },
+                ]}] 
                 activeOpacity={0.85}
                 onPress={() => handleFavouriteToggle(selectedMarker)}
               >
@@ -838,7 +831,6 @@ export const MapboxMap: React.FC = () => {
                   borderWidth: 2,
                   borderColor: '#3B82F6',
                   flex: 1,
-                  marginLeft: 5,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -847,7 +839,7 @@ export const MapboxMap: React.FC = () => {
                 onPress={handleDirections}
               >
                 <Ionicons name="navigate" size={16} color="#3B82F6" style={{ marginRight: 6 }} />
-                <ThemedText style={[styles.actionButtonModernText, { color: '#3B82F6' }]}>Route</ThemedText>
+                <ThemedText style={[styles.actionButtonModernText, { color: '#3B82F6' }]}>Navigáció</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
