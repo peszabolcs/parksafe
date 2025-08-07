@@ -998,22 +998,44 @@ export const MapboxMap: React.FC = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[
+                  styles.actionButtonModern,
+                  {
+                    backgroundColor: selectedMarker.available
+                      ? "#22C55E"
+                      : "#EF4444",
+                    flex: 1,
+                    marginRight: 5,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: selectedMarker.available ? 1 : 0.7,
+                  },
+                ]}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name="eye"
+                  size={16}
+                  color="#fff"
+                  style={{ marginRight: 6 }}
+                />
+                <ThemedText style={styles.actionButtonModernText}>
+                  {selectedMarker.available ? "Megtekintés" : "Nem elérhető"}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.actionButtonModern,
                   {
                     backgroundColor: isFavourite(selectedMarker.id)
                       ? "#FFD700"
                       : "#fff",
                     borderWidth: 2,
                     borderColor: "#FFD700",
-                    width: 54,
-                    height: 44,
-                    borderRadius: 10,
+                    width: 60,
+                    marginHorizontal: 5,
                     alignItems: "center",
                     justifyContent: "center",
-                    padding: 0,
-                    margin: 0,
-                    shadowOpacity: 0.08,
-                    shadowRadius: 4,
-                    elevation: 2,
                   },
                 ]}
                 activeOpacity={0.85}
