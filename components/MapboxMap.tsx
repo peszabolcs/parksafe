@@ -22,6 +22,7 @@ import {
   FlatList,
   Linking,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   TouchableOpacity,
@@ -376,14 +377,39 @@ export const MapboxMap: React.FC = () => {
     [isFavourite, addFavourite, removeFavourite]
   );
 
-  const handleDirections = useCallback(() => {
+  const handleDirections = useCallback(async () => {
     if (selectedMarker) {
       const { latitude, longitude } = selectedMarker.coordinate;
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-
-      Linking.openURL(url).catch(() => {
-        Alert.alert("Error", "Could not open navigation app.");
+      
+      // Try native map apps first, fallback to Google Maps web
+      const urls = Platform.select({
+        ios: [
+          `maps://maps.apple.com/?daddr=${latitude},${longitude}`, // Apple Maps
+          `comgooglemaps://?daddr=${latitude},${longitude}`, // Google Maps app
+          `https://maps.google.com/maps?daddr=${latitude},${longitude}` // Web fallback
+        ],
+        android: [
+          `geo:${latitude},${longitude}?q=${latitude},${longitude}`, // Native Android Maps
+          `https://maps.google.com/maps?daddr=${latitude},${longitude}` // Web fallback
+        ],
+        default: [
+          `https://maps.google.com/maps?daddr=${latitude},${longitude}` // Web fallback
+        ]
       });
+
+      for (const url of urls) {
+        try {
+          const supported = await Linking.canOpenURL(url);
+          if (supported) {
+            await Linking.openURL(url);
+            return;
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+      
+      Alert.alert("Error", "Could not open navigation app.");
     }
   }, [selectedMarker]);
 
@@ -972,33 +998,6 @@ export const MapboxMap: React.FC = () => {
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[
-                  styles.actionButtonModern,
-                  {
-                    backgroundColor: selectedMarker.available
-                      ? "#22C55E"
-                      : "#EF4444",
-                    flex: 1,
-                    marginRight: 5,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: selectedMarker.available ? 1 : 0.7,
-                  },
-                ]}
-                activeOpacity={0.85}
-              >
-                <Ionicons
-                  name="eye"
-                  size={16}
-                  color="#fff"
-                  style={{ marginRight: 6 }}
-                />
-                <ThemedText style={styles.actionButtonModernText}>
-                  {selectedMarker.available ? "Megtekintés" : "Nem elérhető"}
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
                   {
                     backgroundColor: isFavourite(selectedMarker.id)
                       ? "#FFD700"
@@ -1036,7 +1035,6 @@ export const MapboxMap: React.FC = () => {
                     borderWidth: 2,
                     borderColor: "#3B82F6",
                     flex: 1,
-                    marginLeft: 5,
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "center",
