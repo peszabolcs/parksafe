@@ -3,15 +3,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useProfileStore } from '@/stores/profileStore';
+import { ErrorHandler, handleError } from '@/lib/errorHandler';
 
 interface AuthState {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  error: string | null;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
   initializeAuth: () => Promise<void>;
   forceSessionUpdate: () => Promise<void>;
+  clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
@@ -22,6 +25,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     session: null,
     user: null,
     loading: true,
+    error: null,
 
     initializeAuth: async () => {
       // Prevent multiple initializations
@@ -35,15 +39,23 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
         
         // Handle invalid refresh token errors
-        if (sessionError && sessionError.message.includes('Invalid Refresh Token')) {
-          console.log('Invalid refresh token detected, clearing stored session');
-          await supabase.auth.signOut();
-          set({ 
-            session: null, 
-            user: null,
-            loading: false 
-          });
-          return;
+        if (sessionError) {
+          const errorResult = handleError(sessionError);
+          
+          if (ErrorHandler.shouldSignOut(sessionError)) {
+            console.log('Invalid refresh token detected, clearing stored session');
+            await supabase.auth.signOut();
+            set({ 
+              session: null, 
+              user: null,
+              loading: false,
+              error: null
+            });
+            return;
+          }
+          
+          // Log non-critical session errors but don't block initialization
+          console.warn('Session error during initialization:', errorResult.userMessage);
         }
         
         console.log('Initial session check:', initialSession ? 'Session found' : 'No session');
@@ -51,7 +63,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({ 
           session: initialSession, 
           user: initialSession?.user ?? null,
-          loading: false 
+          loading: false,
+          error: null
         });
 
         // Load profile data if user is already signed in
@@ -86,7 +99,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
             set({ 
               session: newSession, 
               user: newSession?.user ?? null,
-              loading: false 
+              loading: false,
+              error: null
             });
 
             // Load profile data when user signs in
@@ -101,7 +115,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
                   await AsyncStorage.setItem(userOnboardingKey, 'true');
                 }
               } catch (error) {
-                console.error('Error setting user onboarding flag:', error);
+                const errorResult = handleError(error);
+                console.error('Error setting user onboarding flag:', errorResult.userMessage);
               }
             }
             
@@ -129,10 +144,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
                 if (currentSession) {
                   const { data, error } = await supabase.auth.refreshSession();
                   if (error) {
-                    console.error('Error refreshing token:', error);
-                    // If refresh token is invalid, sign out the user
-                    if (error.message.includes('Invalid Refresh Token')) {
-                      console.log('Invalid refresh token during auto-refresh, signing out');
+                    const errorResult = handleError(error);
+                    console.error('Error refreshing token:', errorResult.userMessage);
+                    
+                    // If should sign out based on error type, sign out the user
+                    if (ErrorHandler.shouldSignOut(error)) {
+                      console.log('Critical auth error during auto-refresh, signing out');
                       await get().signOut();
                     }
                   } else {
@@ -140,7 +157,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
                   }
                 }
               } catch (error) {
-                console.error('Error in token refresh interval:', error);
+                const errorResult = handleError(error);
+                console.error('Error in token refresh interval:', errorResult.userMessage);
               }
             }, 23 * 60 * 60 * 1000); // 23 hours
 
@@ -160,8 +178,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
           };
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        set({ loading: false });
+        const errorResult = handleError(error);
+        console.error('Error initializing auth:', errorResult.userMessage);
+        set({ 
+          loading: false,
+          error: errorResult.isNetworkError ? errorResult.userMessage : null
+        });
       }
     },
 
@@ -181,12 +203,22 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({ 
           session: null, 
           user: null, 
-          loading: false 
+          loading: false,
+          error: null
         });
         
         isInitialized = false;
       } catch (error) {
-        console.error('Error signing out:', error);
+        const errorResult = handleError(error);
+        console.error('Error signing out:', errorResult.userMessage);
+        
+        // Even if sign out fails, clear the local state
+        set({ 
+          session: null, 
+          user: null, 
+          loading: false,
+          error: null
+        });
       }
     },
 
@@ -194,17 +226,21 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
-          console.error('Error refreshing session:', error);
-          // If refresh token is invalid, sign out the user
-          if (error.message.includes('Invalid Refresh Token')) {
-            console.log('Invalid refresh token in refreshSession, signing out');
+          const errorResult = handleError(error);
+          console.error('Error refreshing session:', errorResult.userMessage);
+          
+          // If should sign out based on error type, sign out the user
+          if (ErrorHandler.shouldSignOut(error)) {
+            console.log('Critical auth error in refreshSession, signing out');
             await get().signOut();
           }
-          throw error;
+          
+          throw errorResult;
         }
       } catch (error) {
-        console.error('Error refreshing session:', error);
-        throw error;
+        const errorResult = handleError(error);
+        console.error('Error refreshing session:', errorResult.userMessage);
+        throw errorResult;
       }
     },
 
@@ -218,7 +254,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
           set({ 
             session: currentSession, 
             user: currentSession.user,
-            loading: false 
+            loading: false,
+            error: null
           });
 
           // Load profile data
@@ -228,13 +265,22 @@ export const useAuthStore = create<AuthState>((set, get) => {
           set({ 
             session: null, 
             user: null,
-            loading: false 
+            loading: false,
+            error: null
           });
         }
       } catch (error) {
-        console.error('Error forcing session update:', error);
-        set({ loading: false });
+        const errorResult = handleError(error);
+        console.error('Error forcing session update:', errorResult.userMessage);
+        set({ 
+          loading: false,
+          error: errorResult.isNetworkError ? errorResult.userMessage : null
+        });
       }
+    },
+
+    clearError: () => {
+      set({ error: null });
     },
   };
 }); 

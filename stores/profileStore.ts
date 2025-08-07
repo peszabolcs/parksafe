@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { handleError } from '@/lib/errorHandler';
 
 export interface UserProfile {
   id: string;

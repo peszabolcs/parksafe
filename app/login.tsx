@@ -17,6 +17,8 @@ import { supabase } from '@/lib/supabase';
 import { router, useSegments } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 import { handleGoogleAuth } from '@/lib/googleAuth';
+import { handleError } from '@/lib/errorHandler';
+import { NetworkErrorBanner } from '@/components/NetworkErrorBanner';
 
 interface ValidationErrors {
   email?: string;
@@ -103,7 +105,8 @@ export default function LoginScreen() {
             // The auth store should now have the updated session and trigger navigation
           }
         } catch (profileError) {
-          console.error('Error checking profile:', profileError);
+          const errorResult = handleError(profileError);
+          console.error('Error checking profile:', errorResult.userMessage);
           console.log('Profile check failed, assuming incomplete');
           router.replace('/complete-profile');
         }
@@ -112,8 +115,9 @@ export default function LoginScreen() {
         handleAuthError('Session nem jött létre.');
       }
     } catch (error) {
-      console.error('Failed to initialize auth after login:', error);
-      handleAuthError('Hiba a bejelentkezés feldolgozása során.');
+      const errorResult = handleError(error);
+      console.error('Failed to initialize auth after login:', errorResult.userMessage);
+      handleAuthError(errorResult.userMessage);
     }
   }
 
@@ -141,12 +145,14 @@ export default function LoginScreen() {
               });
               
               if (error) {
-                Alert.alert('Hiba', error.message);
+                const errorResult = handleError(error);
+                Alert.alert('Hiba', errorResult.userMessage);
               } else {
                 Alert.alert('Siker', 'Jelszó visszaállítási link elküldve!');
               }
             } catch (err) {
-              Alert.alert('Hiba', 'Váratlan hiba történt.');
+              const errorResult = handleError(err);
+              Alert.alert('Hiba', errorResult.userMessage);
             }
           }
         }
@@ -165,11 +171,13 @@ export default function LoginScreen() {
       if (result.success) {
         await handleAuthSuccess();
       } else {
-        handleAuthError(result.error || 'Google bejelentkezés sikertelen.');
+        const errorResult = handleError(result.error || 'Google bejelentkezés sikertelen.');
+        handleAuthError(errorResult.userMessage);
       }
     } catch (err) {
-      console.error('Google login error:', err);
-      handleAuthError('Váratlan hiba történt a Google bejelentkezés során.');
+      const errorResult = handleError(err);
+      console.error('Google login error:', errorResult.userMessage);
+      handleAuthError(errorResult.userMessage);
     } finally {
       setGoogleLoading(false);
     }
@@ -187,12 +195,14 @@ export default function LoginScreen() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        handleAuthError(error.message);
+        const errorResult = handleError(error);
+        handleAuthError(errorResult.userMessage);
       } else {
         await handleAuthSuccess();
       }
     } catch (err) {
-      handleAuthError('Váratlan hiba történt. Kérjük, próbálja újra.');
+      const errorResult = handleError(err);
+      handleAuthError(errorResult.userMessage);
     } finally {
       setLoading(false);
     }
@@ -211,6 +221,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <NetworkErrorBanner />
           <View style={styles.form}>
             <View style={styles.header}>
               <ThemedText style={styles.title} type="title">Bejelentkezés</ThemedText>
@@ -251,6 +262,9 @@ export default function LoginScreen() {
                     setEmail(text);
                     if (validationErrors.email) {
                       setValidationErrors(prev => ({ ...prev, email: undefined }));
+                    }
+                    if (error) {
+                      setError('');
                     }
                   }}
                   onSubmitEditing={() => passwordRef.current?.focus()}
@@ -293,6 +307,9 @@ export default function LoginScreen() {
                     setPassword(text);
                     if (validationErrors.password) {
                       setValidationErrors(prev => ({ ...prev, password: undefined }));
+                    }
+                    if (error) {
+                      setError('');
                     }
                   }}
                   onSubmitEditing={handleLogin}
