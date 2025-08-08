@@ -9,7 +9,8 @@ import {
   ScrollView, 
   KeyboardAvoidingView,
   ActivityIndicator,
-  Alert
+  Alert,
+  Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
@@ -23,6 +24,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { handleGoogleAuth } from '@/lib/googleAuth';
 import { handleError } from '@/lib/errorHandler';
 import { NetworkErrorBanner } from '@/components/NetworkErrorBanner';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const COUNTRY_CODES = [
   { code: '+36', country: 'HU' },
@@ -40,6 +42,8 @@ interface ValidationErrors {
   confirmPassword?: string;
   phone?: string;
   dob?: string;
+  terms?: string;
+  privacy?: string;
 }
 
 function getCountryFromPhone(phone: string) {
@@ -65,6 +69,8 @@ export default function RegisterScreen() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dobDate, setDobDate] = useState<Date | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const { forceSessionUpdate } = useAuthStore();
 
   const usernameRef = useRef<TextInput>(null);
@@ -144,6 +150,14 @@ export default function RegisterScreen() {
       } else if (selectedDate > maxDate) {
         errors.dob = 'A felhasználónak legalább 13 évesnek kell lennie';
       }
+    }
+
+    if (!acceptedTerms) {
+      errors.terms = 'A Felhasználási Feltételek elfogadása kötelező';
+    }
+
+    if (!acceptedPrivacy) {
+      errors.privacy = 'Az Adatkezelési Nyilatkozat elfogadása kötelező';
     }
 
     setValidationErrors(errors);
@@ -311,6 +325,9 @@ export default function RegisterScreen() {
   }
 
   function handleDateConfirm() {
+    // Blur any active inputs to hide keyboard/accessory view
+    phoneRef.current?.blur();
+    
     if (dobDate) {
       // Ensure the date is properly formatted when user confirms
       const year = dobDate.getFullYear();
@@ -337,7 +354,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
@@ -564,13 +581,16 @@ export default function RegisterScreen() {
                   keyboardType="phone-pad"
                   autoComplete="tel"
                   textContentType="telephoneNumber"
-                  returnKeyType="next"
+                  returnKeyType="done"
                   value={phone}
                   onChangeText={(text) => {
                     setPhone(text);
                     clearValidationError('phone');
                   }}
-                  onSubmitEditing={() => setShowDatePicker(true)}
+                  onSubmitEditing={() => {
+                    phoneRef.current?.blur();
+                    setShowDatePicker(true);
+                  }}
                   editable={!loading}
                 />
               </View>
@@ -584,7 +604,10 @@ export default function RegisterScreen() {
                 Születési dátum
               </ThemedText>
               <Pressable 
-                onPress={() => setShowDatePicker(true)} 
+                onPress={() => {
+                  phoneRef.current?.blur();
+                  setShowDatePicker(true);
+                }} 
                 disabled={loading}
                 style={[
                   styles.inputContainer, 
@@ -629,7 +652,10 @@ export default function RegisterScreen() {
                     <View style={styles.datePickerButtons}>
                       <TouchableOpacity 
                         style={styles.datePickerButton} 
-                        onPress={() => setShowDatePicker(false)}
+                        onPress={() => {
+                          phoneRef.current?.blur();
+                          setShowDatePicker(false);
+                        }}
                       >
                         <ThemedText style={styles.datePickerButtonText}>Mégse</ThemedText>
                       </TouchableOpacity>
@@ -651,6 +677,75 @@ export default function RegisterScreen() {
                 <ThemedText style={styles.error}>{error}</ThemedText>
               </View>
             ) : null}
+
+            {/* Terms and Privacy Checkboxes */}
+            <View style={styles.checkboxSection}>
+              <TouchableOpacity 
+                style={styles.checkboxContainer}
+                onPress={() => {
+                  setAcceptedTerms(!acceptedTerms);
+                  clearValidationError('terms');
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.checkbox, 
+                  { borderColor: validationErrors.terms ? errorBorderColor : borderColor },
+                  acceptedTerms && styles.checkboxChecked
+                ]}>
+                  {acceptedTerms && (
+                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  )}
+                </View>
+                <View style={styles.checkboxTextContainer}>
+                  <ThemedText style={[styles.checkboxText, { color: textColor }]}>
+                    Elfogadom a{' '}
+                    <ThemedText 
+                      style={[styles.linkText, { color: '#3B82F6' }]}
+                      onPress={() => Linking.openURL('https://parksafe.hu/terms')}
+                    >
+                      Felhasználási Feltételeket
+                    </ThemedText>
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
+              {validationErrors.terms && (
+                <ThemedText style={styles.fieldError}>{validationErrors.terms}</ThemedText>
+              )}
+
+              <TouchableOpacity 
+                style={styles.checkboxContainer}
+                onPress={() => {
+                  setAcceptedPrivacy(!acceptedPrivacy);
+                  clearValidationError('privacy');
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.checkbox, 
+                  { borderColor: validationErrors.privacy ? errorBorderColor : borderColor },
+                  acceptedPrivacy && styles.checkboxChecked
+                ]}>
+                  {acceptedPrivacy && (
+                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  )}
+                </View>
+                <View style={styles.checkboxTextContainer}>
+                  <ThemedText style={[styles.checkboxText, { color: textColor }]}>
+                    Elfogadom az{' '}
+                    <ThemedText 
+                      style={[styles.linkText, { color: '#3B82F6' }]}
+                      onPress={() => Linking.openURL('https://parksafe.hu/policy')}
+                    >
+                      Adatkezelési Nyilatkozatot
+                    </ThemedText>
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
+              {validationErrors.privacy && (
+                <ThemedText style={styles.fieldError}>{validationErrors.privacy}</ThemedText>
+              )}
+            </View>
 
             <TouchableOpacity 
               style={[styles.button, loading && styles.buttonDisabled]} 
@@ -700,7 +795,7 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -882,5 +977,37 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
+  },
+  checkboxSection: {
+    gap: 12,
+    marginTop: 8,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  checkboxTextContainer: {
+    flex: 1,
+  },
+  checkboxText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  linkText: {
+    textDecorationLine: 'underline',
   },
 }); 
