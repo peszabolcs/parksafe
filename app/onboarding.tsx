@@ -13,15 +13,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get("window");
 
-const onboardingData = [
+const getOnboardingData = (t: any) => [
   {
     id: 1,
-    title: "Üdvözlünk a ParkSafe-ben!",
-    subtitle:
-      "Találd meg a legjobb parkolóhelyeket és kerékpár javítókat a környékeden egyszerűen és gyorsan",
+    title: t('onboarding.slides.welcome.title'),
+    subtitle: t('onboarding.slides.welcome.subtitle'),
     icon: "location",
     gradient: ["#667eea", "#764ba2"],
     particles: 8,
@@ -29,9 +29,8 @@ const onboardingData = [
   },
   {
     id: 2,
-    title: "Interaktív térkép",
-    subtitle:
-      "Böngészd a térképet és fedezd fel az összes elérhető szolgáltatást valós időben",
+    title: t('onboarding.slides.map.title'),
+    subtitle: t('onboarding.slides.map.subtitle'),
     icon: "map",
     gradient: ["#f093fb", "#f5576c"],
     particles: 12,
@@ -39,9 +38,8 @@ const onboardingData = [
   },
   {
     id: 3,
-    title: "Szűrők és keresés",
-    subtitle:
-      "Válaszd ki pontosan, mit keresel: parkolóhely vagy kerékpár javító. Szűrd távolság szerint is",
+    title: t('onboarding.slides.filters.title'),
+    subtitle: t('onboarding.slides.filters.subtitle'),
     icon: "options",
     gradient: ["#4facfe", "#00f2fe"],
     particles: 10,
@@ -49,9 +47,8 @@ const onboardingData = [
   },
   {
     id: 4,
-    title: "Kedvencek mentése",
-    subtitle:
-      "Jelöld meg kedvenc helyeidet egy érintéssel, hogy később villámgyorsan megtaláld őket",
+    title: t('onboarding.slides.favorites.title'),
+    subtitle: t('onboarding.slides.favorites.subtitle'),
     icon: "heart",
     gradient: ["#fa709a", "#fee140"],
     particles: 15,
@@ -59,9 +56,8 @@ const onboardingData = [
   },
   {
     id: 5,
-    title: "Készen állsz?",
-    subtitle:
-      "Most már ismered az összes funkciót! Kezdd el felfedezni a várost biztonságos parkolással!",
+    title: t('onboarding.slides.ready.title'),
+    subtitle: t('onboarding.slides.ready.subtitle'),
     icon: "rocket",
     gradient: ["#8E2DE2", "#4A00E0"],
     particles: 20,
@@ -146,9 +142,12 @@ const AnimatedParticle: React.FC<ParticleProps> = ({ index, delay }) => {
 };
 
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLastSlide, setIsLastSlide] = useState(false);
+  
+  const onboardingData = getOnboardingData(t);
 
   // Main animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -357,7 +356,7 @@ export default function OnboardingScreen() {
 
           {!isLastSlide && (
             <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-              <Text style={styles.skipText}>Kihagyás</Text>
+              <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -495,7 +494,7 @@ export default function OnboardingScreen() {
                 style={styles.prevButton}
               >
                 <Ionicons name="chevron-back" size={24} color="white" />
-                <Text style={styles.buttonText}>Vissza</Text>
+                <Text style={styles.buttonText}>{t('onboarding.previous')}</Text>
               </TouchableOpacity>
             )}
 
@@ -506,7 +505,7 @@ export default function OnboardingScreen() {
               style={[styles.nextButton, isLastSlide && styles.finishButton]}
             >
               <Text style={styles.buttonText}>
-                {isLastSlide ? "Kezdjük!" : "Tovább"}
+                {isLastSlide ? t('onboarding.finish') : t('onboarding.next')}
               </Text>
               <Ionicons
                 name={isLastSlide ? "rocket" : "chevron-forward"}

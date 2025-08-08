@@ -18,9 +18,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeStore } from '@/stores/themeStore';
 import { useProfileStore } from '@/stores/profileStore';
+import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 
 export default function ChangePasswordScreen() {
+  const { t } = useTranslation();
   const { updatePassword } = useProfileStore();
   const { currentTheme } = useThemeStore();
   
@@ -48,23 +50,23 @@ export default function ChangePasswordScreen() {
     const newErrors: {[key: string]: string} = {};
 
     if (!currentPassword.trim()) {
-      newErrors.currentPassword = 'A jelenlegi jelszó megadása kötelező';
+      newErrors.currentPassword = t('changePassword.validation.currentPasswordRequired');
     }
 
     if (!newPassword.trim()) {
-      newErrors.newPassword = 'Az új jelszó megadása kötelező';
+      newErrors.newPassword = t('changePassword.validation.newPasswordRequired');
     } else if (newPassword.length < 6) {
-      newErrors.newPassword = 'Az új jelszó minimum 6 karakter hosszú kell legyen';
+      newErrors.newPassword = t('changePassword.validation.newPasswordTooShort');
     }
 
     if (!confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Az új jelszó megerősítése kötelező';
+      newErrors.confirmPassword = t('changePassword.validation.confirmPasswordRequired');
     } else if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'A jelszavak nem egyeznek';
+      newErrors.confirmPassword = t('changePassword.validation.passwordMismatch');
     }
 
     if (currentPassword && newPassword && currentPassword === newPassword) {
-      newErrors.newPassword = 'Az új jelszó nem lehet ugyanaz, mint a jelenlegi';
+      newErrors.newPassword = t('changePassword.validation.passwordSame');
     }
 
     setErrors(newErrors);
@@ -79,11 +81,11 @@ export default function ChangePasswordScreen() {
       const success = await updatePassword(newPassword);
       if (success) {
         Alert.alert(
-          'Jelszó megváltoztatva',
-          'A jelszó sikeresen megváltoztatva!',
+          t('changePassword.alerts.successTitle'),
+          t('changePassword.alerts.successMessage'),
           [
             {
-              text: 'OK',
+              text: t('common.ok'),
               onPress: () => router.back()
             }
           ]
@@ -91,7 +93,7 @@ export default function ChangePasswordScreen() {
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      Alert.alert('Hiba', 'Nem sikerült megváltoztatni a jelszót.');
+      Alert.alert(t('common.error'), t('changePassword.alerts.error'));
     } finally {
       setLoading(false);
     }
@@ -121,12 +123,12 @@ export default function ChangePasswordScreen() {
 
   const getPasswordStrength = (password: string) => {
     if (password.length === 0) return { strength: 0, text: '' };
-    if (password.length < 6) return { strength: 1, text: 'Gyenge' };
-    if (password.length < 8) return { strength: 2, text: 'Közepes' };
+    if (password.length < 6) return { strength: 1, text: t('changePassword.strength.weak') };
+    if (password.length < 8) return { strength: 2, text: t('changePassword.strength.medium') };
     if (password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password)) {
-      return { strength: 3, text: 'Erős' };
+      return { strength: 3, text: t('changePassword.strength.strong') };
     }
-    return { strength: 2, text: 'Közepes' };
+    return { strength: 2, text: t('changePassword.strength.medium') };
   };
 
   const passwordStrength = getPasswordStrength(newPassword);
@@ -147,7 +149,7 @@ export default function ChangePasswordScreen() {
               <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                 <Ionicons name="arrow-back" size={24} color="white" />
               </TouchableOpacity>
-              <ThemedText style={styles.headerTitle}>Jelszó módosítás</ThemedText>
+              <ThemedText style={styles.headerTitle}>{t('changePassword.title')}</ThemedText>
               <View style={styles.headerPlaceholder} />
             </View>
           </SafeAreaView>
@@ -158,12 +160,12 @@ export default function ChangePasswordScreen() {
           {/* Password Form */}
           <View style={[styles.section, { backgroundColor: cardBackground }]}>
             <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
-              Jelszó módosítása
+              {t('changePassword.sectionTitle')}
             </ThemedText>
             
             <View style={styles.fieldContainer}>
               <ThemedText style={[styles.label, { color: textColor }]}>
-                Jelenlegi jelszó
+                {t('changePassword.fields.currentPassword')}
               </ThemedText>
               <View style={styles.passwordContainer}>
                 <TextInput
@@ -178,7 +180,7 @@ export default function ChangePasswordScreen() {
                   ]}
                   value={currentPassword}
                   onChangeText={(value) => handleInputChange('currentPassword', value)}
-                  placeholder="Jelenlegi jelszó"
+                  placeholder={t('changePassword.fields.currentPasswordPlaceholder')}
                   placeholderTextColor={secondaryTextColor}
                   secureTextEntry={!showPasswords.current}
                 />
@@ -202,7 +204,7 @@ export default function ChangePasswordScreen() {
 
             <View style={styles.fieldContainer}>
               <ThemedText style={[styles.label, { color: textColor }]}>
-                Új jelszó
+                {t('changePassword.fields.newPassword')}
               </ThemedText>
               <View style={styles.passwordContainer}>
                 <TextInput
@@ -217,7 +219,7 @@ export default function ChangePasswordScreen() {
                   ]}
                   value={newPassword}
                   onChangeText={(value) => handleInputChange('newPassword', value)}
-                  placeholder="Új jelszó"
+                  placeholder={t('changePassword.fields.newPasswordPlaceholder')}
                   placeholderTextColor={secondaryTextColor}
                   secureTextEntry={!showPasswords.new}
                 />
@@ -261,7 +263,7 @@ export default function ChangePasswordScreen() {
 
             <View style={styles.fieldContainer}>
               <ThemedText style={[styles.label, { color: textColor }]}>
-                Új jelszó megerősítése
+                {t('changePassword.fields.confirmPassword')}
               </ThemedText>
               <View style={styles.passwordContainer}>
                 <TextInput
@@ -276,7 +278,7 @@ export default function ChangePasswordScreen() {
                   ]}
                   value={confirmPassword}
                   onChangeText={(value) => handleInputChange('confirmPassword', value)}
-                  placeholder="Új jelszó megerősítése"
+                  placeholder={t('changePassword.fields.confirmPasswordPlaceholder')}
                   placeholderTextColor={secondaryTextColor}
                   secureTextEntry={!showPasswords.confirm}
                 />
@@ -304,21 +306,21 @@ export default function ChangePasswordScreen() {
             <View style={styles.tipsHeader}>
               <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
               <ThemedText style={[styles.tipsTitle, { color: '#3B82F6' }]}>
-                Biztonságos jelszó tippek
+                {t('changePassword.tips.title')}
               </ThemedText>
             </View>
             <View style={styles.tipsList}>
               <ThemedText style={[styles.tipText, { color: textColor }]}>
-                • Minimum 8 karakter hosszú legyen
+                • {t('changePassword.tips.minLength')}
               </ThemedText>
               <ThemedText style={[styles.tipText, { color: textColor }]}>
-                • Tartalmazzon nagy- és kisbetűket
+                • {t('changePassword.tips.mixedCase')}
               </ThemedText>
               <ThemedText style={[styles.tipText, { color: textColor }]}>
-                • Használjon számokat és speciális karaktereket
+                • {t('changePassword.tips.numbers')}
               </ThemedText>
               <ThemedText style={[styles.tipText, { color: textColor }]}>
-                • Ne használjon személyes adatokat
+                • {t('changePassword.tips.noPersonalData')}
               </ThemedText>
             </View>
           </View>
@@ -336,7 +338,7 @@ export default function ChangePasswordScreen() {
             disabled={loading}
           >
             <ThemedText style={styles.saveButtonText}>
-              {loading ? 'Változtatás...' : 'Jelszó módosítás'}
+              {loading ? t('changePassword.changing') : t('changePassword.changeButton')}
             </ThemedText>
           </TouchableOpacity>
           

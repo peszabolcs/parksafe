@@ -21,9 +21,11 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeStore } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileStore } from '@/stores/profileStore';
+import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 
 export default function ProfileInfoScreen() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const { profile, loading, error, loadProfile, updateProfile, uploadAvatar, deleteAvatar, checkUsernameAvailability } = useProfileStore();
   const { currentTheme } = useThemeStore();
@@ -84,15 +86,15 @@ export default function ProfileInfoScreen() {
     const errors: {[key: string]: string} = {};
 
     if (formData.username.length < 3) {
-      errors.username = 'A felhasználónév minimum 3 karakter hosszú kell legyen';
+      errors.username = t('profileInfo.validation.usernameMinLength');
     }
 
     if (formData.username && !/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      errors.username = 'A felhasználónév csak betűket, számokat és aláhúzást tartalmazhat';
+      errors.username = t('profileInfo.validation.usernameInvalidChars');
     }
 
     if (formData.phone && !/^[\+]?[0-9\s\-\(\)]+$/.test(formData.phone)) {
-      errors.phone = 'Érvénytelen telefonszám formátum';
+      errors.phone = t('profileInfo.validation.phoneInvalid');
     }
 
 
@@ -110,7 +112,7 @@ export default function ProfileInfoScreen() {
     if (!available) {
       setValidationErrors(prev => ({
         ...prev,
-        username: 'Ez a felhasználónév már foglalt'
+        username: t('profileInfo.validation.usernameTaken')
       }));
       return false;
     }
@@ -154,11 +156,11 @@ export default function ProfileInfoScreen() {
       const success = await updateProfile(formData);
       if (success) {
         setHasUnsavedChanges(false);
-        Alert.alert('Siker', 'A profil sikeresen frissítve!');
+        Alert.alert(t('common.success'), t('profileInfo.alerts.saveSuccess'));
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Hiba', 'Nem sikerült menteni a változtatásokat.');
+      Alert.alert(t('common.error'), t('profileInfo.alerts.saveError'));
     } finally {
       setSaving(false);
     }
@@ -168,25 +170,25 @@ export default function ProfileInfoScreen() {
     const avatarUrl = await uploadAvatar(uri);
     if (avatarUrl) {
       // Avatar upload automatically updates the profile
-      Alert.alert('Siker', 'A profilkép sikeresen feltöltve!');
+      Alert.alert(t('common.success'), t('profileInfo.alerts.avatarUploadSuccess'));
     }
   };
 
   const handleAvatarDelete = async () => {
     const success = await deleteAvatar();
     if (success) {
-      Alert.alert('Siker', 'A profilkép sikeresen törölve!');
+      Alert.alert(t('common.success'), t('profileInfo.alerts.avatarDeleteSuccess'));
     }
   };
 
   const handleBack = () => {
     if (hasUnsavedChanges) {
       Alert.alert(
-        'Nem mentett változtatások',
-        'Vannak nem mentett változtatások. Biztosan ki szeretne lépni?',
+        t('profileInfo.alerts.unsavedChanges.title'),
+        t('profileInfo.alerts.unsavedChanges.message'),
         [
-          { text: 'Mégse', style: 'cancel' },
-          { text: 'Kilépés', style: 'destructive', onPress: () => router.back() }
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('profileInfo.alerts.unsavedChanges.exit'), style: 'destructive', onPress: () => router.back() }
         ]
       );
     } else {
@@ -199,7 +201,7 @@ export default function ProfileInfoScreen() {
       <ThemedView style={[styles.container, { backgroundColor }]}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.loadingContainer}>
-            <ThemedText>Profil betöltése...</ThemedText>
+            <ThemedText>{t('profileInfo.loading')}</ThemedText>
           </View>
         </SafeAreaView>
       </ThemedView>
@@ -222,14 +224,14 @@ export default function ProfileInfoScreen() {
               <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                 <Ionicons name="arrow-back" size={24} color="white" />
               </TouchableOpacity>
-              <ThemedText style={styles.headerTitle}>Profilinformációk</ThemedText>
+              <ThemedText style={styles.headerTitle}>{t('profileInfo.title')}</ThemedText>
               <TouchableOpacity
                 style={[styles.saveButton, { opacity: hasUnsavedChanges ? 1 : 0.5 }]}
                 onPress={handleSave}
                 disabled={!hasUnsavedChanges || saving}
               >
                 <ThemedText style={styles.saveButtonText}>
-                  {saving ? 'Mentés...' : 'Mentés'}
+                  {saving ? t('profileInfo.saving') : t('profileInfo.save')}
                 </ThemedText>
               </TouchableOpacity>
             </View>
@@ -251,7 +253,7 @@ export default function ProfileInfoScreen() {
           <View style={[styles.section, { backgroundColor: cardBackground }]}>
             <View style={styles.fieldContainer}>
               <ThemedText style={[styles.label, { color: textColor }]}>
-                Felhasználónév *
+                {t('profileInfo.fields.username')}
               </ThemedText>
               <TextInput
                 style={[
@@ -264,14 +266,14 @@ export default function ProfileInfoScreen() {
                 ]}
                 value={formData.username}
                 onChangeText={handleUsernameChange}
-                placeholder="felhasználónév"
+                placeholder={t('profileInfo.fields.usernamePlaceholder')}
                 placeholderTextColor={secondaryTextColor}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
               {usernameChecking && (
                 <ThemedText style={[styles.helperText, { color: secondaryTextColor }]}>
-                  Ellenőrzés...
+                  {t('profileInfo.validation.checking')}
                 </ThemedText>
               )}
               {validationErrors.username && (
@@ -283,7 +285,7 @@ export default function ProfileInfoScreen() {
 
             <View style={styles.fieldContainer}>
               <ThemedText style={[styles.label, { color: textColor }]}>
-                Teljes név
+                {t('profileInfo.fields.fullName')}
               </ThemedText>
               <TextInput
                 style={[
@@ -296,7 +298,7 @@ export default function ProfileInfoScreen() {
                 ]}
                 value={formData.full_name}
                 onChangeText={(value) => handleInputChange('full_name', value)}
-                placeholder="Teljes név"
+                placeholder={t('profileInfo.fields.fullNamePlaceholder')}
                 placeholderTextColor={secondaryTextColor}
                 autoCapitalize="words"
               />
@@ -304,7 +306,7 @@ export default function ProfileInfoScreen() {
 
             <View style={styles.fieldContainer}>
               <ThemedText style={[styles.label, { color: textColor }]}>
-                Telefonszám
+                {t('profileInfo.fields.phone')}
               </ThemedText>
               <TextInput
                 style={[
@@ -317,7 +319,7 @@ export default function ProfileInfoScreen() {
                 ]}
                 value={formData.phone}
                 onChangeText={(value) => handleInputChange('phone', value)}
-                placeholder="+36 30 123 4567"
+                placeholder={t('profileInfo.fields.phonePlaceholder')}
                 placeholderTextColor={secondaryTextColor}
                 keyboardType="phone-pad"
               />
@@ -331,7 +333,7 @@ export default function ProfileInfoScreen() {
 
             <View style={styles.fieldContainer}>
               <ThemedText style={[styles.label, { color: textColor }]}>
-                Helyszín
+                {t('profileInfo.fields.location')}
               </ThemedText>
               <TextInput
                 style={[
@@ -344,7 +346,7 @@ export default function ProfileInfoScreen() {
                 ]}
                 value={formData.location}
                 onChangeText={(value) => handleInputChange('location', value)}
-                placeholder="Város, Ország"
+                placeholder={t('profileInfo.fields.locationPlaceholder')}
                 placeholderTextColor={secondaryTextColor}
                 autoCapitalize="words"
               />
@@ -355,7 +357,7 @@ export default function ProfileInfoScreen() {
           <View style={[styles.section, { backgroundColor: cardBackground }]}>
             <View style={styles.fieldContainer}>
               <ThemedText style={[styles.label, { color: textColor }]}>
-                Email cím
+                {t('profileInfo.fields.email')}
               </ThemedText>
               <View style={styles.emailContainer}>
                 <TextInput
@@ -370,7 +372,7 @@ export default function ProfileInfoScreen() {
                   ]}
                   value={profile?.email || ''}
                   editable={false}
-                  placeholder="email@example.com"
+                  placeholder={t('profileInfo.fields.emailPlaceholder')}
                   placeholderTextColor={secondaryTextColor}
                 />
                 <TouchableOpacity
@@ -378,7 +380,7 @@ export default function ProfileInfoScreen() {
                   onPress={() => router.push('/change-email')}
                 >
                   <ThemedText style={[styles.changeEmailButtonText, { color: '#3B82F6' }]}>
-                    Módosítás
+                    {t('profileInfo.fields.changeEmail')}
                   </ThemedText>
                 </TouchableOpacity>
               </View>

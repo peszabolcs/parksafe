@@ -90,6 +90,7 @@ The app uses **Zustand** for state management with these key stores:
 - `authStore.ts` - Authentication state and session management
 - `locationStore.ts` - User location and nearby markers
 - `themeStore.ts` - Theme preferences (light/dark/system)
+- `languageStore.ts` - Language preferences (Hungarian/English/System)
 - `favouritesStore.ts` - User's favorite locations
 
 ### Core Systems
@@ -132,12 +133,20 @@ stores/                # Zustand state management
 ├── authStore.ts       # Authentication state
 ├── locationStore.ts   # Location and markers
 ├── themeStore.ts      # Theme management
+├── languageStore.ts   # Language preferences
 └── favouritesStore.ts # User favorites
 
 lib/                   # Core utilities
 ├── startup.ts         # App initialization logic
 ├── supabase.ts        # Database client
-└── markers.ts         # Location marker fetching
+├── markers.ts         # Location marker fetching
+└── i18n.ts            # Internationalization setup
+
+locales/               # Translation files
+├── hu/                # Hungarian translations
+│   └── translation.json
+└── en/                # English translations
+    └── translation.json
 
 components/            # Reusable UI components
 hooks/                 # Custom React hooks
@@ -187,8 +196,93 @@ database/              # SQL setup scripts
 - Theme preference persists across app restarts
 - Automatically updates when system theme changes
 
+### Multilingual Support
+The app supports **Hungarian** and **English** languages with system language detection:
+
+**⚠️ Important**: After installing multilingual support, you need to rebuild the native app:
+```bash
+npx expo run:ios     # For iOS
+npx expo run:android # For Android
+```
+This is required because `react-native-localize` needs native module registration.
+
+#### Core Implementation
+- **react-i18next**: Main internationalization framework
+- **react-native-localize**: Device language detection
+- **AsyncStorage persistence**: Language preferences saved locally
+- **Real-time switching**: Language changes apply immediately without app restart
+
+#### Language System (`stores/languageStore.ts`)
+- **System detection**: Automatically detects device language on first launch
+- **Manual override**: Users can select specific language in settings
+- **Fallback**: Defaults to English if device language is not supported
+- **Persistence**: User preference saved across app restarts
+
+#### Translation Structure (`locales/`)
+```
+locales/
+├── hu/translation.json    # Hungarian translations
+└── en/translation.json    # English translations
+```
+
+#### Translation Key Structure
+```json
+{
+  "common": { "loading", "error", "success", "cancel", "ok", ... },
+  "auth": {
+    "login": { "title", "subtitle", "emailLabel", ... },
+    "register": { "title", "subtitle", ... },
+    "validation": { "emailRequired", "passwordTooShort", ... }
+  },
+  "settings": { "title", "profile", "theme", "language", ... },
+  "theme": { "light", "dark", "system", "selection", ... },
+  "language": { "hungarian", "english", "system", ... },
+  "tabs": { "home", "map", "favourite", "profile" }
+}
+```
+
+#### Usage in Components
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+  
+  return (
+    <Text>{t('auth.login.title')}</Text>
+  );
+}
+```
+
+#### Language Options
+- **Hungarian (hu)**: Full translation for Hungarian users
+- **English (en)**: Full translation for international users  
+- **System**: Follows device language preference (hu/en)
+
+#### Adding New Translations
+1. Add translation keys to both `locales/hu/translation.json` and `locales/en/translation.json`
+2. Use `t('category.subcategory.key')` in components
+3. Always provide both Hungarian and English translations
+4. Follow the existing hierarchical structure for consistency
+
 ### Common Issues
 - **Location timeout**: Default timeout is 10 seconds, falls back to lower accuracy
 - **Token refresh**: Automatic every 23 hours, can be manually triggered
 - **Marker loading**: Uses cached results while fetching fresh data
 - **Authentication**: Sessions persist for 14 days with automatic refresh
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+## Multilingual Implementation Guidelines
+CRITICAL: When creating new components or screens, ALWAYS implement proper multilingual support:
+
+1. **NEVER use hardcoded strings** - Always use `t('translation.key')` from react-i18next
+2. **Add translations to BOTH language files** - Update both `locales/hu/translation.json` and `locales/en/translation.json`
+3. **Import useTranslation hook** - Add `const { t } = useTranslation();` to every component with text
+4. **Follow naming convention** - Use hierarchical keys like `auth.login.title` or `settings.profile.subtitle`
+5. **Test in both languages** - Verify text displays correctly in Hungarian and English
+6. **Include all text elements** - Labels, placeholders, buttons, alerts, error messages, etc.

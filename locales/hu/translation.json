@@ -1,0 +1,732 @@
+{
+  "common": {
+    "loading": "Betöltés...",
+    "error": "Hiba",
+    "success": "Siker",
+    "cancel": "Mégse",
+    "ok": "OK",
+    "save": "Mentés",
+    "delete": "Törlés",
+    "edit": "Szerkesztés",
+    "confirm": "Megerősítés",
+    "back": "Vissza",
+    "next": "Következő",
+    "done": "Kész",
+    "close": "Bezárás",
+    "retry": "Újra",
+    "or": "vagy"
+  },
+  "auth": {
+    "login": {
+      "title": "Bejelentkezés",
+      "subtitle": "Üdvözöljük újra! Jelentkezzen be fiókjába",
+      "emailLabel": "Email cím",
+      "emailPlaceholder": "pelda@email.com",
+      "passwordLabel": "Jelszó",
+      "passwordPlaceholder": "Jelszó",
+      "forgotPassword": "Elfelejtett jelszó?",
+      "loginButton": "Bejelentkezés",
+      "googleLogin": "Bejelentkezés Google-lel",
+      "noAccount": "Nincs fiókja?",
+      "registerNow": "Regisztráljon most!"
+    },
+    "register": {
+      "title": "Regisztráció",
+      "subtitle": "Hozzon létre egy új fiókot a szolgáltatás használatához",
+      "usernameLabel": "Felhasználónév",
+      "usernamePlaceholder": "Felhasználónév",
+      "emailLabel": "Email cím",
+      "emailPlaceholder": "pelda@email.com",
+      "passwordLabel": "Jelszó",
+      "passwordPlaceholder": "Jelszó",
+      "confirmPasswordLabel": "Jelszó megerősítése",
+      "confirmPasswordPlaceholder": "Jelszó megerősítése",
+      "phoneLabel": "Telefonszám",
+      "phonePlaceholder": "+36 20 123 4567",
+      "dobLabel": "Születési dátum",
+      "dobPlaceholder": "YYYY-MM-DD",
+      "registerButton": "Regisztráció",
+      "googleRegister": "Regisztráció Google-lel",
+      "haveAccount": "Van már fiókja?",
+      "loginNow": "Jelentkezzen be!",
+      "termsAccept": "Elfogadom a",
+      "termsLink": "Felhasználási Feltételeket",
+      "privacyAccept": "Elfogadom az",
+      "privacyLink": "Adatkezelési Nyilatkozatot",
+      "successTitle": "Siker!",
+      "successMessage": "Fiókja sikeresen létrejött! Kérjük, ellenőrizze email címét a megerősítéshez."
+    },
+    "validation": {
+      "emailRequired": "Email cím megadása kötelező",
+      "emailInvalid": "Érvénytelen email cím formátum",
+      "passwordRequired": "Jelszó megadása kötelező",
+      "passwordTooShort": "A jelszónak legalább 6 karakter hosszúnak kell lennie",
+      "passwordTooShortRegister": "A jelszónak legalább 8 karakter hosszúnak kell lennie",
+      "confirmPasswordRequired": "Jelszó megerősítése kötelező",
+      "passwordMismatch": "A jelszavak nem egyeznek",
+      "usernameRequired": "Felhasználónév megadása kötelező",
+      "usernameTooShort": "A felhasználónévnek legalább 3 karakter hosszúnak kell lennie",
+      "phoneRequired": "Telefonszám megadása kötelező",
+      "phoneInvalid": "Érvénytelen telefonszám formátum",
+      "dobRequired": "Születési dátum megadása kötelező",
+      "dobFuture": "A születési dátum nem lehet a jövőben",
+      "dobTooOld": "A születési dátum nem lehet 120 évnél régebbi",
+      "dobTooYoung": "A felhasználónak legalább 13 évesnek kell lennie",
+      "termsRequired": "A Felhasználási Feltételek elfogadása kötelező",
+      "privacyRequired": "Az Adatkezelési Nyilatkozat elfogadása kötelező"
+    },
+    "forgotPassword": {
+      "title": "Jelszó visszaállítás",
+      "message": "Jelszó visszaállítási linket küldünk a megadott email címre.",
+      "send": "Küldés",
+      "success": "Jelszó visszaállítási link elküldve!",
+      "errorNoEmail": "Kérjük, adja meg az email címét a jelszó visszaállításához."
+    },
+    "logout": {
+      "title": "Kijelentkezés",
+      "message": "Biztosan ki szeretne jelentkezni?",
+      "button": "Kijelentkezés",
+      "error": "Nem sikerült kijelentkezni"
+    }
+  },
+  "settings": {
+    "title": "Beállítások",
+    "profile": "Profil",
+    "profileInfo": "Profilinformációk",
+    "changePassword": "Jelszó módosítás",
+    "changePasswordSubtitle": "Fiók biztonságának növelése",
+    "notifications": "Értesítések",
+    "notificationsSubtitle": "Értesítési beállítások kezelése",
+    "notificationsComingSoon": "Értesítési beállítások hamarosan elérhetőek",
+    "appSettings": "Alkalmazás beállítások",
+    "theme": "Téma",
+    "language": "Nyelv",
+    "languageSubtitle": "Magyar",
+    "languageComingSoon": "Nyelvi beállítások hamarosan elérhetőek",
+    "location": "Hely",
+    "locationSubtitle": "Helymeghatározás beállítások",
+    "locationComingSoon": "Helymeghatározási beállítások hamarosan elérhetőek",
+    "support": "Támogatás és információk",
+    "feedback": "Visszajelzés küldése",
+    "feedbackSubtitle": "Vélemény, javaslat vagy hibabejelentés",
+    "help": "Súgó és támogatás",
+    "helpSubtitle": "GYIK és kapcsolat",
+    "terms": "Felhasználási feltételek",
+    "privacy": "Adatvédelem",
+    "about": "Az alkalmazásról",
+    "aboutSubtitle": "Verzió 1.0.0",
+    "aboutMessage": "ParkSafe v1.0.0\nBiciklitároló és szerviz kereső alkalmazás",
+    "account": "Fiók",
+    "profileSettings": "Profil beállítások",
+    "additionalOptions": "További opciók",
+    "developmentTools": "🚧 Fejlesztői eszközök",
+    "deleteAccount": "Fiók törlése",
+    "deleteAccountConfirm": "Ez a művelet véglegesen törli a fiókját és az összes kapcsolódó adatot. Ez a művelet nem vonható vissza.\n\nBiztosan törölni szeretné a fiókját?",
+    "deleteAccountFinalConfirm": "Ez tényleg az utolsó lehetőség a visszalépésre. A fiók törlése után minden adat elvész.\n\nValóban törölni szeretné a fiókját?",
+    "deleteAccountFinalButton": "Igen, törlés",
+    "deleteAccountSuccess": "A fiók sikeresen törölve lett.",
+    "deleteAccountError": "Nem sikerült törölni a fiókot",
+    "mainSettings": "Beállítások",
+    "onboardingTest": "Onboarding teszt",
+    "onboardingTestSubtitle": "Onboarding képernyők tesztelése",
+    "onboardingTestMessage": "Szeretnéd megnézni az onboarding képernyőket?",
+    "onboardingTestButton": "Igen, mutasd",
+    "onboardingTestError": "Nem sikerült megnyitni az onboardingot",
+    "locationSettings": "Hely",
+    "locationSettingsSubtitle": "Helymeghatározás beállítások",
+    "profileInfoDefault": "Felhasználónév beállítása szükséges"
+  },
+  "theme": {
+    "selection": "Téma választás",
+    "light": "Világos",
+    "lightDescription": "Világos téma használata",
+    "dark": "Sötét",
+    "darkDescription": "Sötét téma használata",
+    "system": "Rendszer",
+    "systemDescription": "Rendszer beállítás követése"
+  },
+  "language": {
+    "selection": "Nyelv választás",
+    "hungarian": "Magyar",
+    "hungarianDescription": "Magyar nyelv használata",
+    "english": "English",
+    "englishDescription": "Angol nyelv használata",
+    "system": "Rendszer",
+    "systemDescription": "Rendszer beállítás követése"
+  },
+  "tabs": {
+    "home": "Kezdőlap",
+    "map": "Térkép",
+    "favourite": "Kedvencek",
+    "profile": "Profil"
+  },
+  "home": {
+    "appName": "ParkSafe",
+    "greeting": {
+      "hello": "Helló, {{name}}!",
+      "welcome": "Üdvözöljük!",
+      "user": "Felhasználó"
+    },
+    "hero": {
+      "title": "Keressen biztonságos biciklitárolókat és megbízható szervizeket",
+      "subtitle": "Több mint {{count}}+ ellenőrzött hely országszerte",
+      "loadingSubtitle": "Helyek betöltése...",
+      "fallbackSubtitle": "Ellenőrzött helyek országszerte"
+    },
+    "actions": {
+      "parking": {
+        "title": "Biciklitárolók",
+        "subtitle": "Keresse meg a legközelebbi biztonságos tárolókat"
+      },
+      "repair": {
+        "title": "Szervizek",
+        "subtitle": "Találjon szakértő javítókat közelben"
+      },
+      "shops": {
+        "title": "Bicikli boltok",
+        "subtitle": "Vásároljon alkatrészeket és kiegészítőket"
+      }
+    },
+    "stats": {
+      "locations": "Aktív helyek",
+      "rating": "Átlag értékelés",
+      "safety": "Biztonságos"
+    },
+    "nearby": {
+      "title": "Közelben lévő helyek",
+      "subtitle": "A legközelebbi biciklitárolók és szervizek",
+      "viewAll": "Összes",
+      "loading": "Hely meghatározása...",
+      "refreshing": "Frissítés...",
+      "error": "Helymeghatározási hiba",
+      "retry": "Újrapróbálás",
+      "empty": {
+        "loggedIn": "Még nincsenek közeli helyek betöltve.",
+        "notLoggedIn": "Jelentkezzen be a közeli helyek megtekintéséhez.",
+        "refresh": "Frissítés",
+        "login": "Bejelentkezés"
+      },
+      "types": {
+        "parking": "Biciklitároló",
+        "shop": "Bicikli bolt",
+        "repair": "Szerviz"
+      }
+    }
+  },
+  "favourites": {
+    "title": "Kedvencek",
+    "remove": {
+      "title": "Eltávolítás a kedvencekből",
+      "message": "Biztosan el szeretné távolítani a \"{{name}}\" helyet a kedvencekből?",
+      "button": "Eltávolítás",
+      "error": "Nem sikerült eltávolítani a kedvencet."
+    },
+    "types": {
+      "parking": "Parkoló",
+      "repair": "Szerviz"
+    },
+    "empty": {
+      "title": "Még nincsenek kedvencei",
+      "description": "Adjon hozzá kedvencekhez helyeket a térkép nézetben a csillag gombra kattintva.",
+      "exploreButton": "Térkép megtekintése"
+    },
+    "loading": "Kedvencek betöltése...",
+    "error": {
+      "title": "Hiba történt a kedvencek betöltésekor",
+      "retry": "Újrapróbálás"
+    },
+    "auth": {
+      "title": "Bejelentkezés szükséges",
+      "description": "A kedvencek megtekintéséhez jelentkezzen be a fiókjába."
+    }
+  },
+  "map": {
+    "listView": "Lista nézet",
+    "listTitle": "Helyek listája",
+    "close": "Bezárás",
+    "filters": {
+      "all": "Minden",
+      "parking": "Parkolók",
+      "repair": "Szervizek",
+      "shops": "Boltok"
+    },
+    "empty": "Nincsenek található helyek",
+    "locationError": "Helymeghatározási hiba",
+    "permissionDenied": "Helymeghatározási engedély megtagadva",
+    "openInMaps": "Megnyitás térképben",
+    "addToFavorites": "Hozzáadás a kedvencekhez",
+    "removeFromFavorites": "Eltávolítás a kedvencekből",
+    "directions": "Útvonal",
+    "loadError": "Nem sikerült betölteni a helyeket ezen a területen.",
+    "favoriteError": "Nem sikerült frissíteni a kedvenceket.",
+    "navigationError": "Nem sikerült megnyitni a navigációs alkalmazást.",
+    "status": {
+      "open": "Nyìtva",
+      "closed": "Zárva"
+    },
+    "types": {
+      "parking": "Parkoló",
+      "shop": "Bicikli bolt",
+      "repair": "Szerviz"
+    }
+  },
+  "profileInfo": {
+    "title": "Profilinformációk",
+    "loading": "Profil betöltése...",
+    "save": "Mentés",
+    "saving": "Mentés...",
+    "fields": {
+      "username": "Felhasználónév *",
+      "usernamePlaceholder": "felhasználónév",
+      "fullName": "Teljes név",
+      "fullNamePlaceholder": "Teljes név",
+      "phone": "Telefonszám",
+      "phonePlaceholder": "+36 30 123 4567",
+      "location": "Helyszín",
+      "locationPlaceholder": "Város, Ország",
+      "email": "Email cím",
+      "emailPlaceholder": "email@example.com",
+      "changeEmail": "Módosítás"
+    },
+    "validation": {
+      "usernameMinLength": "A felhasználónév minimum 3 karakter hosszú kell legyen",
+      "usernameInvalidChars": "A felhasználónév csak betűket, számokat és aláhúzást tartalmazhat",
+      "phoneInvalid": "Érvénytelen telefonszám formátum",
+      "usernameTaken": "Ez a felhasználónév már foglalt",
+      "checking": "Ellenőrzés..."
+    },
+    "alerts": {
+      "saveSuccess": "A profil sikeresen frissítve!",
+      "saveError": "Nem sikerült menteni a változtatásokat.",
+      "avatarUploadSuccess": "A profilkép sikeresen feltöltve!",
+      "avatarDeleteSuccess": "A profilkép sikeresen törölve!",
+      "unsavedChanges": {
+        "title": "Nem mentett változtatások",
+        "message": "Vannak nem mentett változtatások. Biztosan ki szeretne lépni?",
+        "exit": "Kilépés"
+      }
+    },
+    "avatar": {
+      "changeButton": "Kép módosítása",
+      "addButton": "Kép hozzáadása",
+      "uploading": "Feltöltés...",
+      "modal": {
+        "title": "Profilkép választás",
+        "message": "Válassz egy opciót",
+        "cancel": "Mégse",
+        "camera": "Kamera",
+        "gallery": "Galéria",
+        "delete": "Törlés"
+      },
+      "permissions": {
+        "mediaTitle": "Engedély szükséges",
+        "mediaMessage": "Az alkalmazásnak hozzáférést kell adni a fényképekhez a profilkép módosításához.",
+        "cameraMessage": "A kamera használatához engedély szükséges."
+      },
+      "errors": {
+        "cameraError": "Nem sikerült a kamera megnyitása.",
+        "galleryError": "Nem sikerült a galéria megnyitása.",
+        "uploadError": "Nem sikerült a kép feltöltése.",
+        "deleteError": "Nem sikerült a kép törlése."
+      },
+      "deleteConfirm": {
+        "title": "Profilkép törlése",
+        "message": "Biztosan törölni szeretné a profilképet?",
+        "cancel": "Mégse",
+        "delete": "Törlés"
+      }
+    }
+  },
+  "changePassword": {
+    "title": "Jelszó módosítás",
+    "sectionTitle": "Jelszó módosítása",
+    "fields": {
+      "currentPassword": "Jelenlegi jelszó",
+      "currentPasswordPlaceholder": "Jelenlegi jelszó",
+      "newPassword": "Új jelszó",
+      "newPasswordPlaceholder": "Új jelszó",
+      "confirmPassword": "Új jelszó megerősítése",
+      "confirmPasswordPlaceholder": "Új jelszó megerősítése"
+    },
+    "validation": {
+      "currentPasswordRequired": "A jelenlegi jelszó megadása kötelező",
+      "newPasswordRequired": "Az új jelszó megadása kötelező",
+      "newPasswordTooShort": "Az új jelszó minimum 6 karakter hosszú kell legyen",
+      "confirmPasswordRequired": "Az új jelszó megerősítése kötelező",
+      "passwordMismatch": "A jelszavak nem egyeznek",
+      "passwordSame": "Az új jelszó nem lehet ugyanaz, mint a jelenlegi"
+    },
+    "strength": {
+      "weak": "Gyenge",
+      "medium": "Közepes",
+      "strong": "Erős"
+    },
+    "tips": {
+      "title": "Biztonságos jelszó tippek",
+      "minLength": "Minimum 8 karakter hosszú legyen",
+      "mixedCase": "Tartalmazzon nagy- és kisbetűket",
+      "numbers": "Használjon számokat és speciális karaktereket",
+      "noPersonalData": "Ne használjon személyes adatokat"
+    },
+    "changeButton": "Jelszó módosítás",
+    "changing": "Változtatás...",
+    "alerts": {
+      "successTitle": "Jelszó megváltoztatva",
+      "successMessage": "A jelszó sikeresen megváltoztatva!",
+      "error": "Nem sikerült megváltoztatni a jelszót."
+    }
+  },
+  "feedback": {
+    "title": "Visszajelzés küldése",
+    "types": {
+      "bug": "Hibabejelentés",
+      "feature": "Új funkció",
+      "improvement": "Fejlesztési javaslat",
+      "general": "Általános visszajelzés"
+    },
+    "priorities": {
+      "low": "Alacsony",
+      "medium": "Közepes",
+      "high": "Magas"
+    },
+    "categories": {
+      "ui_ux": "Felhasználói felület",
+      "performance": "Teljesítmény",
+      "feature": "Új funkció",
+      "bug": "Hibabejelentés",
+      "content": "Tartalom",
+      "other": "Egyéb"
+    },
+    "form": {
+      "header": "Ossza meg velünk véleményét",
+      "subtitle": "Visszajelzése segít nekünk fejleszteni az alkalmazást",
+      "typeLabel": "Visszajelzés típusa *",
+      "typeButton": "Típus",
+      "categoryLabel": "Kategória *",
+      "categoryButton": "Kategória",
+      "titleLabel": "Cím / Tárgy *",
+      "titlePlaceholder": "Rövid, szemléletes cím...",
+      "descriptionLabel": "Részletes leírás *",
+      "descriptionPlaceholder": "Írja le részletesen a problémát, javaslatot vagy véleményét...",
+      "priorityLabel": "Prioritás",
+      "priorityButton": "Prioritás",
+      "emailLabel": "Kapcsolattartási email (opcionális)",
+      "emailPlaceholder": "email@example.com",
+      "emailHelp": "Ha szeretne visszajelzést kapni, adja meg az email címét",
+      "submitButton": "Visszajelzés küldése",
+      "submitting": "Küldés...",
+      "selectPlaceholder": "Válasszon"
+    },
+    "typeDescriptions": {
+      "bug": "Alkalmazásban talált hiba jelentése",
+      "feature": "Új funkció kérése",
+      "improvement": "Meglévő funkció javítása",
+      "general": "Általános vélemény vagy észrevétel"
+    },
+    "categoryDescriptions": {
+      "ui_ux": "Dizájn és használhatóság",
+      "performance": "Sebesség és válaszidő problémák",
+      "feature": "Hiányzó funkciók kérése",
+      "bug": "Hibák és problémák",
+      "content": "Tartalom javítási javaslatok",
+      "other": "Minden más téma"
+    },
+    "validation": {
+      "titleRequired": "Hiányzó cím",
+      "titleRequiredMessage": "Kérem adjon meg egy címet a visszajelzéshez.",
+      "titleTooShort": "Túl rövid cím",
+      "titleTooShortMessage": "A cím legalább 5 karakter hosszú legyen.",
+      "descriptionRequired": "Hiányzó leírás",
+      "descriptionRequiredMessage": "Kérem adjon meg részletes leírást.",
+      "descriptionTooShort": "Túl rövid leírás",
+      "descriptionTooShortMessage": "A leírás legalább 10 karakter hosszú legyen.",
+      "emailInvalid": "Érvénytelen email",
+      "emailInvalidMessage": "Kérem adjon meg érvényes email címet vagy hagyja üresen."
+    },
+    "success": {
+      "title": "Sikeres beküldés",
+      "message": "Köszönjük a visszajelzését! Csapatunk áttekinti és válaszol rá a lehető leghamarabb."
+    },
+    "error": {
+      "title": "Hiba történt",
+      "message": "Nem sikerült elküldeni a visszajelzést. Kérem próbálja újra később."
+    },
+    "modals": {
+      "typeTitle": "Visszajelzés típusa",
+      "priorityTitle": "Prioritás szint",
+      "categoryTitle": "Kategória választás"
+    }
+  },
+  "help": {
+    "title": "Súgó és támogatás",
+    "faq": "Gyakran Ismét Kérdések",
+    "contact": "Kapcsolat",
+    "support": "Támogatás kérése",
+    "emailSupport": "E-mail támogatás",
+    "questions": {
+      "whatIsParkSafe": "Mi a ParkSafe?",
+      "whatIsParkSafeAnswer": "A ParkSafe egy mobilalkalmazás, amely segít biztonságos kerékpár- és roller-tárolóhelyek megtalálásában. Térképes megjelenítéssel, valós idejű információkkal és közösségi értékelésekkel támogatjuk a biztonságos tárolás megtalálását.",
+      "howSearchWorks": "Hogyan működik a tárolóhelyek keresése?",
+      "howSearchWorksAnswer": "Az alkalmazás GPS-alapú helymeghatározással mutatja a környezetében lévő tárolóhelyeket. Szűrhet típus szerint (kerékpár/roller), távolság alapján, és megtekintheti az egyes helyek biztonsági értékelését.",
+      "isFree": "Ingyenes az alkalmazás?",
+      "isFreeAnswer": "Az alapfunkciók ingyenesen használhatók. A prémium szolgáltatások havonta 990 Ft-ba kerülnek, amit az első hónapban ingyenesen kipróbálhat. A prémium funkciókat bármikor lemondhatja.",
+      "premiumFeatures": "Milyen prémium funkciókat kínálnak?",
+      "premiumFeaturesAnswer": "A prémium előfizetés részletes biztonsági információkat, kamerarendszer adatokat, speciális szűrőket, értesítéseket és offline térképeket tartalmaz.",
+      "addLocation": "Hogyan adhatok hozzá új tárolóhelyet?",
+      "addLocationAnswer": "A térképen hosszan nyomva tartva új tárolóhelyet adhat hozzá. Adja meg a szükséges információkat (típus, biztonság, leírás) és a közösség számára elérhetővé válik a jóváhagyás után.",
+      "reportError": "Mi a teendő, ha hibás információt találok?",
+      "reportErrorAnswer": "Minden tárolóhelynél van \"Jelentés\" gomb, amivel jelezheti a hibás vagy elavult információkat. A bejelentéseket 24 órán belül feldolgozzuk.",
+      "rateLocation": "Hogyan értékelhetem a tárolóhelyeket?",
+      "rateLocationAnswer": "A tárolóhely részletes nézetében 1-5 csillagos értékelést adhat és szöveges véleményt írhat. Az értékelések segítik a többi felhasználót a döntésben.",
+      "locationPermission": "Miért fontos a helymeghatározás engedélyezése?",
+      "locationPermissionAnswer": "A helymeghatározás szükséges ahhoz, hogy a környezetében lévő tárolóhelyeket megmutathassuk. Az adatokat csak a szolgáltatás nyújtásához használjuk fel.",
+      "offlineMode": "Offline is működik az alkalmazás?",
+      "offlineModeAnswer": "Az alapfunkciók offline is elérhetők prémium előfizetéssel. A korábban megtekintett területek térképe és tárolóhelyek információi offline is elérhetők.",
+      "dataProtection": "Hogyan védik az adataimat?",
+      "dataProtectionAnswer": "Az összes adat titkosított formában tárolódik. A helyadatokat csak a szolgáltatás nyújtásához használjuk fel. Részletes információkat az Adatvédelmi Szabályzatban találhat."
+    }
+  },
+  "privacy": {
+    "title": "Adatvédelmi szabályzat",
+    "lastUpdated": "Utolsó frissítés: 2024. július 16.",
+    "sections": {
+      "introduction": {
+        "title": "1. Bevezetés",
+        "paragraph1": "A Premiumtex Kft. (székhely: 6792 Zsombó, Dózsa dűlő 55.; cégjegyzékszám: 06-09-013323; adószám: 14559253-2-06) elkötelezett a felhasználók személyes adatainak védelemében. Jelen adatvédelmi szabályzat részletezi, hogyan gyűjtünk, használunk és védjük az Ön személyes adatait a ParkSafe alkalmazás használata során.",
+        "paragraph2": "Az alkalmazás használatával Ön elfogadja jelen adatvédelmi szabályzatban foglalt feltételeket és hozzájárul adatainak az itt leírt módon történő kezeléséhez."
+      },
+      "dataCollection": {
+        "title": "2. Gyűjtött adatok",
+        "intro": "A szolgáltatás nyújtása érdekében az alábbi adatokat gyűjtünk:",
+        "items": {
+          "registration": "Regisztrációs adatok: név, e-mail cím, telefonszám",
+          "location": "Helyadatok: GPS koordináták, keresési helyek",
+          "device": "Eszközinformációk: eszköz típusa, operációs rendszer, alkalmazásverzio",
+          "usage": "Használati adatok: alkalmazás használati statisztikák, preferenciák",
+          "community": "Közösségi tartalmak: értékelések, vélemények, feltöltött képek"
+        }
+      },
+      "dataUsage": {
+        "title": "3. Adatok felhasználása",
+        "intro": "A gyűjtött adatokat az alábbi célokra használjuk:",
+        "items": {
+          "service": "Szolgáltatás nyújtása: tárolóhelyek megjelenítése, navigáció",
+          "experience": "Felhasználói élmény javítása: személyre szabott tartalom",
+          "communication": "Kommunikáció: értesítések, támogatás, frissítések",
+          "security": "Biztonság: visszaélések megelőzése, fiókbiztonság",
+          "analytics": "Statisztikák: névtelen használati adatok elemzése"
+        }
+      },
+      "locationData": {
+        "title": "4. Helyadatok kezelése",
+        "intro": "A helyadatok kezelése különös figyelmet igényel:",
+        "items": {
+          "permission": "Helyadatokat csak explicit engedéllyel gyűjtünk",
+          "processing": "A pontos helyet csak a szolgáltatás használata során dolgozzuk fel",
+          "history": "A helytörténetet nem tároljuk hosszú távon",
+          "sharing": "A helyadatok megosztását bármikor letilthatja",
+          "offline": "Offline használat esetén a helyadatok helyben maradnak"
+        }
+      },
+      "dataSecurity": {
+        "title": "5. Adatbiztonság",
+        "intro": "Az adatok védelme érdekében az alábbi biztonsági intézkedéseket alkalmazzuk:",
+        "items": {
+          "encryption": "Titkosítás: minden adat titkosítva tárolódik",
+          "servers": "Biztonságos szerverek: SSL/TLS protokoll használata",
+          "access": "Hozzáférés-korlátozás: csak jogosult személyek férhetnek hozzá",
+          "audits": "Rendszeres biztonsági auditok és frissítések",
+          "backup": "Adatvesztés elleni védelem: rendszeres biztonsági mentések"
+        }
+      },
+      "dataSharing": {
+        "title": "6. Adatmegosztás",
+        "intro": "Személyes adatait nem adjuk át harmadik félnek, kivéve az alábbi esetekben:",
+        "items": {
+          "legal": "Jogi kötelezéttség: hatósági megkeresés esetén",
+          "providers": "Szolgáltatók: technikai szolgáltatók (hosting, analytics)",
+          "payment": "Fizetési szolgáltatók: prémium előfizetések esetén",
+          "consent": "Felhasználói beleegyezés: explicit engedély esetén"
+        }
+      },
+      "communityContent": {
+        "title": "7. Közösségi tartalmak",
+        "intro": "A közösségi funkciók használata során:",
+        "items": {
+          "public": "Értékelések és vélemények nyilvánosan láthatók",
+          "username": "Felhasználónév megjelenik a tartalmaknl",
+          "moderation": "Képek és kommentek moderálva vannak",
+          "removal": "Nem megfelelő tartalmakat eltávolítjuk",
+          "deletion": "Saját tartalmait bármikor törölheti"
+        }
+      },
+      "cookiesTracking": {
+        "title": "8. Sütik és követés",
+        "intro": "Az alkalmazás működéséhez szükséges technikai adatokat használunk:",
+        "items": {
+          "session": "Munkamenet-azonosítók: bejelentkezés fenntartása",
+          "settings": "Beállítások tárolása: preferenciák megőrzése",
+          "performance": "Teljesítménnymérés: alkalmazás optimalizálása",
+          "errors": "Hibajelentés: hibák azonosítása és javítása"
+        }
+      },
+      "userRights": {
+        "title": "9. Felhasználói jogok",
+        "intro": "A GDPR alapján az alábbi jogokkal rendelkezik:",
+        "items": {
+          "access": "Hozzáférés: adatai megtekintése és lekérése",
+          "rectification": "Helyesbítés: hibás adatok javítása",
+          "erasure": "Törlés: fiók és adatok törlése",
+          "restriction": "Korlátozás: adatkezelés korlátozása",
+          "portability": "Hordozhatóság: adatok átvitele más szolgáltatóhoz",
+          "objection": "Tiltakozás: adatkezelés ellen való kifogás"
+        }
+      },
+      "dataRetention": {
+        "title": "10. Adatmegőrzés",
+        "intro": "Az adatokat az alábbi időtartamokig őrizzük meg:",
+        "items": {
+          "account": "Fiókadatok: a fiók törlésig",
+          "transactions": "Tranzakciós adatok: jogi kötelezéttség szerint (5 év)",
+          "location": "Helyadatok: 30 nap után automatikusan törlődnek",
+          "community": "Közösségi tartalmak: tartalom törléséig",
+          "statistics": "Statisztikai adatok: névtelenítve, korlátlan ideig"
+        }
+      },
+      "minorProtection": {
+        "title": "11. Kiskorúak védelme",
+        "intro": "A 16 év alatti felhasználók védelemében:",
+        "items": {
+          "consent": "Szülői beleegyezés szükséges 16 év alatt",
+          "functionality": "Korlátozott funkcionalitás kiskorúak számára",
+          "protection": "Fokozott adatvédelem és moderálás",
+          "reporting": "Jelentési lehetőség nem megfelelő tartalmakra"
+        }
+      },
+      "contact": {
+        "title": "12. Kapcsolat és bejelentések",
+        "intro": "Adatvédelmi kérdések, kérések és panaszok esetén forduljon hozzánk:",
+        "items": {
+          "email": "E-mail: perjesidev@gmail.com",
+          "address": "Postai cím: 6792 Zsombó, Dózsa d. 55.",
+          "phone": "Telefonos elérhetőség: +36 30 721 2524",
+          "response": "Válaszadási idő: 30 napon belül"
+        }
+      },
+      "policyChanges": {
+        "title": "13. Szabályzat módosítása",
+        "intro": "A jelen adatvédelmi szabályzat módosítása:",
+        "items": {
+          "notification": "Jelentős változásokról előzetesen értesítjük",
+          "display": "Módosítások az alkalmazásban is megjelennek",
+          "acceptance": "Folyamatos használat = módosítások elfogadása",
+          "effective": "Változások a közléstől számított 30 napon belül lépnek hatályba"
+        }
+      }
+    }
+  },
+  "terms": {
+    "title": "Felhasználási feltételek",
+    "lastUpdated": "Utolsó frissítés: 2024. július 16.",
+    "sections": {
+      "generalProvisions": {
+        "title": "1. Általános rendelkezések",
+        "paragraph1": "Jelen Általános Szerződési Feltételek (a továbbiakban: ÁSZF) a Premiumtex Kft. (székhely: 6792 Zsombó, Dózsa dűlő 55.; cégjegyzékszám: 06-09-013323; adószám: 14559253-2-06) által üzemeltetett ParkSafe alkalmazás és szolgáltatások használatára vonatkoznak.",
+        "paragraph2": "Az alkalmazás használatával Ön elfogadja jelen ÁSZF-ben foglalt feltételeket. Kérjük, hogy a regisztráció előtt figyelmesen olvassa el az alábbi feltételeket."
+      },
+      "serviceDescription": {
+        "title": "2. A szolgáltatás leírása",
+        "intro": "A ParkSafe egy mobilalkalmazás és webes platform, amely segít a felhasználóknak biztonságos kerékpár- és roller-tárolóhelyek megtalálásában. A szolgáltatás keretében a következő funkciókat biztosítjuk:",
+        "items": {
+          "mapDisplay": "Tárolóhelyek térképes megjelenítése",
+          "realTimeInfo": "Valós idejű elérhetőségi információk",
+          "communityReviews": "Közösségi értékelések és vélemények",
+          "securityInfo": "Biztonsági információk és kamerarendszer adatok",
+          "serviceSearch": "Szerviz- és kiegészítő szolgáltatások keresése"
+        }
+      },
+      "registrationAccount": {
+        "title": "3. Regisztráció és felhasználói fiók",
+        "intro": "A szolgáltatás teljes körű használatához regisztráció szükséges. A regisztráció során megadott adatok valódiságáért a felhasználó felel. A felhasználó köteles:",
+        "items": {
+          "realData": "Valós adatokat megadni a regisztráció során",
+          "secureAccount": "Fiókadatait biztonságban tartani",
+          "changePassword": "Jelszavát rendszeresen megváltoztatni",
+          "reportAbuse": "Haladéktalanul jelenteni bármilyen visszaélést"
+        }
+      },
+      "feesPayment": {
+        "title": "4. Díjak és fizetés",
+        "intro": "Az alkalmazás alapfunkciói ingyenesen használhatók. A prémium szolgáltatásokért havonta 990 Ft díjat számítunk fel. A díjfizetés automatikus megújítással történik, amelyet a felhasználó bármikor lemondhat.",
+        "freeTrialInfo": "Az első hónapban a prémium szolgáltatások ingyenesen kipróbálhatók. A lemondás elmulasztása esetén automatikusan megújul a prémium előfizetés."
+      },
+      "intellectualProperty": {
+        "title": "5. Szellemi tulajdonjogok",
+        "paragraph1": "Az alkalmazás és annak tartalma (szoftver, grafika, szövegek, adatbázis) a Premiumtex Kft. szellemi tulajdonát képezi. A felhasználó kizárólag a szolgáltatás rendeltetésszerű használatára jogosult.",
+        "paragraph2": "Tilos az alkalmazás tartalmának másolása, terjesztése, módosítása vagy kereskedelmi célú felhasználása a Premiumtex Kft. írásos engedélye nélkül."
+      },
+      "limitationLiability": {
+        "title": "6. Felelősség korlátozása",
+        "paragraph1": "A Premiumtex Kft. nem vállal felelősséget a tárolóhelyek tényleges biztonságáért vagy elérhetőségéért. Az alkalmazásban megjelenő információk tájékoztató jellegűek.",
+        "paragraph2": "A társaság nem felel a felhasználó által a tárolóhelyeken elszenvedett károkért, lopásokért vagy bármilyen egyéb veszteségért."
+      },
+      "communityContent": {
+        "title": "7. Közösségi tartalmak",
+        "paragraph1": "A felhasználók által közzétett értékelések, vélemények és egyéb tartalmak szerzői jogaiért a feltöltő felhasználó felel. A társaság fenntartja a jogot a nem megfelelő tartalmak eltávolítására.",
+        "paragraph2": "Tilos trágár, sértő, jogellenes vagy valótlan tartalmak közzététele. Az ilyen tartalmak közzétevőjének fiókját felfüggesztjük."
+      },
+      "serviceSuspension": {
+        "title": "8. Szolgáltatás felfüggesztése",
+        "paragraph1": "A Premiumtex Kft. fenntartja a jogot a szolgáltatás ideiglenes vagy végleges felfüggesztésére karbantartás, fejlesztés vagy egyéb műszaki okok miatt.",
+        "paragraph2": "Súlyos szerződésszegés esetén a társaság jogosult a felhasználói fiók azonnali felfüggesztésére vagy törlésére előzetes értesítés nélkül."
+      },
+      "disputeResolution": {
+        "title": "9. Jogviták rendezése",
+        "paragraph1": "A jelen ÁSZF-fel kapcsolatos jogviták rendezésére a magyar jog irányadó. A felek elsősorban békés úton kísérlik meg rendezni a vitákat.",
+        "paragraph2": "Amennyiben a békés rendezés nem vezet eredményre, a jogviták elbírálására a Budapesti Törvényszék kizárólagosan illetékes."
+      },
+      "termsModification": {
+        "title": "10. Az ÁSZF módosítása",
+        "paragraph1": "A Premiumtex Kft. fenntartja a jogot jelen ÁSZF egyoldalú módosítására. A módosításokról a felhasználókat e-mail útján vagy az alkalmazásban megjelenő értesítéssel tájékoztatjuk.",
+        "paragraph2": "A módosítások a közléstől számított 15 napon belül lépnek hatályba. A szolgáltatás további használatával a felhasználó elfogadja a módosított feltételeket."
+      },
+      "contact": {
+        "title": "11. Kapcsolat",
+        "intro": "Jelen ÁSZF-fel kapcsolatos kérdésekkel, panaszokkal a következő elérhetőségeken fordulhat hozzánk:",
+        "items": {
+          "email": "E-mail: perjesidev@gmail.com",
+          "address": "Postai cím: 6792 Zsombó, Dózsa d. 55.",
+          "phone": "Telefonos ügyfélszolgálat: +36 30 721 2524"
+        }
+      }
+    }
+  },
+  "onboarding": {
+    "skip": "Kihagyás",
+    "previous": "Vissza",
+    "next": "Tovább",
+    "finish": "Kezdjük!",
+    "slides": {
+      "welcome": {
+        "title": "Üdvözlünk a ParkSafe-ben!",
+        "subtitle": "Találd meg a legjobb parkolóhelyeket és kerékpár javítókat a környékeden egyszerűen és gyorsan"
+      },
+      "map": {
+        "title": "Interaktív térkép",
+        "subtitle": "Böngészd a térképet és fedezd fel az összes elérhető szolgáltatást valós időben"
+      },
+      "filters": {
+        "title": "Szűrők és keresés",
+        "subtitle": "Válaszd ki pontosan, mit keresel: parkolóhely vagy kerékpár javító. Szűrd távolság szerint is"
+      },
+      "favorites": {
+        "title": "Kedvencek mentése",
+        "subtitle": "Jelöld meg kedvenc helyeidet egy érintéssel, hogy később villámgyorsan megtaláld őket"
+      },
+      "ready": {
+        "title": "Készen állsz?",
+        "subtitle": "Most már ismered az összes funkciót! Kezdd el felfedezni a várost biztonságos parkolással!"
+      }
+    }
+  }
+}

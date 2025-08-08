@@ -1,0 +1,732 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "close": "Close",
+    "retry": "Retry",
+    "or": "or"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign In",
+      "subtitle": "Welcome back! Please sign in to your account",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "example@email.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "forgotPassword": "Forgot password?",
+      "loginButton": "Sign In",
+      "googleLogin": "Sign in with Google",
+      "noAccount": "Don't have an account?",
+      "registerNow": "Sign up now!"
+    },
+    "register": {
+      "title": "Sign Up",
+      "subtitle": "Create a new account to use our services",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "example@email.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "phoneLabel": "Phone number",
+      "phonePlaceholder": "+1 555 123 4567",
+      "dobLabel": "Date of birth",
+      "dobPlaceholder": "YYYY-MM-DD",
+      "registerButton": "Sign Up",
+      "googleRegister": "Sign up with Google",
+      "haveAccount": "Already have an account?",
+      "loginNow": "Sign in!",
+      "termsAccept": "I accept the",
+      "termsLink": "Terms of Service",
+      "privacyAccept": "I accept the",
+      "privacyLink": "Privacy Policy",
+      "successTitle": "Success!",
+      "successMessage": "Your account has been created successfully! Please check your email to verify your account."
+    },
+    "validation": {
+      "emailRequired": "Email address is required",
+      "emailInvalid": "Invalid email address format",
+      "passwordRequired": "Password is required",
+      "passwordTooShort": "Password must be at least 6 characters long",
+      "passwordTooShortRegister": "Password must be at least 8 characters long",
+      "confirmPasswordRequired": "Password confirmation is required",
+      "passwordMismatch": "Passwords do not match",
+      "usernameRequired": "Username is required",
+      "usernameTooShort": "Username must be at least 3 characters long",
+      "phoneRequired": "Phone number is required",
+      "phoneInvalid": "Invalid phone number format",
+      "dobRequired": "Date of birth is required",
+      "dobFuture": "Date of birth cannot be in the future",
+      "dobTooOld": "Date of birth cannot be more than 120 years ago",
+      "dobTooYoung": "User must be at least 13 years old",
+      "termsRequired": "You must accept the Terms of Service",
+      "privacyRequired": "You must accept the Privacy Policy"
+    },
+    "forgotPassword": {
+      "title": "Reset Password",
+      "message": "We'll send a password reset link to the provided email address.",
+      "send": "Send",
+      "success": "Password reset link sent!",
+      "errorNoEmail": "Please enter your email address to reset your password."
+    },
+    "logout": {
+      "title": "Sign Out",
+      "message": "Are you sure you want to sign out?",
+      "button": "Sign Out",
+      "error": "Failed to sign out"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "profileInfo": "Profile information",
+    "changePassword": "Change password",
+    "changePasswordSubtitle": "Enhance account security",
+    "notifications": "Notifications",
+    "notificationsSubtitle": "Manage notification settings",
+    "notificationsComingSoon": "Notification settings will be available soon",
+    "appSettings": "App settings",
+    "theme": "Theme",
+    "language": "Language",
+    "languageSubtitle": "English",
+    "languageComingSoon": "Language settings will be available soon",
+    "location": "Location",
+    "locationSubtitle": "Location settings",
+    "locationComingSoon": "Location settings will be available soon",
+    "support": "Support & Information",
+    "feedback": "Send feedback",
+    "feedbackSubtitle": "Share your opinion, suggestions, or report bugs",
+    "help": "Help & Support",
+    "helpSubtitle": "FAQ and contact",
+    "terms": "Terms of Service",
+    "privacy": "Privacy",
+    "about": "About the app",
+    "aboutSubtitle": "Version 1.0.0",
+    "aboutMessage": "ParkSafe v1.0.0\nBike parking and repair finder app",
+    "account": "Account",
+    "profileSettings": "Profile settings",
+    "additionalOptions": "Additional options",
+    "developmentTools": "🚧 Development tools",
+    "deleteAccount": "Delete account",
+    "deleteAccountConfirm": "This action will permanently delete your account and all associated data. This action cannot be undone.\n\nAre you sure you want to delete your account?",
+    "deleteAccountFinalConfirm": "This is really the last chance to back out. After deleting your account, all data will be lost.\n\nDo you really want to delete your account?",
+    "deleteAccountFinalButton": "Yes, delete",
+    "deleteAccountSuccess": "Account successfully deleted.",
+    "deleteAccountError": "Failed to delete account",
+    "mainSettings": "Settings",
+    "onboardingTest": "Onboarding test",
+    "onboardingTestSubtitle": "Test onboarding screens",
+    "onboardingTestMessage": "Would you like to view the onboarding screens?",
+    "onboardingTestButton": "Yes, show them",
+    "onboardingTestError": "Failed to open onboarding",
+    "locationSettings": "Location",
+    "locationSettingsSubtitle": "Location settings",
+    "profileInfoDefault": "Username setup required"
+  },
+  "theme": {
+    "selection": "Theme selection",
+    "light": "Light",
+    "lightDescription": "Use light theme",
+    "dark": "Dark",
+    "darkDescription": "Use dark theme",
+    "system": "System",
+    "systemDescription": "Follow system settings"
+  },
+  "language": {
+    "selection": "Language selection",
+    "hungarian": "Magyar",
+    "hungarianDescription": "Use Hungarian language",
+    "english": "English",
+    "englishDescription": "Use English language",
+    "system": "System",
+    "systemDescription": "Follow system settings"
+  },
+  "tabs": {
+    "home": "Home",
+    "map": "Map",
+    "favourite": "Favorites",
+    "profile": "Profile"
+  },
+  "home": {
+    "appName": "ParkSafe",
+    "greeting": {
+      "hello": "Hello, {{name}}!",
+      "welcome": "Welcome!",
+      "user": "User"
+    },
+    "hero": {
+      "title": "Find safe bike storage and reliable repair services",
+      "subtitle": "More than {{count}}+ verified locations nationwide",
+      "loadingSubtitle": "Loading locations...",
+      "fallbackSubtitle": "Verified locations nationwide"
+    },
+    "actions": {
+      "parking": {
+        "title": "Bike Storage",
+        "subtitle": "Find the nearest secure bike storage"
+      },
+      "repair": {
+        "title": "Repair Services",
+        "subtitle": "Find expert repair services nearby"
+      },
+      "shops": {
+        "title": "Bike Shops",
+        "subtitle": "Shop for parts and accessories"
+      }
+    },
+    "stats": {
+      "locations": "Active locations",
+      "rating": "Average rating",
+      "safety": "Safe"
+    },
+    "nearby": {
+      "title": "Nearby locations",
+      "subtitle": "Closest bike storage and repair services",
+      "viewAll": "View all",
+      "loading": "Determining location...",
+      "refreshing": "Refreshing...",
+      "error": "Location error",
+      "retry": "Retry",
+      "empty": {
+        "loggedIn": "No nearby locations loaded yet.",
+        "notLoggedIn": "Please log in to view nearby locations.",
+        "refresh": "Refresh",
+        "login": "Sign In"
+      },
+      "types": {
+        "parking": "Bike Storage",
+        "shop": "Bike Shop",
+        "repair": "Repair Service"
+      }
+    }
+  },
+  "favourites": {
+    "title": "Favorites",
+    "remove": {
+      "title": "Remove from favorites",
+      "message": "Are you sure you want to remove \"{{name}}\" from your favorites?",
+      "button": "Remove",
+      "error": "Failed to remove favorite."
+    },
+    "types": {
+      "parking": "Parking",
+      "repair": "Service"
+    },
+    "empty": {
+      "title": "No favorites yet",
+      "description": "Add places to favorites by tapping the star button in map view.",
+      "exploreButton": "View Map"
+    },
+    "loading": "Loading favorites...",
+    "error": {
+      "title": "Error loading favorites",
+      "retry": "Retry"
+    },
+    "auth": {
+      "title": "Login required",
+      "description": "Please sign in to your account to view favorites."
+    }
+  },
+  "map": {
+    "listView": "List view",
+    "listTitle": "Places list",
+    "close": "Close",
+    "filters": {
+      "all": "All",
+      "parking": "Parking",
+      "repair": "Services",
+      "shops": "Shops"
+    },
+    "empty": "No places found",
+    "locationError": "Location error",
+    "permissionDenied": "Location permission denied",
+    "openInMaps": "Open in Maps",
+    "addToFavorites": "Add to favorites",
+    "removeFromFavorites": "Remove from favorites",
+    "directions": "Directions",
+    "loadError": "Failed to load places in this area.",
+    "favoriteError": "Failed to update favourites.",
+    "navigationError": "Could not open navigation app.",
+    "status": {
+      "open": "Open",
+      "closed": "Closed"
+    },
+    "types": {
+      "parking": "Parking",
+      "shop": "Bike Shop",
+      "repair": "Repair"
+    }
+  },
+  "profileInfo": {
+    "title": "Profile Information",
+    "loading": "Loading profile...",
+    "save": "Save",
+    "saving": "Saving...",
+    "fields": {
+      "username": "Username *",
+      "usernamePlaceholder": "username",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "Full Name",
+      "phone": "Phone Number",
+      "phonePlaceholder": "+1 555 123 4567",
+      "location": "Location",
+      "locationPlaceholder": "City, Country",
+      "email": "Email Address",
+      "emailPlaceholder": "email@example.com",
+      "changeEmail": "Change"
+    },
+    "validation": {
+      "usernameMinLength": "Username must be at least 3 characters long",
+      "usernameInvalidChars": "Username can only contain letters, numbers and underscores",
+      "phoneInvalid": "Invalid phone number format",
+      "usernameTaken": "This username is already taken",
+      "checking": "Checking..."
+    },
+    "alerts": {
+      "saveSuccess": "Profile updated successfully!",
+      "saveError": "Failed to save changes.",
+      "avatarUploadSuccess": "Profile picture uploaded successfully!",
+      "avatarDeleteSuccess": "Profile picture deleted successfully!",
+      "unsavedChanges": {
+        "title": "Unsaved Changes",
+        "message": "You have unsaved changes. Are you sure you want to exit?",
+        "exit": "Exit"
+      }
+    },
+    "avatar": {
+      "changeButton": "Change photo",
+      "addButton": "Add photo",
+      "uploading": "Uploading...",
+      "modal": {
+        "title": "Profile photo selection",
+        "message": "Choose an option",
+        "cancel": "Cancel",
+        "camera": "Camera",
+        "gallery": "Gallery",
+        "delete": "Delete"
+      },
+      "permissions": {
+        "mediaTitle": "Permission required",
+        "mediaMessage": "The app needs access to photos to change your profile picture.",
+        "cameraMessage": "Camera permission is required to use the camera."
+      },
+      "errors": {
+        "cameraError": "Failed to open camera.",
+        "galleryError": "Failed to open gallery.",
+        "uploadError": "Failed to upload image.",
+        "deleteError": "Failed to delete image."
+      },
+      "deleteConfirm": {
+        "title": "Delete profile photo",
+        "message": "Are you sure you want to delete your profile photo?",
+        "cancel": "Cancel",
+        "delete": "Delete"
+      }
+    }
+  },
+  "changePassword": {
+    "title": "Change Password",
+    "sectionTitle": "Change Password",
+    "fields": {
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Current Password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Confirm New Password"
+    },
+    "validation": {
+      "currentPasswordRequired": "Current password is required",
+      "newPasswordRequired": "New password is required",
+      "newPasswordTooShort": "New password must be at least 6 characters long",
+      "confirmPasswordRequired": "Password confirmation is required",
+      "passwordMismatch": "Passwords do not match",
+      "passwordSame": "New password cannot be the same as current password"
+    },
+    "strength": {
+      "weak": "Weak",
+      "medium": "Medium",
+      "strong": "Strong"
+    },
+    "tips": {
+      "title": "Secure Password Tips",
+      "minLength": "At least 8 characters long",
+      "mixedCase": "Include uppercase and lowercase letters",
+      "numbers": "Use numbers and special characters",
+      "noPersonalData": "Don't use personal information"
+    },
+    "changeButton": "Change Password",
+    "changing": "Changing...",
+    "alerts": {
+      "successTitle": "Password Changed",
+      "successMessage": "Password changed successfully!",
+      "error": "Failed to change password."
+    }
+  },
+  "feedback": {
+    "title": "Send Feedback",
+    "types": {
+      "bug": "Bug Report",
+      "feature": "Feature Request",
+      "improvement": "Improvement Suggestion",
+      "general": "General Feedback"
+    },
+    "priorities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "categories": {
+      "ui_ux": "User Interface",
+      "performance": "Performance",
+      "feature": "New Feature",
+      "bug": "Bug Report",
+      "content": "Content",
+      "other": "Other"
+    },
+    "form": {
+      "header": "Share your opinion with us",
+      "subtitle": "Your feedback helps us improve the application",
+      "typeLabel": "Feedback type *",
+      "typeButton": "Type",
+      "categoryLabel": "Category *",
+      "categoryButton": "Category",
+      "titleLabel": "Title / Subject *",
+      "titlePlaceholder": "Short, descriptive title...",
+      "descriptionLabel": "Detailed description *",
+      "descriptionPlaceholder": "Describe the problem, suggestion or opinion in detail...",
+      "priorityLabel": "Priority",
+      "priorityButton": "Priority",
+      "emailLabel": "Contact email (optional)",
+      "emailPlaceholder": "email@example.com",
+      "emailHelp": "If you would like to receive feedback, please provide your email address",
+      "submitButton": "Send feedback",
+      "submitting": "Sending...",
+      "selectPlaceholder": "Select"
+    },
+    "typeDescriptions": {
+      "bug": "Report a bug found in the application",
+      "feature": "Request a new feature",
+      "improvement": "Suggest improvement to existing feature",
+      "general": "General feedback or observation"
+    },
+    "categoryDescriptions": {
+      "ui_ux": "Design and usability",
+      "performance": "Speed and response time issues",
+      "feature": "Request for missing features",
+      "bug": "Bugs and problems",
+      "content": "Content improvement suggestions",
+      "other": "Any other topic"
+    },
+    "validation": {
+      "titleRequired": "Missing title",
+      "titleRequiredMessage": "Please provide a title for the feedback.",
+      "titleTooShort": "Title too short",
+      "titleTooShortMessage": "The title should be at least 5 characters long.",
+      "descriptionRequired": "Missing description",
+      "descriptionRequiredMessage": "Please provide a detailed description.",
+      "descriptionTooShort": "Description too short",
+      "descriptionTooShortMessage": "The description should be at least 10 characters long.",
+      "emailInvalid": "Invalid email",
+      "emailInvalidMessage": "Please provide a valid email address or leave it empty."
+    },
+    "success": {
+      "title": "Successfully submitted",
+      "message": "Thank you for your feedback! Our team will review it and respond as soon as possible."
+    },
+    "error": {
+      "title": "Error occurred",
+      "message": "Failed to send feedback. Please try again later."
+    },
+    "modals": {
+      "typeTitle": "Feedback type",
+      "priorityTitle": "Priority level",
+      "categoryTitle": "Category selection"
+    }
+  },
+  "help": {
+    "title": "Help & Support",
+    "faq": "Frequently Asked Questions",
+    "contact": "Contact",
+    "support": "Request support",
+    "emailSupport": "Email support",
+    "questions": {
+      "whatIsParkSafe": "What is ParkSafe?",
+      "whatIsParkSafeAnswer": "ParkSafe is a mobile application that helps you find secure bike and scooter parking spots. With map display, real-time information, and community ratings, we support finding safe storage.",
+      "howSearchWorks": "How does the parking search work?",
+      "howSearchWorksAnswer": "The app uses GPS-based location to show parking spots in your area. You can filter by type (bike/scooter), distance, and view safety ratings for each location.",
+      "isFree": "Is the app free?",
+      "isFreeAnswer": "Basic features are free to use. Premium services cost 990 HUF per month, which you can try free for the first month. Premium features can be cancelled anytime.",
+      "premiumFeatures": "What premium features do you offer?",
+      "premiumFeaturesAnswer": "Premium subscription includes detailed security information, camera system data, special filters, notifications, and offline maps.",
+      "addLocation": "How can I add a new parking spot?",
+      "addLocationAnswer": "By long-pressing on the map, you can add a new parking spot. Provide the necessary information (type, security, description) and it will become available to the community after approval.",
+      "reportError": "What to do if I find incorrect information?",
+      "reportErrorAnswer": "Every parking spot has a \"Report\" button where you can report incorrect or outdated information. Reports are processed within 24 hours.",
+      "rateLocation": "How can I rate parking spots?",
+      "rateLocationAnswer": "In the detailed view of a parking spot, you can give a 1-5 star rating and write a text review. Ratings help other users make decisions.",
+      "locationPermission": "Why is it important to enable location?",
+      "locationPermissionAnswer": "Location is needed to show you parking spots in your area. We only use data for providing the service.",
+      "offlineMode": "Does the app work offline?",
+      "offlineModeAnswer": "Basic features are available offline with premium subscription. Previously viewed area maps and parking spot information are available offline.",
+      "dataProtection": "How do you protect my data?",
+      "dataProtectionAnswer": "All data is stored in encrypted form. Location data is only used for providing the service. Detailed information can be found in the Privacy Policy."
+    }
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: July 16, 2024",
+    "sections": {
+      "introduction": {
+        "title": "1. Introduction",
+        "paragraph1": "Premiumtex Kft. (headquarters: 6792 Zsombó, Dózsa dűlő 55.; company registration number: 06-09-013323; tax number: 14559253-2-06) is committed to protecting users' personal data. This privacy policy details how we collect, use, and protect your personal data when using the ParkSafe application.",
+        "paragraph2": "By using the application, you accept the terms contained in this privacy policy and consent to the processing of your data as described herein."
+      },
+      "dataCollection": {
+        "title": "2. Data Collection",
+        "intro": "To provide our services, we collect the following data:",
+        "items": {
+          "registration": "Registration data: name, email address, phone number",
+          "location": "Location data: GPS coordinates, search locations",
+          "device": "Device information: device type, operating system, application version",
+          "usage": "Usage data: application usage statistics, preferences",
+          "community": "Community content: ratings, reviews, uploaded images"
+        }
+      },
+      "dataUsage": {
+        "title": "3. Data Usage",
+        "intro": "We use the collected data for the following purposes:",
+        "items": {
+          "service": "Service provision: displaying storage locations, navigation",
+          "experience": "Improving user experience: personalized content",
+          "communication": "Communication: notifications, support, updates",
+          "security": "Security: preventing abuse, account security",
+          "analytics": "Statistics: anonymous usage data analysis"
+        }
+      },
+      "locationData": {
+        "title": "4. Location Data Handling",
+        "intro": "Location data handling requires special attention:",
+        "items": {
+          "permission": "We only collect location data with explicit permission",
+          "processing": "Precise location is only processed during service use",
+          "history": "We do not store location history long-term",
+          "sharing": "You can disable location data sharing at any time",
+          "offline": "During offline use, location data remains local"
+        }
+      },
+      "dataSecurity": {
+        "title": "5. Data Security",
+        "intro": "To protect data, we implement the following security measures:",
+        "items": {
+          "encryption": "Encryption: all data is stored encrypted",
+          "servers": "Secure servers: using SSL/TLS protocol",
+          "access": "Access restriction: only authorized personnel have access",
+          "audits": "Regular security audits and updates",
+          "backup": "Data loss protection: regular security backups"
+        }
+      },
+      "dataSharing": {
+        "title": "6. Data Sharing",
+        "intro": "We do not share personal data with third parties, except in the following cases:",
+        "items": {
+          "legal": "Legal obligation: in case of official requests",
+          "providers": "Service providers: technical providers (hosting, analytics)",
+          "payment": "Payment providers: for premium subscriptions",
+          "consent": "User consent: with explicit permission"
+        }
+      },
+      "communityContent": {
+        "title": "7. Community Content",
+        "intro": "When using community features:",
+        "items": {
+          "public": "Ratings and reviews are publicly visible",
+          "username": "Username appears with content",
+          "moderation": "Images and comments are moderated",
+          "removal": "We remove inappropriate content",
+          "deletion": "You can delete your own content at any time"
+        }
+      },
+      "cookiesTracking": {
+        "title": "8. Cookies and Tracking",
+        "intro": "We use technical data necessary for application operation:",
+        "items": {
+          "session": "Session identifiers: maintaining login",
+          "settings": "Settings storage: preserving preferences",
+          "performance": "Performance measurement: application optimization",
+          "errors": "Error reporting: identifying and fixing bugs"
+        }
+      },
+      "userRights": {
+        "title": "9. User Rights",
+        "intro": "Under GDPR, you have the following rights:",
+        "items": {
+          "access": "Access: viewing and retrieving your data",
+          "rectification": "Rectification: correcting incorrect data",
+          "erasure": "Erasure: deleting account and data",
+          "restriction": "Restriction: limiting data processing",
+          "portability": "Portability: transferring data to other providers",
+          "objection": "Objection: objecting to data processing"
+        }
+      },
+      "dataRetention": {
+        "title": "10. Data Retention",
+        "intro": "We retain data for the following periods:",
+        "items": {
+          "account": "Account data: until account deletion",
+          "transactions": "Transaction data: as per legal obligation (5 years)",
+          "location": "Location data: automatically deleted after 30 days",
+          "community": "Community content: until content deletion",
+          "statistics": "Statistical data: anonymized, indefinitely"
+        }
+      },
+      "minorProtection": {
+        "title": "11. Minor Protection",
+        "intro": "To protect users under 16:",
+        "items": {
+          "consent": "Parental consent required for under 16",
+          "functionality": "Limited functionality for minors",
+          "protection": "Enhanced data protection and moderation",
+          "reporting": "Reporting option for inappropriate content"
+        }
+      },
+      "contact": {
+        "title": "12. Contact and Reports",
+        "intro": "For privacy questions, requests, and complaints, contact us:",
+        "items": {
+          "email": "Email: perjesidev@gmail.com",
+          "address": "Postal address: 6792 Zsombó, Dózsa d. 55.",
+          "phone": "Phone contact: +36 30 721 2524",
+          "response": "Response time: within 30 days"
+        }
+      },
+      "policyChanges": {
+        "title": "13. Policy Modifications",
+        "intro": "Modifications to this privacy policy:",
+        "items": {
+          "notification": "We notify in advance of significant changes",
+          "display": "Modifications also appear in the application",
+          "acceptance": "Continued use = acceptance of modifications",
+          "effective": "Changes take effect within 30 days of announcement"
+        }
+      }
+    }
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated: July 16, 2024",
+    "sections": {
+      "generalProvisions": {
+        "title": "1. General Provisions",
+        "paragraph1": "These General Terms and Conditions (hereinafter: Terms) apply to the use of the ParkSafe application and services operated by Premiumtex Kft. (headquarters: 6792 Zsombó, Dózsa dűlő 55.; company registration number: 06-09-013323; tax number: 14559253-2-06).",
+        "paragraph2": "By using the application, you accept the terms contained in these Terms. Please read the following terms carefully before registration."
+      },
+      "serviceDescription": {
+        "title": "2. Service Description",
+        "intro": "ParkSafe is a mobile application and web platform that helps users find secure bicycle and scooter storage locations. Within the service, we provide the following functions:",
+        "items": {
+          "mapDisplay": "Map display of storage locations",
+          "realTimeInfo": "Real-time availability information",
+          "communityReviews": "Community ratings and reviews",
+          "securityInfo": "Security information and camera system data",
+          "serviceSearch": "Service and accessory service search"
+        }
+      },
+      "registrationAccount": {
+        "title": "3. Registration and User Account",
+        "intro": "Registration is required for full use of the service. The user is responsible for the authenticity of the data provided during registration. The user is obligated to:",
+        "items": {
+          "realData": "Provide real data during registration",
+          "secureAccount": "Keep account data secure",
+          "changePassword": "Change password regularly",
+          "reportAbuse": "Immediately report any abuse"
+        }
+      },
+      "feesPayment": {
+        "title": "4. Fees and Payment",
+        "intro": "The basic functions of the application can be used free of charge. We charge a monthly fee of 990 HUF for premium services. Payment is made with automatic renewal, which the user can cancel at any time.",
+        "freeTrialInfo": "Premium services can be tried free for the first month. If cancellation is missed, the premium subscription will automatically renew."
+      },
+      "intellectualProperty": {
+        "title": "5. Intellectual Property Rights",
+        "paragraph1": "The application and its content (software, graphics, texts, database) are the intellectual property of Premiumtex Kft. The user is only entitled to use the service for its intended purpose.",
+        "paragraph2": "It is prohibited to copy, distribute, modify or commercially use the application content without the written permission of Premiumtex Kft."
+      },
+      "limitationLiability": {
+        "title": "6. Limitation of Liability",
+        "paragraph1": "Premiumtex Kft. does not assume responsibility for the actual security or availability of storage locations. The information displayed in the application is for informational purposes.",
+        "paragraph2": "The company is not liable for damages, thefts or any other losses suffered by the user at storage locations."
+      },
+      "communityContent": {
+        "title": "7. Community Content",
+        "paragraph1": "The user is responsible for the copyright of ratings, reviews and other content posted by users. The company reserves the right to remove inappropriate content.",
+        "paragraph2": "It is prohibited to post profane, offensive, illegal or false content. The account of the poster of such content will be suspended."
+      },
+      "serviceSuspension": {
+        "title": "8. Service Suspension",
+        "paragraph1": "Premiumtex Kft. reserves the right to temporarily or permanently suspend the service due to maintenance, development or other technical reasons.",
+        "paragraph2": "In case of serious breach of contract, the company is entitled to immediately suspend or delete the user account without prior notice."
+      },
+      "disputeResolution": {
+        "title": "9. Dispute Resolution",
+        "paragraph1": "Hungarian law applies to the resolution of legal disputes related to these Terms. The parties primarily attempt to resolve disputes peacefully.",
+        "paragraph2": "If peaceful resolution does not lead to results, the Budapest Court has exclusive jurisdiction to adjudicate legal disputes."
+      },
+      "termsModification": {
+        "title": "10. Terms Modification",
+        "paragraph1": "Premiumtex Kft. reserves the right to unilaterally modify these Terms. We inform users about modifications via email or notification appearing in the application.",
+        "paragraph2": "Modifications take effect within 15 days of announcement. By continuing to use the service, the user accepts the modified terms."
+      },
+      "contact": {
+        "title": "11. Contact",
+        "intro": "For questions and complaints related to these Terms, you can contact us at the following contacts:",
+        "items": {
+          "email": "Email: perjesidev@gmail.com",
+          "address": "Postal address: 6792 Zsombó, Dózsa d. 55.",
+          "phone": "Phone customer service: +36 30 721 2524"
+        }
+      }
+    }
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "previous": "Previous",
+    "next": "Next",
+    "finish": "Let's Start!",
+    "slides": {
+      "welcome": {
+        "title": "Welcome to ParkSafe!",
+        "subtitle": "Find the best parking spots and bike repair services near you quickly and easily"
+      },
+      "map": {
+        "title": "Interactive Map",
+        "subtitle": "Browse the map and discover all available services in real time"
+      },
+      "filters": {
+        "title": "Filters and Search",
+        "subtitle": "Choose exactly what you're looking for: parking or bike repair. Filter by distance too"
+      },
+      "favorites": {
+        "title": "Save Favorites",
+        "subtitle": "Mark your favorite places with one touch to find them lightning fast later"
+      },
+      "ready": {
+        "title": "Ready to go?",
+        "subtitle": "Now you know all the features! Start exploring the city with safe parking!"
+      }
+    }
+  }
+}

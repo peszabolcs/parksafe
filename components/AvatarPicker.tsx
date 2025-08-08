@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTranslation } from 'react-i18next';
 
 interface AvatarPickerProps {
   currentAvatarUrl?: string | null;
@@ -20,6 +21,7 @@ export function AvatarPicker({
   size = 120,
   disabled = false,
 }: AvatarPickerProps) {
+  const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   
   const backgroundColor = useThemeColor({}, 'background');
@@ -32,9 +34,9 @@ export function AvatarPicker({
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        'Engedély szükséges',
-        'Az alkalmazásnak hozzáférést kell adni a fényképekhez a profilkép módosításához.',
-        [{ text: 'OK' }]
+        t('profileInfo.avatar.permissions.mediaTitle'),
+        t('profileInfo.avatar.permissions.mediaMessage'),
+        [{ text: t('common.ok') }]
       );
       return false;
     }
@@ -48,14 +50,14 @@ export function AvatarPicker({
     if (!hasPermission) return;
 
     Alert.alert(
-      'Profilkép választás',
-      'Válassz egy opciót',
+      t('profileInfo.avatar.modal.title'),
+      t('profileInfo.avatar.modal.message'),
       [
-        { text: 'Mégse', style: 'cancel' },
-        { text: 'Kamera', onPress: () => pickImageFromCamera() },
-        { text: 'Galéria', onPress: () => pickImageFromGallery() },
+        { text: t('profileInfo.avatar.modal.cancel'), style: 'cancel' },
+        { text: t('profileInfo.avatar.modal.camera'), onPress: () => pickImageFromCamera() },
+        { text: t('profileInfo.avatar.modal.gallery'), onPress: () => pickImageFromGallery() },
         ...(currentAvatarUrl && onAvatarDelete ? [
-          { text: 'Törlés', style: 'destructive', onPress: () => handleDeleteAvatar() }
+          { text: t('profileInfo.avatar.modal.delete'), style: 'destructive', onPress: () => handleDeleteAvatar() }
         ] : [])
       ]
     );
@@ -65,7 +67,7 @@ export function AvatarPicker({
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Engedély szükséges', 'A kamera használatához engedély szükséges.');
+        Alert.alert(t('profileInfo.avatar.permissions.mediaTitle'), t('profileInfo.avatar.permissions.cameraMessage'));
         return;
       }
 
@@ -81,7 +83,7 @@ export function AvatarPicker({
       }
     } catch (error) {
       console.error('Error picking image from camera:', error);
-      Alert.alert('Hiba', 'Nem sikerült a kamera megnyitása.');
+      Alert.alert(t('common.error'), t('profileInfo.avatar.errors.cameraError'));
     }
   };
 
@@ -99,7 +101,7 @@ export function AvatarPicker({
       }
     } catch (error) {
       console.error('Error picking image from gallery:', error);
-      Alert.alert('Hiba', 'Nem sikerült a galéria megnyitása.');
+      Alert.alert(t('common.error'), t('profileInfo.avatar.errors.galleryError'));
     }
   };
 
@@ -111,7 +113,7 @@ export function AvatarPicker({
       console.log('Image upload completed successfully');
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      Alert.alert('Hiba', 'Nem sikerült a kép feltöltése.');
+      Alert.alert(t('common.error'), t('profileInfo.avatar.errors.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -121,12 +123,12 @@ export function AvatarPicker({
     if (!onAvatarDelete) return;
 
     Alert.alert(
-      'Profilkép törlése',
-      'Biztosan törölni szeretné a profilképet?',
+      t('profileInfo.avatar.deleteConfirm.title'),
+      t('profileInfo.avatar.deleteConfirm.message'),
       [
-        { text: 'Mégse', style: 'cancel' },
+        { text: t('profileInfo.avatar.deleteConfirm.cancel'), style: 'cancel' },
         {
-          text: 'Törlés',
+          text: t('profileInfo.avatar.deleteConfirm.delete'),
           style: 'destructive',
           onPress: async () => {
             setUploading(true);
@@ -134,7 +136,7 @@ export function AvatarPicker({
               await onAvatarDelete();
             } catch (error) {
               console.error('Error deleting avatar:', error);
-              Alert.alert('Hiba', 'Nem sikerült a kép törlése.');
+              Alert.alert(t('common.error'), t('profileInfo.avatar.errors.deleteError'));
             } finally {
               setUploading(false);
             }
@@ -187,7 +189,7 @@ export function AvatarPicker({
         activeOpacity={0.7}
       >
         <ThemedText style={[styles.changeButtonText, { color: '#3B82F6' }]}>
-          {uploading ? 'Feltöltés...' : currentAvatarUrl ? 'Kép módosítása' : 'Kép hozzáadása'}
+          {uploading ? t('profileInfo.avatar.uploading') : currentAvatarUrl ? t('profileInfo.avatar.changeButton') : t('profileInfo.avatar.addButton')}
         </ThemedText>
       </TouchableOpacity>
     </View>

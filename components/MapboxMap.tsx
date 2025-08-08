@@ -40,6 +40,7 @@ import {
 import { useFavouritesStore } from "@/stores/favouritesStore";
 import { useLocationStore } from "@/stores/locationStore";
 import { useThemeStore } from "@/stores/themeStore";
+import { useTranslation } from 'react-i18next';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_KEY;
 if (MAPBOX_ACCESS_TOKEN) {
@@ -47,6 +48,8 @@ if (MAPBOX_ACCESS_TOKEN) {
 }
 
 export const MapboxMap: React.FC = () => {
+  const { t } = useTranslation();
+  
   // Override console.error to filter out ViewTagResolver errors
   useEffect(() => {
     const originalConsoleError = console.error;
@@ -200,7 +203,7 @@ export const MapboxMap: React.FC = () => {
         currentMapCenter.longitude
       );
     } catch (error) {
-      Alert.alert("Error", "Failed to load places in this area.");
+      Alert.alert(t('common.error'), t('map.loadError'));
     }
   };
 
@@ -370,10 +373,10 @@ export const MapboxMap: React.FC = () => {
           await addFavourite(marker);
         }
       } catch (error) {
-        Alert.alert("Error", "Failed to update favourites.");
+        Alert.alert(t('common.error'), t('map.favoriteError'));
       }
     },
-    [isFavourite, addFavourite, removeFavourite]
+    [isFavourite, addFavourite, removeFavourite, t]
   );
 
   const handleDirections = useCallback(() => {
@@ -382,10 +385,10 @@ export const MapboxMap: React.FC = () => {
       const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
 
       Linking.openURL(url).catch(() => {
-        Alert.alert("Error", "Could not open navigation app.");
+        Alert.alert(t('common.error'), t('map.navigationError'));
       });
     }
-  }, [selectedMarker]);
+  }, [selectedMarker, t]);
 
   const handleListItemPress = useCallback(
     (marker: MapMarkerType) => {
@@ -866,7 +869,7 @@ export const MapboxMap: React.FC = () => {
             style={{ marginRight: 8 }}
           />
           <ThemedText style={[styles.fabWideText, { color: textColor }]}>
-            Lista nézet
+            {t('map.listView')}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -1060,10 +1063,10 @@ export const MapboxMap: React.FC = () => {
               <View style={{ marginBottom: 16 }}>
                 <FlatList
                   data={[
-                    { key: "all", label: "All" },
-                    { key: "parking", label: "Parking" },
-                    { key: "repairStation", label: "Repair" },
-                    { key: "bicycleService", label: "Shops" },
+                    { key: "all", label: t('map.filters.all') },
+                    { key: "parking", label: t('map.filters.parking') },
+                    { key: "repairStation", label: t('map.filters.repair') },
+                    { key: "bicycleService", label: t('map.filters.shops') },
                   ]}
                   keyExtractor={(item) => item.key}
                   horizontal
@@ -1121,7 +1124,7 @@ export const MapboxMap: React.FC = () => {
                   color: textColor,
                 }}
               >
-                Nearby Places
+                {t('map.listTitle')}
               </ThemedText>
               <FlatList
                 data={listFilteredMarkers}
@@ -1190,11 +1193,11 @@ export const MapboxMap: React.FC = () => {
                       </ThemedText>
                       <ThemedText style={{ fontSize: 12, color: "#666" }}>
                         {item.type === "parking"
-                          ? "Parking"
+                          ? t('map.types.parking')
                           : item.type === "bicycleService"
-                          ? "Bike Shop"
-                          : "Repair"}{" "}
-                        • {item.available ? "Open" : "Closed"}
+                          ? t('map.types.shop')
+                          : t('map.types.repair')}{" "}
+                        • {item.available ? t('map.status.open') : t('map.status.closed')}
                       </ThemedText>
                     </View>
                     {userLocation && item.distance !== undefined && (
@@ -1219,7 +1222,7 @@ export const MapboxMap: React.FC = () => {
                       marginTop: 20,
                     }}
                   >
-                    No places available.
+                    {t('map.empty')}
                   </ThemedText>
                 }
               />
@@ -1230,7 +1233,7 @@ export const MapboxMap: React.FC = () => {
                 <ThemedText
                   style={{ color: "#3B82F6", fontWeight: "bold", fontSize: 16 }}
                 >
-                  Close
+                  {t('map.close')}
                 </ThemedText>
               </TouchableOpacity>
             </Pressable>

@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useLocationStore } from "@/stores/locationStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useThemeStore } from "@/stores/themeStore";
+import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -19,6 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { markers, loading, error } = useLocationStore();
   const { session, user } = useAuthStore();
   const { profile } = useProfileStore();
@@ -73,10 +75,10 @@ export default function HomeScreen() {
             <View>
               <ThemedText style={styles.headerGreeting}>
                 {isLoggedIn
-                  ? `Helló, ${profile?.username || profile?.full_name || "Felhasználó"}!`
-                  : "Üdvözöljük!"}
+                  ? t('home.greeting.hello', { name: profile?.username || profile?.full_name || t('home.greeting.user') })
+                  : t('home.greeting.welcome')}
               </ThemedText>
-              <ThemedText style={styles.headerTitle}>ParkSafe</ThemedText>
+              <ThemedText style={styles.headerTitle}>{t('home.appName')}</ThemedText>
             </View>
             <TouchableOpacity
               style={styles.headerButton}
@@ -129,10 +131,10 @@ export default function HomeScreen() {
                 <MaterialCommunityIcons name="bike" size={32} color="white" />
                 <View style={styles.actionCardText}>
                   <ThemedText style={styles.actionCardTitle}>
-                    Biciklitárolók
+                    {t('home.actions.parking.title')}
                   </ThemedText>
                   <ThemedText style={styles.actionCardSubtitle}>
-                    Keresse meg a legközelebbi biztonságos tárolókat
+                    {t('home.actions.parking.subtitle')}
                   </ThemedText>
                 </View>
                 <Ionicons name="arrow-forward" size={24} color="white" />
@@ -158,10 +160,10 @@ export default function HomeScreen() {
                 <MaterialCommunityIcons name="tools" size={32} color="white" />
                 <View style={styles.actionCardText}>
                   <ThemedText style={styles.actionCardTitle}>
-                    Szervizek
+                    {t('home.actions.repair.title')}
                   </ThemedText>
                   <ThemedText style={styles.actionCardSubtitle}>
-                    Találjon szakértő javítókat közelben
+                    {t('home.actions.repair.subtitle')}
                   </ThemedText>
                 </View>
                 <Ionicons name="arrow-forward" size={24} color="white" />
@@ -191,10 +193,10 @@ export default function HomeScreen() {
                 />
                 <View style={styles.actionCardText}>
                   <ThemedText style={styles.actionCardTitle}>
-                    Bicikli boltok
+                    {t('home.actions.shops.title')}
                   </ThemedText>
                   <ThemedText style={styles.actionCardSubtitle}>
-                    Vásároljon alkatrészeket és kiegészítőket
+                    {t('home.actions.shops.subtitle')}
                   </ThemedText>
                 </View>
                 <Ionicons name="arrow-forward" size={24} color="white" />
@@ -223,7 +225,7 @@ export default function HomeScreen() {
               </ThemedText>
             )}
             <ThemedText style={[styles.statLabel, { color: subtitleColor }]}>
-              Aktív helyek
+              {t('home.stats.locations')}
             </ThemedText>
           </View>
           <View
@@ -234,7 +236,7 @@ export default function HomeScreen() {
             </View>
             <ThemedText style={styles.statNumber}>4.8</ThemedText>
             <ThemedText style={[styles.statLabel, { color: subtitleColor }]}>
-              Átlag értékelés
+              {t('home.stats.rating')}
             </ThemedText>
           </View>
           <View
@@ -245,7 +247,7 @@ export default function HomeScreen() {
             </View>
             <ThemedText style={styles.statNumber}>100%</ThemedText>
             <ThemedText style={[styles.statLabel, { color: subtitleColor }]}>
-              Biztonságos
+              {t('home.stats.safety')}
             </ThemedText>
           </View>
         </View>
@@ -254,12 +256,12 @@ export default function HomeScreen() {
         <View style={styles.modernSectionHeader}>
           <View>
             <ThemedText style={styles.sectionTitle}>
-              Közelben lévő helyek
+              {t('home.nearby.title')}
             </ThemedText>
             <ThemedText
               style={[styles.sectionSubtitle, { color: subtitleColor }]}
             >
-              A legközelebbi biciklitárolók és szervizek
+              {t('home.nearby.subtitle')}
             </ThemedText>
           </View>
           <TouchableOpacity
@@ -271,7 +273,7 @@ export default function HomeScreen() {
               });
             }}
           >
-            <ThemedText style={styles.sectionButtonText}>Összes</ThemedText>
+            <ThemedText style={styles.sectionButtonText}>{t('home.nearby.viewAll')}</ThemedText>
             <Ionicons name="arrow-forward" size={16} color="#22C55E" />
           </TouchableOpacity>
         </View>
@@ -292,7 +294,7 @@ export default function HomeScreen() {
                 style={{ marginRight: 8 }}
               />
               <ThemedText style={{ color: "#888" }}>
-                Hely meghatározása...
+                {t('home.nearby.loading')}
               </ThemedText>
             </View>
           ) : error && nearby.length === 0 ? (
@@ -325,7 +327,7 @@ export default function HomeScreen() {
                 }}
               >
                 <ThemedText style={{ color: "#fff", fontSize: 14 }}>
-                  Újrapróbálás
+                  {t('home.nearby.retry')}
                 </ThemedText>
               </TouchableOpacity>
             </View>
@@ -335,8 +337,8 @@ export default function HomeScreen() {
                 style={{ textAlign: "center", color: "#888", marginBottom: 8 }}
               >
                 {isLoggedIn
-                  ? "Még nincsenek közeli helyek betöltve."
-                  : "Jelentkezzen be a közeli helyek megtekintéséhez."}
+                  ? t('home.nearby.empty.loggedIn')
+                  : t('home.nearby.empty.notLoggedIn')}
               </ThemedText>
               <TouchableOpacity
                 onPress={() => {
@@ -354,7 +356,7 @@ export default function HomeScreen() {
                 }}
               >
                 <ThemedText style={{ color: "#fff", fontSize: 14 }}>
-                  {isLoggedIn ? "Frissítés" : "Bejelentkezés"}
+                  {isLoggedIn ? t('home.nearby.empty.refresh') : t('home.nearby.empty.login')}
                 </ThemedText>
               </TouchableOpacity>
             </View>
@@ -375,7 +377,7 @@ export default function HomeScreen() {
                     style={{ marginRight: 8 }}
                   />
                   <ThemedText style={{ color: "#888", fontSize: 12 }}>
-                    Frissítés...
+                    {t('home.nearby.refreshing')}
                   </ThemedText>
                 </View>
               )}
@@ -496,10 +498,10 @@ export default function HomeScreen() {
                           ]}
                         >
                           {item.type === "parking"
-                            ? "Biciklitároló"
+                            ? t('home.nearby.types.parking')
                             : item.type === "bicycleService"
-                            ? "Bicikli bolt"
-                            : "Szerviz"}
+                            ? t('home.nearby.types.shop')
+                            : t('home.nearby.types.repair')}
                         </ThemedText>
                       </View>
                     </View>

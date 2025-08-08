@@ -22,10 +22,12 @@ import { MapMarker, getDistance } from '@/lib/markers';
 import { useLocationStore } from '@/stores/locationStore';
 import { router } from 'expo-router';
 import { Fonts } from '@/constants/Fonts';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function FavouritesScreen() {
+  const { t } = useTranslation();
   const { 
     favourites, 
     loading, 
@@ -62,27 +64,27 @@ export default function FavouritesScreen() {
 
   const handleRemoveFavourite = useCallback(async (marker: MapMarker) => {
     Alert.alert(
-      'Eltávolítás a kedvencekből',
-      `Biztosan el szeretné távolítani a "${marker.title}" helyet a kedvencekből?`,
+      t('favourites.remove.title'),
+      t('favourites.remove.message', { name: marker.title }),
       [
         {
-          text: 'Mégse',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Eltávolítás',
+          text: t('favourites.remove.button'),
           style: 'destructive',
           onPress: async () => {
             try {
               await removeFavourite(marker.id);
             } catch (error) {
-              Alert.alert('Hiba', 'Nem sikerült eltávolítani a kedvencet.');
+              Alert.alert(t('common.error'), t('favourites.remove.error'));
             }
           },
         },
       ]
     );
-  }, [removeFavourite]);
+  }, [removeFavourite, t]);
 
   const handleMarkerPress = useCallback((marker: MapMarker) => {
     // Add timestamp to force navigation even when selecting the same marker
@@ -145,7 +147,7 @@ export default function FavouritesScreen() {
               <View style={styles.metaRow}>
                 <View style={styles.typeTag}>
                   <ThemedText style={[styles.typeText, { color: iconColor }]}>
-                    {isParking ? 'Parkoló' : 'Szerviz'}
+                    {isParking ? t('favourites.types.parking') : t('favourites.types.repair')}
                   </ThemedText>
                 </View>
                 {distance && (
@@ -179,7 +181,8 @@ export default function FavouritesScreen() {
     secondaryTextColor,
     calculateMarkerDistance,
     handleMarkerPress,
-    handleRemoveFavourite
+    handleRemoveFavourite,
+    t
   ]);
 
   const renderEmptyState = useCallback(() => (
@@ -188,10 +191,10 @@ export default function FavouritesScreen() {
         <Ionicons name="heart-outline" size={48} color={emptyStateColor} />
       </View>
       <ThemedText style={[styles.emptyTitle, { color: textColor }]}>
-        Még nincsenek kedvencei
+        {t('favourites.empty.title')}
       </ThemedText>
       <ThemedText style={[styles.emptyDescription, { color: secondaryTextColor }]}>
-        Adjon hozzá kedvencekhez helyeket a térkép nézetben a csillag gombra kattintva.
+        {t('favourites.empty.description')}
       </ThemedText>
       <TouchableOpacity
         style={[styles.exploreButton, { borderColor: borderColor }]}
@@ -199,28 +202,28 @@ export default function FavouritesScreen() {
       >
         <Ionicons name="map-outline" size={20} color={textColor} style={{ marginRight: 8 }} />
         <ThemedText style={[styles.exploreButtonText, { color: textColor }]}>
-          Térkép megtekintése
+          {t('favourites.empty.exploreButton')}
         </ThemedText>
       </TouchableOpacity>
     </View>
-  ), [borderColor, emptyStateColor, textColor, secondaryTextColor]);
+  ), [borderColor, emptyStateColor, textColor, secondaryTextColor, t]);
 
   const renderError = useCallback(() => (
     <View style={styles.errorState}>
       <Ionicons name="warning-outline" size={48} color={errorColor} />
       <ThemedText style={[styles.errorText, { color: errorColor }]}>
-        {error || 'Hiba történt a kedvencek betöltésekor'}
+        {error || t('favourites.error.title')}
       </ThemedText>
       <TouchableOpacity
         style={[styles.retryButton, { borderColor: errorColor }]}
         onPress={handleRefresh}
       >
         <ThemedText style={[styles.retryButtonText, { color: errorColor }]}>
-          Újrapróbálás
+          {t('favourites.error.retry')}
         </ThemedText>
       </TouchableOpacity>
     </View>
-  ), [error, errorColor, handleRefresh]);
+  ), [error, errorColor, handleRefresh, t]);
 
   if (!user) {
     return (
@@ -228,10 +231,10 @@ export default function FavouritesScreen() {
         <View style={styles.authRequired}>
           <Ionicons name="person-outline" size={48} color={emptyStateColor} />
           <ThemedText style={[styles.authTitle, { color: textColor }]}>
-            Bejelentkezés szükséges
+            {t('favourites.auth.title')}
           </ThemedText>
           <ThemedText style={[styles.authDescription, { color: secondaryTextColor }]}>
-            A kedvencek megtekintéséhez jelentkezzen be a fiókjába.
+            {t('favourites.auth.description')}
           </ThemedText>
         </View>
       </ThemedView>
@@ -248,7 +251,7 @@ export default function FavouritesScreen() {
         <SafeAreaView edges={['top']}>
           <View style={styles.headerContent}>
             <ThemedText style={styles.headerTitle}>
-              Kedvencek
+              {t('favourites.title')}
             </ThemedText>
           </View>
         </SafeAreaView>
@@ -259,7 +262,7 @@ export default function FavouritesScreen() {
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color="#3B82F6" />
           <ThemedText style={[styles.loadingText, { color: secondaryTextColor }]}>
-            Kedvencek betöltése...
+            {t('favourites.loading')}
           </ThemedText>
         </View>
       ) : error ? (

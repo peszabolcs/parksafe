@@ -8,19 +8,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeStore } from '@/stores/themeStore';
+import { useLanguageStore } from '@/stores/languageStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileStore } from '@/stores/profileStore';
+import { useTranslation } from 'react-i18next';
 import { onboardingDebug } from '@/lib/onboardingDebug';
 
 const { height: screenHeight } = Dimensions.get('window');
 
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const [loggingOut, setLoggingOut] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const modalAnim = useRef(new Animated.Value(screenHeight)).current;
+  const languageModalAnim = useRef(new Animated.Value(screenHeight)).current;
   const { user, signOut } = useAuthStore();
   const { themeMode, setThemeMode, currentTheme } = useThemeStore();
+  const { language, setLanguage } = useLanguageStore();
   const { profile, loadProfile, deleteAccount } = useProfileStore();
 
   // Load profile when user changes
@@ -41,15 +47,27 @@ export default function ProfileScreen() {
 
   // Memoized theme options and label
   const themeOptions = useMemo(() => [
-    { value: 'light' as const, label: 'Világos', icon: 'sunny', description: 'Világos téma használata' },
-    { value: 'dark' as const, label: 'Sötét', icon: 'moon', description: 'Sötét téma használata' },
-    { value: 'system' as const, label: 'Rendszer', icon: 'phone-portrait', description: 'Rendszer beállítás követése' },
-  ], []);
+    { value: 'light' as const, label: t('theme.light'), icon: 'sunny', description: t('theme.lightDescription') },
+    { value: 'dark' as const, label: t('theme.dark'), icon: 'moon', description: t('theme.darkDescription') },
+    { value: 'system' as const, label: t('theme.system'), icon: 'phone-portrait', description: t('theme.systemDescription') },
+  ], [t]);
 
   const themeLabel = useMemo(() => {
     const selected = themeOptions.find(option => option.value === themeMode);
-    return selected?.label || 'Rendszer';
-  }, [themeMode, themeOptions]);
+    return selected?.label || t('theme.system');
+  }, [themeMode, themeOptions, t]);
+
+  // Memoized language options and label
+  const languageOptions = useMemo(() => [
+    { value: 'hu' as const, label: t('language.hungarian'), icon: 'flag', description: t('language.hungarianDescription') },
+    { value: 'en' as const, label: t('language.english'), icon: 'flag', description: t('language.englishDescription') },
+    { value: 'system' as const, label: t('language.system'), icon: 'phone-portrait', description: t('language.systemDescription') },
+  ], [t]);
+
+  const languageLabel = useMemo(() => {
+    const selected = languageOptions.find(option => option.value === language);
+    return selected?.label || t('language.system');
+  }, [language, languageOptions, t]);
 
   // Animation functions for modal
   const openThemeModal = useCallback(() => {
@@ -72,8 +90,34 @@ export default function ProfileScreen() {
     });
   }, [modalAnim]);
 
-  // Interpolate values from single animation
+  const openLanguageModal = useCallback(() => {
+    setShowLanguageModal(true);
+    Animated.timing(languageModalAnim, {
+      toValue: 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  }, [languageModalAnim]);
+
+  const closeLanguageModal = useCallback(() => {
+    Animated.timing(languageModalAnim, {
+      toValue: screenHeight,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowLanguageModal(false);
+      languageModalAnim.setValue(screenHeight);
+    });
+  }, [languageModalAnim]);
+
+  // Interpolate values from animations
   const backgroundOpacity = modalAnim.interpolate({
+    inputRange: [0, screenHeight],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const languageBackgroundOpacity = languageModalAnim.interpolate({
     inputRange: [0, screenHeight],
     outputRange: [1, 0],
     extrapolate: 'clamp',
@@ -107,34 +151,34 @@ export default function ProfileScreen() {
 
   const handleDeleteAccount = async () => {
     Alert.alert(
-      'Fiók törlése',
-      'Ez a művelet véglegesen törli a fiókját és az összes kapcsolódó adatot. Ez a művelet nem vonható vissza.\n\nBiztosan törölni szeretné a fiókját?',
+      t('settings.deleteAccount'),
+      t('settings.deleteAccountConfirm'),
       [
-        { text: 'Mégse', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { 
-          text: 'Fiók törlése', 
+          text: t('settings.deleteAccount'), 
           style: 'destructive',
           onPress: () => {
             Alert.alert(
-              'Utolsó megerősítés',
-              'Ez tényleg az utolsó lehetőség a visszalépésre. A fiók törlése után minden adat elvész.\n\nValóban törölni szeretné a fiókját?',
+              t('common.confirm'),
+              t('settings.deleteAccountFinalConfirm'),
               [
-                { text: 'Mégsem', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                  text: 'Igen, törlés',
+                  text: t('settings.deleteAccountFinalButton'),
                   style: 'destructive',
                   onPress: async () => {
                     try {
                       const success = await deleteAccount();
                       if (success) {
                         Alert.alert(
-                          'Fiók törölve',
-                          'A fiók sikeresen törölve lett.',
-                          [{ text: 'OK', onPress: () => {} }]
+                          t('settings.deleteAccount'),
+                          t('settings.deleteAccountSuccess'),
+                          [{ text: t('common.ok'), onPress: () => {} }]
                         );
                       }
                     } catch (error) {
-                      Alert.alert('Hiba', 'Nem sikerült törölni a fiókot');
+                      Alert.alert(t('common.error'), t('settings.deleteAccountError'));
                     }
                   }
                 }
@@ -148,12 +192,12 @@ export default function ProfileScreen() {
 
   const handleShowOnboarding = async () => {
     Alert.alert(
-      'Onboarding teszt',
-      'Szeretnéd megnézni az onboarding képernyőket?',
+      t('settings.onboardingTest'),
+      t('settings.onboardingTestMessage'),
       [
-        { text: 'Mégse', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Igen, mutasd',
+          text: t('settings.onboardingTestButton'),
           onPress: async () => {
             try {
               // Clear current user's onboarding flag
@@ -164,7 +208,7 @@ export default function ProfileScreen() {
               router.push('/onboarding');
             } catch (error) {
               console.error('Error showing onboarding:', error);
-              Alert.alert('Hiba', 'Nem sikerült megnyitni az onboardingot');
+              Alert.alert(t('common.error'), t('settings.onboardingTestError'));
             }
           }
         }
@@ -222,7 +266,7 @@ export default function ProfileScreen() {
         <SafeAreaView edges={['top']}>
           <View style={styles.headerContent}>
             <ThemedText style={styles.headerTitle}>
-              Profil
+              {t('tabs.profile')}
             </ThemedText>
           </View>
         </SafeAreaView>
@@ -255,79 +299,79 @@ export default function ProfileScreen() {
 
         {/* Main Settings */}
         <ThemedText style={[styles.sectionHeader, { color: textColor }]}>
-          Beállítások
+          {t('settings.mainSettings')}
         </ThemedText>
         <View style={styles.section}>
           <SettingsItem
             icon="moon-outline"
-            title="Téma"
+            title={t('settings.theme')}
             subtitle={themeLabel}
             onPress={openThemeModal}
           />
           <SettingsItem
             icon="notifications-outline"
-            title="Értesítések"
-            subtitle="Értesítési beállítások kezelése"
-            onPress={() => Alert.alert('Értesítések', 'Értesítési beállítások hamarosan elérhetőek')}
+            title={t('settings.notifications')}
+            subtitle={t('settings.notificationsSubtitle')}
+            onPress={() => Alert.alert(t('settings.notifications'), t('settings.notificationsComingSoon'))}
           />
           <SettingsItem
             icon="language-outline"
-            title="Nyelv"
-            subtitle="Magyar"
-            onPress={() => Alert.alert('Nyelv', 'Nyelvi beállítások hamarosan elérhetőek')}
+            title={t('settings.language')}
+            subtitle={languageLabel}
+            onPress={openLanguageModal}
           />
           <SettingsItem
             icon="location-outline"
-            title="Hely"
-            subtitle="Helymeghatározás beállítások"
-            onPress={() => Alert.alert('Hely', 'Helymeghatározási beállítások hamarosan elérhetőek')}
+            title={t('settings.locationSettings')}
+            subtitle={t('settings.locationSettingsSubtitle')}
+            onPress={() => Alert.alert(t('settings.locationSettings'), t('settings.locationComingSoon'))}
           />
         </View>
 
         {/* Profile Settings */}
         <ThemedText style={[styles.sectionHeader, { color: textColor }]}>
-          Profil beállítások
+          {t('settings.profileSettings')}
         </ThemedText>
         <View style={styles.section}>
           <SettingsItem
             icon="person-outline"
-            title="Profilinformációk"
-            subtitle={username || 'Felhasználónév beállítása szükséges'}
+            title={t('settings.profileInfo')}
+            subtitle={username || t('settings.profileInfoDefault')}
             onPress={() => router.push('/profile-info')}
           />
           <SettingsItem
             icon="key-outline"
-            title="Jelszó módosítás"
-            subtitle="Fiók biztonságának növelése"
+            title={t('settings.changePassword')}
+            subtitle={t('settings.changePasswordSubtitle')}
             onPress={() => router.push('/change-password')}
           />
         </View>
 
         {/* Additional Options */}
         <ThemedText style={[styles.sectionHeader, { color: textColor }]}>
-          További opciók
+          {t('settings.additionalOptions')}
         </ThemedText>
         <View style={styles.section}>
           <SettingsItem
             icon="chatbubble-ellipses-outline"
-            title="Visszajelzés küldése"
-            subtitle="Vélemény, javaslat vagy hibabejelentés"
+            title={t('settings.feedback')}
+            subtitle={t('settings.feedbackSubtitle')}
             onPress={() => router.push('/feedback')}
           />
           <SettingsItem
             icon="help-circle-outline"
-            title="Súgó és támogatás"
-            subtitle="GYIK és kapcsolat"
+            title={t('settings.help')}
+            subtitle={t('settings.helpSubtitle')}
             onPress={() => router.push('/help')}
           />
           <SettingsItem
             icon="shield-outline"
-            title="Adatvédelem"
+            title={t('settings.privacy')}
             onPress={() => router.push('/privacy')}
           />
           <SettingsItem
             icon="document-text-outline"
-            title="Felhasználási feltételek"
+            title={t('settings.terms')}
             onPress={() => router.push('/terms')}
           />
         </View>
@@ -336,13 +380,13 @@ export default function ProfileScreen() {
         {__DEV__ && (
           <>
             <ThemedText style={[styles.sectionHeader, { color: textColor }]}>
-              🚧 Fejlesztői eszközök
+              {t('settings.developmentTools')}
             </ThemedText>
             <View style={styles.section}>
               <SettingsItem
                 icon="play-outline"
-                title="Onboarding megtekintése"
-                subtitle="Onboarding képernyők tesztelése"
+                title={t('settings.onboardingTest')}
+                subtitle={t('settings.onboardingTestSubtitle')}
                 onPress={handleShowOnboarding}
               />
             </View>
@@ -351,7 +395,7 @@ export default function ProfileScreen() {
 
         {/* Account Actions */}
         <ThemedText style={[styles.sectionHeader, { color: textColor }]}>
-          Fiók
+          {t('settings.account')}
         </ThemedText>
         <View style={styles.section}>
           <TouchableOpacity
@@ -365,7 +409,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.textContainer}>
                 <ThemedText style={[styles.settingsTitle, { color: '#EF4444' }]}>
-                  Fiók törlése
+                  {t('settings.deleteAccount')}
                 </ThemedText>
               </View>
             </View>
@@ -382,7 +426,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.textContainer}>
                 <ThemedText style={[styles.settingsTitle, { color: textColor }]}>
-                  {loggingOut ? 'Kijelentkezés...' : 'Kijelentkezés'}
+                  {loggingOut ? t('auth.logout.button') + '...' : t('auth.logout.button')}
                 </ThemedText>
               </View>
             </View>
@@ -428,7 +472,7 @@ export default function ProfileScreen() {
             >
               <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
                 <ThemedText style={[styles.modalTitle, { color: textColor }]}>
-                  Téma választás
+                  {t('theme.selection')}
                 </ThemedText>
                 <TouchableOpacity
                   onPress={closeThemeModal}
@@ -452,6 +496,101 @@ export default function ProfileScreen() {
                       onPress={() => {
                         setThemeMode(option.value);
                         closeThemeModal();
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.themeOptionLeft}>
+                        <View style={[
+                          styles.themeIconContainer,
+                          { backgroundColor: isSelected ? '#3B82F6' : borderColor }
+                        ]}>
+                          <Ionicons 
+                            name={option.icon as any} 
+                            size={20} 
+                            color={isSelected ? '#FFFFFF' : textColor} 
+                          />
+                        </View>
+                        <View style={styles.themeTextContainer}>
+                          <ThemedText style={[styles.themeOptionTitle, { color: textColor }]}>
+                            {option.label}
+                          </ThemedText>
+                          <ThemedText style={[styles.themeOptionDescription, { color: secondaryTextColor }]}>
+                            {option.description}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={20} color="#3B82F6" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageModal}
+        animationType="none"
+        transparent
+        onRequestClose={closeLanguageModal}
+      >
+        <Animated.View
+          style={{ 
+            flex: 1, 
+            backgroundColor: 'rgba(0,0,0,0.25)', 
+            justifyContent: 'flex-end',
+            opacity: languageBackgroundOpacity
+          }}
+        >
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={closeLanguageModal}
+          />
+          <Animated.View
+            style={{ 
+              backgroundColor: cardBackground, 
+              borderTopLeftRadius: 18, 
+              borderTopRightRadius: 18, 
+              padding: 20, 
+              minHeight: 350,
+              paddingBottom: 20,
+              transform: [{ translateY: languageModalAnim }]
+            }}
+          >
+            <Pressable
+              style={{ flex: 1 }}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+                <ThemedText style={[styles.modalTitle, { color: textColor }]}>
+                  {t('language.selection')}
+                </ThemedText>
+                <TouchableOpacity
+                  onPress={closeLanguageModal}
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={24} color={textColor} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.modalBody}>
+                {languageOptions.map((option) => {
+                  const isSelected = language === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.themeOption,
+                        { borderColor },
+                        isSelected && { backgroundColor: borderColor }
+                      ]}
+                      onPress={async () => {
+                        await setLanguage(option.value);
+                        closeLanguageModal();
                       }}
                       activeOpacity={0.7}
                     >

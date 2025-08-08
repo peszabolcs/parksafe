@@ -15,8 +15,10 @@ import "../lib/polyfills";
 
 import { appStartup } from "@/lib/startup";
 import "@/lib/onboardingDebug"; // Import debug helper
+import "@/lib/i18n"; // Initialize i18n
 import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
+import { useLanguageStore } from "@/stores/languageStore";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -32,15 +34,17 @@ export default function RootLayout() {
     isLoading: themeLoading,
   } = useThemeStore();
   const { session, user, loading: authLoading } = useAuthStore();
+  const { initializeLanguage } = useLanguageStore();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
   const [isAppReady, setIsAppReady] = useState(false);
 
-  // Initialize theme on mount
+  // Initialize theme and language on mount
   useEffect(() => {
     initializeTheme();
-  }, [initializeTheme]);
+    initializeLanguage();
+  }, [initializeTheme, initializeLanguage]);
 
   // Update theme when system theme changes
   useEffect(() => {

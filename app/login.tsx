@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { handleGoogleAuth } from '@/lib/googleAuth';
 import { handleError } from '@/lib/errorHandler';
 import { NetworkErrorBanner } from '@/components/NetworkErrorBanner';
+import { useTranslation } from 'react-i18next';
 
 interface ValidationErrors {
   email?: string;
@@ -26,6 +27,7 @@ interface ValidationErrors {
 }
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const segments = useSegments();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,15 +59,15 @@ export default function LoginScreen() {
     const errors: ValidationErrors = {};
 
     if (!email) {
-      errors.email = 'Email cím megadása kötelező';
+      errors.email = t('auth.validation.emailRequired');
     } else if (!validateEmail(email)) {
-      errors.email = 'Érvénytelen email cím formátum';
+      errors.email = t('auth.validation.emailInvalid');
     }
 
     if (!password) {
-      errors.password = 'Jelszó megadása kötelező';
+      errors.password = t('auth.validation.passwordRequired');
     } else if (password.length < 6) {
-      errors.password = 'A jelszónak legalább 6 karakter hosszúnak kell lennie';
+      errors.password = t('auth.validation.passwordTooShort');
     }
 
     setValidationErrors(errors);
@@ -112,7 +114,7 @@ export default function LoginScreen() {
         }
       } else {
         console.log('No session found after OAuth');
-        handleAuthError('Session nem jött létre.');
+        handleAuthError(t('common.error'));
       }
     } catch (error) {
       const errorResult = handleError(error);
@@ -127,17 +129,17 @@ export default function LoginScreen() {
 
   const handleForgotPassword = () => {
     if (!email) {
-      Alert.alert('Hiba', 'Kérjük, adja meg az email címét a jelszó visszaállításához.');
+      Alert.alert(t('common.error'), t('auth.forgotPassword.errorNoEmail'));
       return;
     }
     
     Alert.alert(
-      'Jelszó visszaállítás',
-      'Jelszó visszaállítási linket küldünk a megadott email címre.',
+      t('auth.forgotPassword.title'),
+      t('auth.forgotPassword.message'),
       [
-        { text: 'Mégse', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { 
-          text: 'Küldés', 
+          text: t('auth.forgotPassword.send'), 
           onPress: async () => {
             try {
               const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -146,13 +148,13 @@ export default function LoginScreen() {
               
               if (error) {
                 const errorResult = handleError(error);
-                Alert.alert('Hiba', errorResult.userMessage);
+                Alert.alert(t('common.error'), errorResult.userMessage);
               } else {
-                Alert.alert('Siker', 'Jelszó visszaállítási link elküldve!');
+                Alert.alert(t('common.success'), t('auth.forgotPassword.success'));
               }
             } catch (err) {
               const errorResult = handleError(err);
-              Alert.alert('Hiba', errorResult.userMessage);
+              Alert.alert(t('common.error'), errorResult.userMessage);
             }
           }
         }
@@ -224,15 +226,15 @@ export default function LoginScreen() {
           <NetworkErrorBanner />
           <View style={styles.form}>
             <View style={styles.header}>
-              <ThemedText style={styles.title} type="title">Bejelentkezés</ThemedText>
+              <ThemedText style={styles.title} type="title">{t('auth.login.title')}</ThemedText>
               <ThemedText style={styles.subtitle}>
-                Üdvözöljük újra! Jelentkezzen be fiókjába
+                {t('auth.login.subtitle')}
               </ThemedText>
             </View>
             
             <View style={styles.inputGroup}>
               <ThemedText style={[styles.label, { color: labelColor }]}>
-                Email cím
+                {t('auth.login.emailLabel')}
               </ThemedText>
               <View style={[
                 styles.inputContainer, 
@@ -250,7 +252,7 @@ export default function LoginScreen() {
                 <TextInput
                   ref={emailRef}
                   style={[styles.input, { color: textColor }]}
-                  placeholder="pelda@email.com"
+                  placeholder={t('auth.login.emailPlaceholder')}
                   placeholderTextColor={placeholderColor}
                   autoCapitalize="none"
                   keyboardType="email-address"
@@ -278,7 +280,7 @@ export default function LoginScreen() {
             
             <View style={styles.inputGroup}>
               <ThemedText style={[styles.label, { color: labelColor }]}>
-                Jelszó
+                {t('auth.login.passwordLabel')}
               </ThemedText>
               <View style={[
                 styles.inputContainer, 
@@ -296,7 +298,7 @@ export default function LoginScreen() {
                 <TextInput
                   ref={passwordRef}
                   style={[styles.input, { color: textColor }]}
-                  placeholder="Jelszó"
+                  placeholder={t('auth.login.passwordPlaceholder')}
                   placeholderTextColor={placeholderColor}
                   secureTextEntry={!showPassword}
                   autoComplete="password"
@@ -334,7 +336,7 @@ export default function LoginScreen() {
 
             <View style={styles.forgotPasswordContainer}>
               <TouchableOpacity onPress={handleForgotPassword} disabled={isLoading}>
-                <ThemedText style={styles.forgotPassword}>Elfelejtett jelszó?</ThemedText>
+                <ThemedText style={styles.forgotPassword}>{t('auth.login.forgotPassword')}</ThemedText>
               </TouchableOpacity>
             </View>
             
@@ -353,14 +355,14 @@ export default function LoginScreen() {
               {loading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <ThemedText style={styles.buttonText}>Bejelentkezés</ThemedText>
+                <ThemedText style={styles.buttonText}>{t('auth.login.loginButton')}</ThemedText>
               )}
             </TouchableOpacity>
             
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <ThemedText style={[styles.dividerText, { color: placeholderColor }]}>
-                vagy
+                {t('common.or')}
               </ThemedText>
               <View style={styles.dividerLine} />
             </View>
@@ -376,7 +378,7 @@ export default function LoginScreen() {
                 <>
                   <Ionicons name="logo-google" size={20} color="#DB4437" />
                   <ThemedText style={styles.googleButtonText}>
-                    Bejelentkezés Google-lel
+                    {t('auth.login.googleLogin')}
                   </ThemedText>
                 </>
               )}
@@ -384,10 +386,10 @@ export default function LoginScreen() {
             
             <View style={styles.footer}>
               <ThemedText style={[styles.footerText, { color: placeholderColor }]}>
-                Nincs fiókja?
+                {t('auth.login.noAccount')}
               </ThemedText>
               <TouchableOpacity onPress={() => router.push('/register')}>
-                <ThemedText style={styles.link}>Regisztráljon most!</ThemedText>
+                <ThemedText style={styles.link}>{t('auth.login.registerNow')}</ThemedText>
               </TouchableOpacity>
             </View>
           </View>

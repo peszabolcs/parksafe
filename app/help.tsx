@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeStore } from '@/stores/themeStore';
+import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 
 type FAQItem = {
@@ -15,6 +16,7 @@ type FAQItem = {
 };
 
 export default function HelpScreen() {
+  const { t } = useTranslation();
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
   const { currentTheme } = useThemeStore();
   const isDarkMode = currentTheme === 'dark';
@@ -29,44 +31,44 @@ export default function HelpScreen() {
 
   const faqItems: FAQItem[] = [
     {
-      question: "Mi a ParkSafe?",
-      answer: "A ParkSafe egy mobilalkalmazás, amely segít biztonságos kerékpár- és roller-tárolóhelyek megtalálásában. Térképes megjelenítéssel, valós idejű információkkal és közösségi értékelésekkel támogatjuk a biztonságos tárolás megtalálását."
+      question: t('help.questions.whatIsParkSafe'),
+      answer: t('help.questions.whatIsParkSafeAnswer')
     },
     {
-      question: "Hogyan működik a tárolóhelyek keresése?",
-      answer: "Az alkalmazás GPS-alapú helymeghatározással mutatja a környezetében lévő tárolóhelyeket. Szűrhet típus szerint (kerékpár/roller), távolság alapján, és megtekintheti az egyes helyek biztonsági értékelését."
+      question: t('help.questions.howSearchWorks'),
+      answer: t('help.questions.howSearchWorksAnswer')
     },
     {
-      question: "Ingyenes az alkalmazás?",
-      answer: "Az alapfunkciók ingyenesen használhatók. A prémium szolgáltatások havonta 990 Ft-ba kerülnek, amit az első hónapban ingyenesen kipróbálhat. A prémium funkciókat bármikor lemondhatja."
+      question: t('help.questions.isFree'),
+      answer: t('help.questions.isFreeAnswer')
     },
     {
-      question: "Milyen prémium funkciókat kínálnak?",
-      answer: "A prémium előfizetés részletes biztonsági információkat, kamerarendszer adatokat, speciális szűrőket, értesítéseket és offline térképeket tartalmaz."
+      question: t('help.questions.premiumFeatures'),
+      answer: t('help.questions.premiumFeaturesAnswer')
     },
     {
-      question: "Hogyan adhatok hozzá új tárolóhelyet?",
-      answer: "A térképen hosszan nyomva tartva új tárolóhelyet adhat hozzá. Adja meg a szükséges információkat (típus, biztonság, leírás) és a közösség számára elérhetővé válik a jóváhagyás után."
+      question: t('help.questions.addLocation'),
+      answer: t('help.questions.addLocationAnswer')
     },
     {
-      question: "Mi a teendő, ha hibás információt találok?",
-      answer: "Minden tárolóhelynél van \"Jelentés\" gomb, amivel jelezheti a hibás vagy elavult információkat. A bejelentéseket 24 órán belül feldolgozzuk."
+      question: t('help.questions.reportError'),
+      answer: t('help.questions.reportErrorAnswer')
     },
     {
-      question: "Hogyan értékelhetem a tárolóhelyeket?",
-      answer: "A tárolóhely részletes nézetében 1-5 csillagos értékelést adhat és szöveges véleményt írhat. Az értékelések segítik a többi felhasználót a döntésben."
+      question: t('help.questions.rateLocation'),
+      answer: t('help.questions.rateLocationAnswer')
     },
     {
-      question: "Miért fontos a helymeghatározás engedélyezése?",
-      answer: "A helymeghatározás szükséges ahhoz, hogy a környezetében lévő tárolóhelyeket megmutathassuk. Az adatokat csak a szolgáltatás nyújtásához használjuk fel."
+      question: t('help.questions.locationPermission'),
+      answer: t('help.questions.locationPermissionAnswer')
     },
     {
-      question: "Offline is működik az alkalmazás?",
-      answer: "Az alapfunkciók offline is elérhetők prémium előfizetéssel. A korábban megtekintett területek térképe és tárolóhelyek információi offline is elérhetők."
+      question: t('help.questions.offlineMode'),
+      answer: t('help.questions.offlineModeAnswer')
     },
     {
-      question: "Hogyan védik az adataimat?",
-      answer: "Az összes adat titkosított formában tárolódik. A helyadatokat csak a szolgáltatás nyújtásához használjuk fel. Részletes információkat az Adatvédelmi Szabályzatban találhat."
+      question: t('help.questions.dataProtection'),
+      answer: t('help.questions.dataProtectionAnswer')
     }
   ];
 
@@ -135,7 +137,7 @@ export default function HelpScreen() {
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <ThemedText style={styles.headerTitle}>
-              Súgó és támogatás
+              {t('help.title')}
             </ThemedText>
             <View style={styles.headerRight} />
           </View>
@@ -144,7 +146,7 @@ export default function HelpScreen() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* FAQ Section */}
-          <SectionHeader title="Gyakori kérdések" icon="help-circle" />
+          <SectionHeader title={t('help.faq')} icon="help-circle" />
           <View style={styles.section}>
             {faqItems.map((item, index) => (
               <View key={index} style={[styles.faqItem, { backgroundColor: cardBackground, borderColor }]}>
@@ -174,11 +176,11 @@ export default function HelpScreen() {
           </View>
 
           {/* Contact Section */}
-          <SectionHeader title="Kapcsolat" icon="mail" />
+          <SectionHeader title={t('help.contact')} icon="mail" />
           <View style={styles.section}>
             <ContactItem
               icon="mail"
-              title="E-mail támogatás"
+              title={t('help.emailSupport')}
               subtitle="perjesidev@gmail.com"
               onPress={handleContactPress}
             />

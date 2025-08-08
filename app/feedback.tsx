@@ -22,6 +22,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeStore } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -40,6 +41,7 @@ interface FeedbackForm {
 }
 
 export default function FeedbackScreen() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const { currentTheme } = useThemeStore();
   const insets = useSafeAreaInsets();
@@ -72,26 +74,26 @@ export default function FeedbackScreen() {
   const isDarkMode = currentTheme === 'dark';
 
   const feedbackTypes = useMemo(() => [
-    { value: 'bug' as const, label: 'Hibabejelentés', icon: 'bug', description: 'Alkalmazásban talált hiba jelentése' },
-    { value: 'feature' as const, label: 'Új funkció', icon: 'bulb', description: 'Új funkció kérése' },
-    { value: 'improvement' as const, label: 'Fejlesztési javaslat', icon: 'trending-up', description: 'Meglévő funkció javítása' },
-    { value: 'general' as const, label: 'Általános visszajelzés', icon: 'chatbubbles', description: 'Általános vélemény vagy észrevétel' }
-  ], []);
+    { value: 'bug' as const, label: t('feedback.types.bug'), icon: 'bug', description: t('feedback.typeDescriptions.bug') },
+    { value: 'feature' as const, label: t('feedback.types.feature'), icon: 'bulb', description: t('feedback.typeDescriptions.feature') },
+    { value: 'improvement' as const, label: t('feedback.types.improvement'), icon: 'trending-up', description: t('feedback.typeDescriptions.improvement') },
+    { value: 'general' as const, label: t('feedback.types.general'), icon: 'chatbubbles', description: t('feedback.typeDescriptions.general') }
+  ], [t]);
 
   const priorityLevels = useMemo(() => [
-    { value: 'low' as const, label: 'Alacsony', icon: 'arrow-down', color: '#10B981' },
-    { value: 'medium' as const, label: 'Közepes', icon: 'remove', color: '#F59E0B' },
-    { value: 'high' as const, label: 'Magas', icon: 'arrow-up', color: '#EF4444' }
-  ], []);
+    { value: 'low' as const, label: t('feedback.priorities.low'), icon: 'arrow-down', color: '#10B981' },
+    { value: 'medium' as const, label: t('feedback.priorities.medium'), icon: 'remove', color: '#F59E0B' },
+    { value: 'high' as const, label: t('feedback.priorities.high'), icon: 'arrow-up', color: '#EF4444' }
+  ], [t]);
 
   const categories = useMemo(() => [
-    { value: 'ui_ux' as const, label: 'Felhasználói felület', icon: 'phone-portrait', description: 'Dizájn és használhatóság' },
-    { value: 'performance' as const, label: 'Teljesítmény', icon: 'speedometer', description: 'Sebesség és válaszidő problémák' },
-    { value: 'feature' as const, label: 'Új funkció', icon: 'add-circle', description: 'Hiányzó funkciók kérése' },
-    { value: 'bug' as const, label: 'Hibabejelentés', icon: 'warning', description: 'Hibák és problémák' },
-    { value: 'content' as const, label: 'Tartalom', icon: 'document-text', description: 'Tartalom javítási javaslatok' },
-    { value: 'other' as const, label: 'Egyéb', icon: 'ellipsis-horizontal', description: 'Minden más téma' }
-  ], []);
+    { value: 'ui_ux' as const, label: t('feedback.categories.ui_ux'), icon: 'phone-portrait', description: t('feedback.categoryDescriptions.ui_ux') },
+    { value: 'performance' as const, label: t('feedback.categories.performance'), icon: 'speedometer', description: t('feedback.categoryDescriptions.performance') },
+    { value: 'feature' as const, label: t('feedback.categories.feature'), icon: 'add-circle', description: t('feedback.categoryDescriptions.feature') },
+    { value: 'bug' as const, label: t('feedback.categories.bug'), icon: 'warning', description: t('feedback.categoryDescriptions.bug') },
+    { value: 'content' as const, label: t('feedback.categories.content'), icon: 'document-text', description: t('feedback.categoryDescriptions.content') },
+    { value: 'other' as const, label: t('feedback.categories.other'), icon: 'ellipsis-horizontal', description: t('feedback.categoryDescriptions.other') }
+  ], [t]);
 
   const openModal = useCallback((type: 'type' | 'priority' | 'category') => {
     const animRef = type === 'type' ? typeModalAnim : type === 'priority' ? priorityModalAnim : categoryModalAnim;
@@ -121,27 +123,27 @@ export default function FeedbackScreen() {
 
   const validateForm = useCallback(() => {
     if (!form.title.trim()) {
-      Alert.alert('Hiányzó cím', 'Kérem adjon meg egy címet a visszajelzéshez.');
+      Alert.alert(t('feedback.validation.titleRequired'), t('feedback.validation.titleRequiredMessage'));
       return false;
     }
     if (form.title.trim().length < 5) {
-      Alert.alert('Túl rövid cím', 'A cím legalább 5 karakter hosszú legyen.');
+      Alert.alert(t('feedback.validation.titleTooShort'), t('feedback.validation.titleTooShortMessage'));
       return false;
     }
     if (!form.description.trim()) {
-      Alert.alert('Hiányzó leírás', 'Kérem adjon meg részletes leírást.');
+      Alert.alert(t('feedback.validation.descriptionRequired'), t('feedback.validation.descriptionRequiredMessage'));
       return false;
     }
     if (form.description.trim().length < 10) {
-      Alert.alert('Túl rövid leírás', 'A leírás legalább 10 karakter hosszú legyen.');
+      Alert.alert(t('feedback.validation.descriptionTooShort'), t('feedback.validation.descriptionTooShortMessage'));
       return false;
     }
     if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) {
-      Alert.alert('Érvénytelen email', 'Kérem adjon meg érvényes email címet vagy hagyja üresen.');
+      Alert.alert(t('feedback.validation.emailInvalid'), t('feedback.validation.emailInvalidMessage'));
       return false;
     }
     return true;
-  }, [form]);
+  }, [form, t]);
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
@@ -171,11 +173,11 @@ export default function FeedbackScreen() {
       if (error) throw error;
 
       Alert.alert(
-        'Sikeres beküldés',
-        'Köszönjük a visszajelzését! Csapatunk áttekinti és válaszol rá a lehető leghamarabb.',
+        t('feedback.success.title'),
+        t('feedback.success.message'),
         [
           {
-            text: 'OK',
+            text: t('common.ok'),
             onPress: () => {
               // Reset form
               setForm({
@@ -194,8 +196,8 @@ export default function FeedbackScreen() {
     } catch (error) {
       console.error('Feedback submission error:', error);
       Alert.alert(
-        'Hiba történt',
-        'Nem sikerült elküldeni a visszajelzést. Kérem próbálja újra később.'
+        t('feedback.error.title'),
+        t('feedback.error.message')
       );
     } finally {
       setIsSubmitting(false);
@@ -339,7 +341,7 @@ export default function FeedbackScreen() {
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
             <ThemedText style={styles.headerTitle}>
-              Visszajelzés
+              {t('feedback.title')}
             </ThemedText>
             <View style={styles.headerPlaceholder} />
           </View>
@@ -355,21 +357,21 @@ export default function FeedbackScreen() {
             {/* Form Header */}
             <View style={styles.formHeader}>
               <ThemedText style={[styles.formTitle, { color: textColor }]}>
-                Ossza meg velünk véleményét
+                {t('feedback.form.header')}
               </ThemedText>
               <ThemedText style={[styles.formSubtitle, { color: secondaryTextColor }]}>
-                Visszajelzése segít nekünk fejleszteni az alkalmazást
+                {t('feedback.form.subtitle')}
               </ThemedText>
             </View>
 
             {/* Feedback Type */}
             <View style={styles.section}>
               <ThemedText style={[styles.sectionLabel, { color: textColor }]}>
-                Visszajelzés típusa *
+                {t('feedback.form.typeLabel')}
               </ThemedText>
               <OptionSelector
-                label="Típus"
-                value={selectedType?.label || 'Válasszon'}
+                label={t('feedback.form.typeButton')}
+                value={selectedType?.label || t('feedback.form.selectPlaceholder')}
                 icon={selectedType?.icon || 'help-circle'}
                 onPress={() => openModal('type')}
               />
@@ -378,11 +380,11 @@ export default function FeedbackScreen() {
             {/* Category */}
             <View style={styles.section}>
               <ThemedText style={[styles.sectionLabel, { color: textColor }]}>
-                Kategória *
+                {t('feedback.form.categoryLabel')}
               </ThemedText>
               <OptionSelector
-                label="Kategória"
-                value={selectedCategory?.label || 'Válasszon'}
+                label={t('feedback.form.categoryButton')}
+                value={selectedCategory?.label || t('feedback.form.selectPlaceholder')}
                 icon={selectedCategory?.icon || 'folder'}
                 onPress={() => openModal('category')}
               />
@@ -391,7 +393,7 @@ export default function FeedbackScreen() {
             {/* Title */}
             <View style={styles.section}>
               <ThemedText style={[styles.sectionLabel, { color: textColor }]}>
-                Cím / Tárgy *
+                {t('feedback.form.titleLabel')}
               </ThemedText>
               <TextInput
                 style={[
@@ -402,7 +404,7 @@ export default function FeedbackScreen() {
                     color: textColor
                   }
                 ]}
-                placeholder="Rövid, szemléletes cím..."
+                placeholder={t('feedback.form.titlePlaceholder')}
                 placeholderTextColor={secondaryTextColor}
                 value={form.title}
                 onChangeText={(text) => setForm(prev => ({ ...prev, title: text }))}
@@ -413,7 +415,7 @@ export default function FeedbackScreen() {
             {/* Description */}
             <View style={styles.section}>
               <ThemedText style={[styles.sectionLabel, { color: textColor }]}>
-                Részletes leírás *
+                {t('feedback.form.descriptionLabel')}
               </ThemedText>
               <TextInput
                 style={[
@@ -424,7 +426,7 @@ export default function FeedbackScreen() {
                     color: textColor
                   }
                 ]}
-                placeholder="Írja le részletesen a problémát, javaslatot vagy véleményét..."
+                placeholder={t('feedback.form.descriptionPlaceholder')}
                 placeholderTextColor={secondaryTextColor}
                 value={form.description}
                 onChangeText={(text) => {
@@ -444,11 +446,11 @@ export default function FeedbackScreen() {
             {/* Priority */}
             <View style={styles.section}>
               <ThemedText style={[styles.sectionLabel, { color: textColor }]}>
-                Prioritás
+                {t('feedback.form.priorityLabel')}
               </ThemedText>
               <OptionSelector
-                label="Prioritás"
-                value={selectedPriority?.label || 'Közepes'}
+                label={t('feedback.form.priorityButton')}
+                value={selectedPriority?.label || t('feedback.priorities.medium')}
                 icon={selectedPriority?.icon || 'remove'}
                 onPress={() => openModal('priority')}
               />
@@ -457,7 +459,7 @@ export default function FeedbackScreen() {
             {/* Contact Email */}
             <View style={styles.section}>
               <ThemedText style={[styles.sectionLabel, { color: textColor }]}>
-                Kapcsolattartási email (opcionális)
+                {t('feedback.form.emailLabel')}
               </ThemedText>
               <TextInput
                 style={[
@@ -468,7 +470,7 @@ export default function FeedbackScreen() {
                     color: textColor
                   }
                 ]}
-                placeholder="email@example.com"
+                placeholder={t('feedback.form.emailPlaceholder')}
                 placeholderTextColor={secondaryTextColor}
                 value={form.email}
                 onChangeText={(text) => setForm(prev => ({ ...prev, email: text }))}
@@ -477,7 +479,7 @@ export default function FeedbackScreen() {
                 autoCorrect={false}
               />
               <ThemedText style={[styles.helpText, { color: secondaryTextColor }]}>
-                Ha szeretne visszajelzést kapni, adja meg az email címét
+                {t('feedback.form.emailHelp')}
               </ThemedText>
             </View>
 
@@ -495,7 +497,7 @@ export default function FeedbackScreen() {
               activeOpacity={0.8}
             >
               <ThemedText style={styles.submitButtonText}>
-                {isSubmitting ? 'Küldés...' : 'Visszajelzés küldése'}
+                {isSubmitting ? t('feedback.form.submitting') : t('feedback.form.submitButton')}
               </ThemedText>
             </TouchableOpacity>
 
@@ -505,9 +507,9 @@ export default function FeedbackScreen() {
       </KeyboardAvoidingView>
 
       {/* Modals */}
-      {renderModal('type', feedbackTypes, form.type, (value) => setForm(prev => ({ ...prev, type: value })), 'Visszajelzés típusa')}
-      {renderModal('priority', priorityLevels, form.priority, (value) => setForm(prev => ({ ...prev, priority: value })), 'Prioritás szint')}
-      {renderModal('category', categories, form.category, (value) => setForm(prev => ({ ...prev, category: value })), 'Kategória választás')}
+      {renderModal('type', feedbackTypes, form.type, (value) => setForm(prev => ({ ...prev, type: value })), t('feedback.modals.typeTitle'))}
+      {renderModal('priority', priorityLevels, form.priority, (value) => setForm(prev => ({ ...prev, priority: value })), t('feedback.modals.priorityTitle'))}
+      {renderModal('category', categories, form.category, (value) => setForm(prev => ({ ...prev, category: value })), t('feedback.modals.categoryTitle'))}
     </ThemedView>
   );
 }
