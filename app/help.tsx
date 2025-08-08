@@ -70,12 +70,8 @@ export default function HelpScreen() {
     }
   ];
 
-  const handleContactPress = (method: 'email' | 'phone') => {
-    if (method === 'email') {
-      Linking.openURL('mailto:perjesidev@gmail.com?subject=ParkSafe Támogatás');
-    } else if (method === 'phone') {
-      Linking.openURL('tel:+36307212524');
-    }
+  const handleContactPress = () => {
+    Linking.openURL('mailto:perjesidev@gmail.com?subject=ParkSafe Támogatás');
   };
 
   const toggleExpanded = (index: number) => {
@@ -184,33 +180,8 @@ export default function HelpScreen() {
               icon="mail"
               title="E-mail támogatás"
               subtitle="perjesidev@gmail.com"
-              onPress={() => handleContactPress('email')}
+              onPress={handleContactPress}
             />
-            <ContactItem
-              icon="call"
-              title="Telefonos ügyfélszolgálat"
-              subtitle="+36 30 721 2524"
-              onPress={() => handleContactPress('phone')}
-            />
-          </View>
-
-          {/* Additional Info */}
-          <SectionHeader title="További információk" icon="information-circle" />
-          <View style={styles.section}>
-            <View style={[styles.infoCard, { backgroundColor: cardBackground, borderColor }]}>
-              <ThemedText style={[styles.infoTitle, { color: textColor }]}>
-                Premiumtex Kft.
-              </ThemedText>
-              <ThemedText style={[styles.infoText, { color: secondaryTextColor }]}>
-                Székhely: 6792 Zsombó, Dózsa dűlő 55.
-              </ThemedText>
-              <ThemedText style={[styles.infoText, { color: secondaryTextColor }]}>
-                Cégjegyzékszám: 06-09-013323
-              </ThemedText>
-              <ThemedText style={[styles.infoText, { color: secondaryTextColor }]}>
-                Adószám: 14559253-2-06
-              </ThemedText>
-            </View>
           </View>
 
           <View style={styles.bottomSpacing} />

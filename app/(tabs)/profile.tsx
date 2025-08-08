@@ -309,6 +309,12 @@ export default function ProfileScreen() {
         </ThemedText>
         <View style={styles.section}>
           <SettingsItem
+            icon="chatbubble-ellipses-outline"
+            title="Visszajelzés küldése"
+            subtitle="Vélemény, javaslat vagy hibabejelentés"
+            onPress={() => router.push('/feedback')}
+          />
+          <SettingsItem
             icon="help-circle-outline"
             title="Súgó és támogatás"
             subtitle="GYIK és kapcsolat"
