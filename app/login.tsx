@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useColors } from '@/hooks/useThemeColor';
 import { supabase } from '@/lib/supabase';
-import { router, useSegments } from 'expo-router';
+import { router } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 import { handleGoogleAuth } from '@/lib/googleAuth';
 import { handleError } from '@/lib/errorHandler';
@@ -28,7 +28,6 @@ interface ValidationErrors {
 
 export default function LoginScreen() {
   const { t } = useTranslation();
-  const segments = useSegments();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,13 +40,7 @@ export default function LoginScreen() {
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
-  const inputBg = useThemeColor({ light: '#F8FAFC', dark: '#1F2937' }, 'background');
-  const borderColor = useThemeColor({ light: '#E2E8F0', dark: '#374151' }, 'background');
-  const errorBorderColor = '#EF4444';
-  const textColor = useThemeColor({}, 'text');
-  const labelColor = useThemeColor({ light: '#374151', dark: '#D1D5DB' }, 'text');
-  const placeholderColor = useThemeColor({ light: '#9CA3AF', dark: '#6B7280' }, 'text');
-  const backgroundColor = useThemeColor({}, 'background');
+  const colors = useColors();
 
 
   const validateEmail = (email: string): boolean => {
@@ -213,7 +206,7 @@ export default function LoginScreen() {
   const isLoading = loading || googleLoading;
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
@@ -233,27 +226,27 @@ export default function LoginScreen() {
             </View>
             
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.label, { color: labelColor }]}>
+              <ThemedText style={[styles.label, { color: colors.text }]}>
                 {t('auth.login.emailLabel')}
               </ThemedText>
               <View style={[
                 styles.inputContainer, 
                 { 
-                  backgroundColor: inputBg, 
-                  borderColor: validationErrors.email ? errorBorderColor : borderColor 
+                  backgroundColor: colors.inputBackground, 
+                  borderColor: validationErrors.email ? colors.error : colors.border 
                 }
               ]}>
                 <Ionicons 
                   name="mail-outline" 
                   size={20} 
-                  color={placeholderColor} 
+                  color={colors.placeholder} 
                   style={styles.inputIcon}
                 />
                 <TextInput
                   ref={emailRef}
-                  style={[styles.input, { color: textColor }]}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder={t('auth.login.emailPlaceholder')}
-                  placeholderTextColor={placeholderColor}
+                  placeholderTextColor={colors.placeholder}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   autoComplete="email"
@@ -274,32 +267,32 @@ export default function LoginScreen() {
                 />
               </View>
               {validationErrors.email && (
-                <ThemedText style={styles.errorText}>{validationErrors.email}</ThemedText>
+                <ThemedText style={[styles.errorText, { color: colors.error }]}>{validationErrors.email}</ThemedText>
               )}
             </View>
             
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.label, { color: labelColor }]}>
+              <ThemedText style={[styles.label, { color: colors.text }]}>
                 {t('auth.login.passwordLabel')}
               </ThemedText>
               <View style={[
                 styles.inputContainer, 
                 { 
-                  backgroundColor: inputBg, 
-                  borderColor: validationErrors.password ? errorBorderColor : borderColor 
+                  backgroundColor: colors.inputBackground, 
+                  borderColor: validationErrors.password ? colors.error : colors.border 
                 }
               ]}>
                 <Ionicons 
                   name="lock-closed-outline" 
                   size={20} 
-                  color={placeholderColor} 
+                  color={colors.placeholder} 
                   style={styles.inputIcon}
                 />
                 <TextInput
                   ref={passwordRef}
-                  style={[styles.input, { color: textColor }]}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder={t('auth.login.passwordPlaceholder')}
-                  placeholderTextColor={placeholderColor}
+                  placeholderTextColor={colors.placeholder}
                   secureTextEntry={!showPassword}
                   autoComplete="password"
                   textContentType="password"
@@ -325,30 +318,30 @@ export default function LoginScreen() {
                   <Ionicons 
                     name={showPassword ? "eye-off-outline" : "eye-outline"} 
                     size={20} 
-                    color={placeholderColor} 
+                    color={colors.placeholder} 
                   />
                 </TouchableOpacity>
               </View>
               {validationErrors.password && (
-                <ThemedText style={styles.errorText}>{validationErrors.password}</ThemedText>
+                <ThemedText style={[styles.errorText, { color: colors.error }]}>{validationErrors.password}</ThemedText>
               )}
             </View>
 
             <View style={styles.forgotPasswordContainer}>
               <TouchableOpacity onPress={handleForgotPassword} disabled={isLoading}>
-                <ThemedText style={styles.forgotPassword}>{t('auth.login.forgotPassword')}</ThemedText>
+                <ThemedText style={[styles.forgotPassword, { color: colors.tint }]}>{t('auth.login.forgotPassword')}</ThemedText>
               </TouchableOpacity>
             </View>
             
             {error ? (
-              <View style={styles.errorContainer}>
-                <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
-                <ThemedText style={styles.error}>{error}</ThemedText>
+              <View style={[styles.errorContainer, { backgroundColor: colors.errorBackground, borderColor: colors.errorBorder }]}>
+                <Ionicons name="alert-circle-outline" size={20} color={colors.error} />
+                <ThemedText style={[styles.error, { color: colors.error }]}>{error}</ThemedText>
               </View>
             ) : null}
             
             <TouchableOpacity 
-              style={[styles.button, isLoading && styles.buttonDisabled]} 
+              style={[styles.button, { backgroundColor: colors.tint }, isLoading && styles.buttonDisabled]} 
               onPress={handleLogin} 
               disabled={isLoading}
             >
@@ -360,24 +353,24 @@ export default function LoginScreen() {
             </TouchableOpacity>
             
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <ThemedText style={[styles.dividerText, { color: placeholderColor }]}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <ThemedText style={[styles.dividerText, { color: colors.placeholder }]}>
                 {t('common.or')}
               </ThemedText>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
             
             <TouchableOpacity 
-              style={[styles.googleButton, isLoading && styles.buttonDisabled]} 
+              style={[styles.googleButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }, isLoading && styles.buttonDisabled]} 
               onPress={handleGoogleLogin} 
               disabled={isLoading}
             >
               {googleLoading ? (
-                <ActivityIndicator color="#374151" size="small" />
+                <ActivityIndicator color={colors.text} size="small" />
               ) : (
                 <>
                   <Ionicons name="logo-google" size={20} color="#DB4437" />
-                  <ThemedText style={styles.googleButtonText}>
+                  <ThemedText style={[styles.googleButtonText, { color: colors.text }]}>
                     {t('auth.login.googleLogin')}
                   </ThemedText>
                 </>
@@ -385,11 +378,11 @@ export default function LoginScreen() {
             </TouchableOpacity>
             
             <View style={styles.footer}>
-              <ThemedText style={[styles.footerText, { color: placeholderColor }]}>
+              <ThemedText style={[styles.footerText, { color: colors.placeholder }]}>
                 {t('auth.login.noAccount')}
               </ThemedText>
               <TouchableOpacity onPress={() => router.push('/register')}>
-                <ThemedText style={styles.link}>{t('auth.login.registerNow')}</ThemedText>
+                <ThemedText style={[styles.link, { color: colors.tint }]}>{t('auth.login.registerNow')}</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -402,7 +395,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // Light theme fallback
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -458,7 +450,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   errorText: {
-    color: '#EF4444',
     fontSize: 14,
     marginTop: 4,
   },
@@ -467,27 +458,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   forgotPassword: {
-    color: '#34aa56',
     fontSize: 14,
     fontWeight: '500',
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#FECACA',
     borderRadius: 8,
     padding: 12,
     gap: 8,
   },
   error: {
-    color: '#EF4444',
     fontSize: 14,
     flex: 1,
   },
   button: {
-    backgroundColor: '#34aa56',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -511,7 +497,6 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
   },
   dividerText: {
     marginHorizontal: 16,
@@ -519,9 +504,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   googleButton: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -531,7 +514,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   googleButtonText: {
-    color: '#374151',
     fontWeight: '600',
     fontSize: 16,
   },
@@ -546,7 +528,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   link: {
-    color: '#34aa56',
     fontWeight: '600',
     fontSize: 14,
   },

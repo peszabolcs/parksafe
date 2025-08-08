@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { Colors } from '@/constants/Colors';
 import {
   Animated,
   Dimensions,
@@ -23,7 +24,7 @@ const getOnboardingData = (t: any) => [
     title: t('onboarding.slides.welcome.title'),
     subtitle: t('onboarding.slides.welcome.subtitle'),
     icon: "location",
-    gradient: ["#667eea", "#764ba2"],
+    gradient: Colors.light.gradientPrimary,
     particles: 8,
     delay: 0,
   },
@@ -32,7 +33,7 @@ const getOnboardingData = (t: any) => [
     title: t('onboarding.slides.map.title'),
     subtitle: t('onboarding.slides.map.subtitle'),
     icon: "map",
-    gradient: ["#f093fb", "#f5576c"],
+    gradient: Colors.light.gradientSecondary,
     particles: 12,
     delay: 300,
   },
@@ -41,7 +42,7 @@ const getOnboardingData = (t: any) => [
     title: t('onboarding.slides.filters.title'),
     subtitle: t('onboarding.slides.filters.subtitle'),
     icon: "options",
-    gradient: ["#4facfe", "#00f2fe"],
+    gradient: Colors.light.gradientSecondary,
     particles: 10,
     delay: 600,
   },
@@ -50,7 +51,7 @@ const getOnboardingData = (t: any) => [
     title: t('onboarding.slides.favorites.title'),
     subtitle: t('onboarding.slides.favorites.subtitle'),
     icon: "heart",
-    gradient: ["#fa709a", "#fee140"],
+    gradient: Colors.light.gradientAccent,
     particles: 15,
     delay: 900,
   },
@@ -59,7 +60,7 @@ const getOnboardingData = (t: any) => [
     title: t('onboarding.slides.ready.title'),
     subtitle: t('onboarding.slides.ready.subtitle'),
     icon: "rocket",
-    gradient: ["#8E2DE2", "#4A00E0"],
+    gradient: Colors.light.gradientPrimary,
     particles: 20,
     delay: 1200,
   },

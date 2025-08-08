@@ -1,36 +1,35 @@
 /**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
+ * Unified theme color hook that integrates with the centralized Colors system
  */
 
+import { Colors } from '@/constants/Colors';
 import { useThemeStore } from '@/stores/themeStore';
 import { useMemo } from 'react';
 
-// Memoized color tokens to avoid recreating on every call
-const COLOR_TOKENS: Record<string, { light: string; dark: string }> = {
-  background: { light: '#fff', dark: '#18181B' },
-  text: { light: '#18181B', dark: '#fff' },
-  tint: { light: '#007AFF', dark: '#0A84FF' },
-  icon: { light: '#18181B', dark: '#fff' },
-};
-
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: string
+  colorName?: keyof typeof Colors.light
 ) {
   const { currentTheme } = useThemeStore();
 
   return useMemo(() => {
+    // If explicit colors provided, use them
     if (props[currentTheme]) {
       return props[currentTheme]!;
     }
 
-    const token = COLOR_TOKENS[colorName];
-    if (token) {
-      return token[currentTheme];
+    // If colorName provided, use from Colors system
+    if (colorName && Colors[currentTheme] && colorName in Colors[currentTheme]) {
+      return Colors[currentTheme][colorName as keyof typeof Colors.light];
     }
 
     // Default fallback
-    return currentTheme === 'dark' ? '#18181B' : '#fff';
+    return Colors[currentTheme].background;
   }, [props, currentTheme, colorName]);
+}
+
+// Convenience hook for direct access to Colors
+export function useColors() {
+  const { currentTheme } = useThemeStore();
+  return Colors[currentTheme];
 }

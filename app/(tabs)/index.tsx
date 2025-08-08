@@ -1,5 +1,5 @@
 import { ThemedText } from "@/components/ThemedText";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useColors } from "@/hooks/useThemeColor";
 import { getTotalLocationCounts } from "@/lib/markers";
 import { useAuthStore } from "@/stores/authStore";
 import { useLocationStore } from "@/stores/locationStore";
@@ -29,15 +29,9 @@ export default function HomeScreen() {
   const [locationCountsLoading, setLocationCountsLoading] = useState(true);
 
   // Theme-aware colors
-  const cardBackgroundColor = useThemeColor(
-    { light: "#FFFFFF", dark: "#1E293B" },
-    "background"
-  );
-  const subtitleColor = useThemeColor(
-    { light: "#64748B", dark: "#94A3B8" },
-    "text"
-  );
-  const isDarkMode = currentTheme === "dark";
+  const colors = useColors();
+  const cardBackgroundColor = colors.cardBackground;
+  const subtitleColor = colors.textSecondary;
 
   // Get top 3 nearby markers
   const nearby = useMemo(() => {
@@ -64,10 +58,10 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Modern Gradient Header */}
       <LinearGradient
-        colors={isDarkMode ? ["#0F172A", "#1E293B"] : ["#22C55E", "#16A34A"]}
+        colors={colors.gradientPrimary}
         style={styles.headerGradient}
       >
         <SafeAreaView edges={["top"]}>
@@ -91,7 +85,7 @@ export default function HomeScreen() {
       </LinearGradient>
 
       <ScrollView
-        style={styles.scrollView}
+        style={[styles.scrollView, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -124,7 +118,7 @@ export default function HomeScreen() {
             })}
           >
             <LinearGradient
-              colors={["#22C55E", "#16A34A"]}
+              colors={colors.gradientPrimary}
               style={styles.actionCardGradient}
             >
               <View style={styles.actionCardContent}>
@@ -153,7 +147,7 @@ export default function HomeScreen() {
             })}
           >
             <LinearGradient
-              colors={["#3B82F6", "#2563EB"]}
+              colors={colors.gradientSecondary}
               style={styles.actionCardGradient}
             >
               <View style={styles.actionCardContent}>
@@ -182,7 +176,7 @@ export default function HomeScreen() {
             })}
           >
             <LinearGradient
-              colors={["#F97316", "#EA580C"]}
+              colors={colors.gradientAccent}
               style={styles.actionCardGradient}
             >
               <View style={styles.actionCardContent}>
