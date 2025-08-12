@@ -33,6 +33,10 @@ interface ProfileState {
   updatePassword: (newPassword: string) => Promise<boolean>;
   deleteAccount: () => Promise<boolean>;
   clearProfile: () => void;
+  
+  // Optimized for Google auth
+  upsertGoogleProfile: (userId: string, googleData: any) => Promise<boolean>;
+  checkProfileCompleteness: (userId: string) => Promise<{ complete: boolean; missing: string[] }>;
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
@@ -366,5 +370,68 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
   clearProfile: () => {
     set({ profile: null, loading: false, error: null });
+  },
+
+  upsertGoogleProfile: async (userId: string, googleData: any) => {
+    set({ loading: true, error: null });
+    
+    try {
+      const profileUpdate = {
+        full_name: googleData.name,
+        avatar_url: googleData.picture,
+        email: googleData.email,
+        updated_at: new Date().toISOString(),
+        ...(googleData.locale && { locale: googleData.locale }),
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          ...profileUpdate
+        });
+
+      if (error) {
+        console.error('Error upserting Google profile:', error);
+        set({ error: error.message, loading: false });
+        return false;
+      }
+
+      // Reload the profile to get complete data
+      await get().loadProfile(userId);
+      return true;
+    } catch (error) {
+      console.error('Error upserting Google profile:', error);
+      set({ error: 'Hiba történt a profil mentése közben', loading: false });
+      return false;
+    }
+  },
+
+  checkProfileCompleteness: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username, phone, dob')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error checking profile completeness:', error);
+        return { complete: false, missing: ['username', 'phone'] };
+      }
+
+      const missing: string[] = [];
+      if (!data.username) missing.push('username');
+      if (!data.phone) missing.push('phone');
+      // DOB is optional for now
+      
+      return {
+        complete: missing.length === 0,
+        missing
+      };
+    } catch (error) {
+      console.error('Error checking profile completeness:', error);
+      return { complete: false, missing: ['username', 'phone'] };
+    }
   },
 }));

@@ -27,6 +27,7 @@
       "forgotPassword": "Elfelejtett jelszó?",
       "loginButton": "Bejelentkezés",
       "googleLogin": "Bejelentkezés Google-lel",
+      "googleError": "Google bejelentkezés sikertelen",
       "noAccount": "Nincs fiókja?",
       "registerNow": "Regisztráljon most!"
     },
@@ -66,6 +67,7 @@
       "passwordMismatch": "A jelszavak nem egyeznek",
       "usernameRequired": "Felhasználónév megadása kötelező",
       "usernameTooShort": "A felhasználónévnek legalább 3 karakter hosszúnak kell lennie",
+      "usernameTaken": "Ez a felhasználónév már foglalt",
       "phoneRequired": "Telefonszám megadása kötelező",
       "phoneInvalid": "Érvénytelen telefonszám formátum",
       "dobRequired": "Születési dátum megadása kötelező",
@@ -87,6 +89,20 @@
       "message": "Biztosan ki szeretne jelentkezni?",
       "button": "Kijelentkezés",
       "error": "Nem sikerült kijelentkezni"
+    },
+    "profile": {
+      "welcomeTitle": "Üdvözöljük, {{name}}!",
+      "completeSubtitle": "Csak néhány további részlet a profil kiegészítéséhez.",
+      "usernameLabel": "Felhasználónév",
+      "usernamePlaceholder": "Válasszon felhasználónevet",
+      "phoneLabel": "Telefonszám",
+      "phonePlaceholder": "+36 20 123 4567",
+      "completeButton": "Profil kiegészítése",
+      "skipButton": "Kihagyás egyelőre",
+      "skipTitle": "Profilbeállítás kihagyása?",
+      "skipMessage": "A profilt később bármikor kiegészítheti a beállításokban.",
+      "skipConfirm": "Kihagyás",
+      "updateError": "Nem sikerült frissíteni a profilt. Kérjük, próbálja újra."
     }
   },
   "settings": {

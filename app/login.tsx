@@ -15,8 +15,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColors } from '@/hooks/useThemeColor';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
-import { useAuthStore } from '@/stores/authStore';
-import { handleGoogleAuth } from '@/lib/googleAuth';
+import { GoogleAuth } from '@/lib/googleAuth';
 import { handleError } from '@/lib/errorHandler';
 import { NetworkErrorBanner } from '@/components/NetworkErrorBanner';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +34,6 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const { forceSessionUpdate } = useAuthStore();
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -67,54 +65,6 @@ export default function LoginScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  async function handleAuthSuccess() {
-    try {
-      console.log('handleAuthSuccess called');
-      
-      // Force auth store to update with the new session
-      await forceSessionUpdate();
-      
-      // Give a moment for auth state to stabilize
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Check if we need to complete profile
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        console.log('Checking profile completion for user:', session.user.email);
-        
-        try {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('username, phone')
-            .eq('id', session.user.id)
-            .single();
-          
-          console.log('Profile data:', profileData);
-          
-          if (!profileData?.username || !profileData?.phone) {
-            console.log('Profile incomplete, redirecting to complete-profile');
-            router.replace('/complete-profile');
-          } else {
-            console.log('Profile complete, auth state listener should handle navigation...');
-            // Instead of manual navigation, let the auth listener in _layout.tsx handle it
-            // The auth store should now have the updated session and trigger navigation
-          }
-        } catch (profileError) {
-          const errorResult = handleError(profileError);
-          console.error('Error checking profile:', errorResult.userMessage);
-          console.log('Profile check failed, assuming incomplete');
-          router.replace('/complete-profile');
-        }
-      } else {
-        console.log('No session found after OAuth');
-        handleAuthError(t('common.error'));
-      }
-    } catch (error) {
-      const errorResult = handleError(error);
-      console.error('Failed to initialize auth after login:', errorResult.userMessage);
-      handleAuthError(errorResult.userMessage);
-    }
-  }
 
   const handleAuthError = (errorMessage: string) => {
     setError(errorMessage);
@@ -161,12 +111,12 @@ export default function LoginScreen() {
     setValidationErrors({});
     
     try {
-      const result = await handleGoogleAuth('login');
+      const result = await GoogleAuth.authenticate();
       
       if (result.success) {
-        await handleAuthSuccess();
+        // Let the auth callback handler take over - don't navigate here
       } else {
-        const errorResult = handleError(result.error || 'Google bejelentkezés sikertelen.');
+        const errorResult = handleError(result.error || t('auth.login.googleError'));
         handleAuthError(errorResult.userMessage);
       }
     } catch (err) {
@@ -193,7 +143,7 @@ export default function LoginScreen() {
         const errorResult = handleError(error);
         handleAuthError(errorResult.userMessage);
       } else {
-        await handleAuthSuccess();
+        // Let the auth state listener handle navigation automatically
       }
     } catch (err) {
       const errorResult = handleError(err);

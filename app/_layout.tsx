@@ -114,23 +114,19 @@ export default function RootLayout() {
     }
 
     const inAuthGroup = segments[0] === "login" || segments[0] === "register";
+    const inAuthFlow = inAuthGroup || segments[0] === "auth" || segments[0] === "complete-profile";
     const hasValidSession = !!(session && user);
 
-    console.log("Auth change detected:", {
-      hasSession: hasValidSession,
-      inAuthGroup,
-      currentRoute: segments[0] || "root",
-    });
+    // Don't interfere if we're in the middle of auth callback flow
+    if (segments[0] === "auth" || segments[0] === "complete-profile") {
+      return;
+    }
 
-    if (!hasValidSession && !inAuthGroup) {
+    if (!hasValidSession && !inAuthFlow) {
       // User logged out or session expired - go to login
-      console.log("Navigating to login: No session");
       router.replace("/login");
-    } else if (hasValidSession && inAuthGroup) {
-      // User logged in while on auth screen - go to home
-      console.log("Navigating to home: Session found");
-      router.replace("/(tabs)");
-
+    } else if (hasValidSession && (segments[0] === "login" || segments[0] === "register")) {
+      // User has session but is on login screen - let callback decide where to go
       // Start loading location and markers immediately after successful login
       appStartup.startDataFetching().catch((error) => {
         console.error("Post-login data loading failed:", error);

@@ -27,6 +27,7 @@
       "forgotPassword": "Forgot password?",
       "loginButton": "Sign In",
       "googleLogin": "Sign in with Google",
+      "googleError": "Google sign in failed",
       "noAccount": "Don't have an account?",
       "registerNow": "Sign up now!"
     },
@@ -66,6 +67,7 @@
       "passwordMismatch": "Passwords do not match",
       "usernameRequired": "Username is required",
       "usernameTooShort": "Username must be at least 3 characters long",
+      "usernameTaken": "This username is already taken",
       "phoneRequired": "Phone number is required",
       "phoneInvalid": "Invalid phone number format",
       "dobRequired": "Date of birth is required",
@@ -87,6 +89,20 @@
       "message": "Are you sure you want to sign out?",
       "button": "Sign Out",
       "error": "Failed to sign out"
+    },
+    "profile": {
+      "welcomeTitle": "Welcome, {{name}}!",
+      "completeSubtitle": "Just a couple more details to complete your profile.",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Choose your username",
+      "phoneLabel": "Phone number",
+      "phonePlaceholder": "+1 555 123 4567",
+      "completeButton": "Complete Profile",
+      "skipButton": "Skip for now",
+      "skipTitle": "Skip Profile Setup?",
+      "skipMessage": "You can always complete your profile later in settings.",
+      "skipConfirm": "Skip",
+      "updateError": "Failed to update profile. Please try again."
     }
   },
   "settings": {

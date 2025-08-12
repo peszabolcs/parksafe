@@ -1,123 +1,71 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   TextInput, 
   StyleSheet, 
   TouchableOpacity, 
   Platform, 
-  Pressable, 
   ScrollView, 
   KeyboardAvoidingView,
   ActivityIndicator,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useColors } from '@/hooks/useThemeColor';
 import { router } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import CountryFlag from 'react-native-country-flag';
 import { useProfileStore } from '@/stores/profileStore';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/lib/supabase';
-
-const COUNTRY_CODES = [
-  { code: '+36', country: 'HU' },
-  { code: '+1', country: 'US' },
-  { code: '+44', country: 'GB' },
-  { code: '+49', country: 'DE' },
-  { code: '+33', country: 'FR' },
-];
+import { useTranslation } from 'react-i18next';
 
 interface ValidationErrors {
   username?: string;
   phone?: string;
-  dob?: string;
 }
 
-function getCountryFromPhone(phone: string) {
-  for (const entry of COUNTRY_CODES) {
-    if (phone.startsWith(entry.code)) return entry.country;
-  }
-  return null;
-}
-
-export default function CompleteProfileScreen() {
+export default function CompleteProfile() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
-  const [dob, setDob] = useState('');
   const [phone, setPhone] = useState('+36 ');
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dobDate, setDobDate] = useState<Date | null>(null);
+  const [userInfo, setUserInfo] = useState<any>(null);
   
   const { user } = useAuthStore();
   const { updateProfile, checkUsernameAvailability } = useProfileStore();
+  const colors = useColors();
 
   const usernameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
 
-  const inputBg = useThemeColor({ light: '#F8FAFC', dark: '#1F2937' }, 'background');
-  const borderColor = useThemeColor({ light: '#E2E8F0', dark: '#374151' }, 'background');
-  const errorBorderColor = '#EF4444';
-  const textColor = useThemeColor({}, 'text');
-  const labelColor = useThemeColor({ light: '#374151', dark: '#D1D5DB' }, 'text');
-  const placeholderColor = useThemeColor({ light: '#9CA3AF', dark: '#6B7280' }, 'text');
-  const backgroundColor = useThemeColor({}, 'background');
-
-  const country = getCountryFromPhone(phone);
-
-  const validatePhone = (phone: string): boolean => {
-    const phoneRegex = /^\+?[\d\s\-\(\)]+$/;
-    return phoneRegex.test(phone) && phone.length >= 10;
-  };
-
-  const clearValidationError = (field: keyof ValidationErrors) => {
-    setValidationErrors(prev => {
-      const updated = { ...prev };
-      delete updated[field];
-      return updated;
-    });
-  };
+  useEffect(() => {
+    // Load user info from auth metadata
+    if (user?.user_metadata) {
+      setUserInfo(user.user_metadata);
+    }
+  }, [user?.user_metadata]);
 
   const validateForm = async (): Promise<boolean> => {
     const errors: ValidationErrors = {};
 
+    // Username validation
     if (!username.trim()) {
-      errors.username = 'Felhasználónév megadása kötelező';
+      errors.username = t('auth.validation.usernameRequired');
     } else if (username.length < 3) {
-      errors.username = 'A felhasználónévnek legalább 3 karakter hosszúnak kell lennie';
+      errors.username = t('auth.validation.usernameTooShort');
     } else {
-      // Check username availability
       const isAvailable = await checkUsernameAvailability(username);
       if (!isAvailable) {
-        errors.username = 'Ez a felhasználónév már foglalt';
+        errors.username = t('auth.validation.usernameTaken');
       }
     }
 
-    if (!phone) {
-      errors.phone = 'Telefonszám megadása kötelező';
-    } else if (!validatePhone(phone)) {
-      errors.phone = 'Érvénytelen telefonszám formátum';
-    }
-
-    if (!dob) {
-      errors.dob = 'Születési dátum megadása kötelező';
-    } else {
-      const selectedDate = new Date(dob);
-      const today = new Date();
-      const minDate = new Date();
-      minDate.setFullYear(today.getFullYear() - 120);
-      const maxDate = new Date();
-      maxDate.setFullYear(today.getFullYear() - 13);
-
-      if (selectedDate > today) {
-        errors.dob = 'A születési dátum nem lehet a jövőben';
-      } else if (selectedDate < minDate) {
-        errors.dob = 'A születési dátum nem lehet 120 évnél régebbi';
-      } else if (selectedDate > maxDate) {
-        errors.dob = 'A felhasználónak legalább 13 évesnek kell lennie';
-      }
+    // Phone validation
+    if (!phone || phone === '+36 ') {
+      errors.phone = t('auth.validation.phoneRequired');
+    } else if (phone.length < 10) {
+      errors.phone = t('auth.validation.phoneInvalid');
     }
 
     setValidationErrors(errors);
@@ -125,86 +73,41 @@ export default function CompleteProfileScreen() {
   };
 
   const handleCompleteProfile = async () => {
-    if (!await validateForm()) {
+    if (!(await validateForm())) {
       return;
     }
 
     setLoading(true);
 
     try {
-      // First update the profile with basic info
       const success = await updateProfile({
-        username,
-        phone,
-        full_name: user?.user_metadata?.full_name || null,
-        avatar_url: user?.user_metadata?.avatar_url || null,
+        username: username.trim(),
+        phone: phone.trim(),
+        // Keep existing Google data
+        full_name: userInfo?.full_name || user?.user_metadata?.full_name || null,
+        avatar_url: userInfo?.avatar_url || user?.user_metadata?.avatar_url || null,
       });
 
-      if (success && dob) {
-        // Also update the dob field directly in the database
-        const { error: dobError } = await supabase
-          .from('profiles')
-          .update({ dob })
-          .eq('id', user?.id);
-        
-        if (dobError) {
-          console.error('Error updating DOB:', dobError);
-          // Continue anyway, as basic profile is saved
-        }
-      }
-
       if (success) {
-        // Also store additional fields if your schema supports them
-        // For now, we'll just proceed to the main app
+        // Navigate directly to main app
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Hiba', 'Hiba történt a profil frissítése során. Kérjük, próbálja újra.');
+        Alert.alert(t('common.error'), t('auth.profile.updateError'));
       }
     } catch (error) {
       console.error('Profile completion error:', error);
-      Alert.alert('Hiba', 'Váratlan hiba történt. Kérjük, próbálja újra.');
+      Alert.alert(t('common.error'), t('common.unexpectedError'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-
-    if (selectedDate) {
-      setDobDate(selectedDate);
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const formattedDate = `${year}-${month}-${day}`;
-      setDob(formattedDate);
-      clearValidationError('dob');
-    }
-  };
-
-  const handleDateConfirm = () => {
-    if (dobDate) {
-      const year = dobDate.getFullYear();
-      const month = String(dobDate.getMonth() + 1).padStart(2, '0');
-      const day = String(dobDate.getDate()).padStart(2, '0');
-      const formattedDate = `${year}-${month}-${day}`;
-      setDob(formattedDate);
-      clearValidationError('dob');
-    }
-    setShowDatePicker(false);
-  };
-
-  const getDateForPicker = (): Date => {
-    if (dobDate) return dobDate;
-    const defaultDate = new Date();
-    defaultDate.setFullYear(defaultDate.getFullYear() - 18);
-    return defaultDate;
+  const clearValidationError = (field: keyof ValidationErrors) => {
+    setValidationErrors(prev => ({ ...prev, [field]: undefined }));
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
@@ -215,42 +118,48 @@ export default function CompleteProfileScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.form}>
+            {/* Header with user info */}
             <View style={styles.header}>
+              {userInfo?.avatar_url && (
+                <Image 
+                  source={{ uri: userInfo.avatar_url }} 
+                  style={styles.avatar}
+                />
+              )}
               <ThemedText style={styles.title} type="title">
-                Profil kiegészítése
+                {t('auth.profile.welcomeTitle', { name: userInfo?.full_name?.split(' ')[0] || t('common.user') })}
               </ThemedText>
               <ThemedText style={styles.subtitle}>
-                A Google bejelentkezés sikeres volt! Kérjük, egészítse ki profilját a következő adatokkal.
+                {t('auth.profile.completeSubtitle')}
               </ThemedText>
             </View>
 
-            {/* Username */}
+            {/* Username Input */}
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.label, { color: labelColor }]}>
-                Felhasználónév *
+              <ThemedText style={[styles.label, { color: colors.text }]}>
+                {t('auth.profile.usernameLabel')} *
               </ThemedText>
               <View style={[
                 styles.inputContainer, 
                 { 
-                  backgroundColor: inputBg, 
-                  borderColor: validationErrors.username ? errorBorderColor : borderColor 
+                  backgroundColor: colors.inputBackground, 
+                  borderColor: validationErrors.username ? colors.error : colors.border 
                 }
               ]}>
                 <Ionicons 
                   name="person-outline" 
                   size={20} 
-                  color={placeholderColor} 
+                  color={colors.placeholder} 
                   style={styles.inputIcon}
                 />
                 <TextInput
                   ref={usernameRef}
-                  style={[styles.input, { color: textColor }]}
-                  placeholder="Felhasználónév"
-                  placeholderTextColor={placeholderColor}
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder={t('auth.profile.usernamePlaceholder')}
+                  placeholderTextColor={colors.placeholder}
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="username"
-                  textContentType="username"
                   returnKeyType="next"
                   value={username}
                   onChangeText={(text) => {
@@ -262,117 +171,94 @@ export default function CompleteProfileScreen() {
                 />
               </View>
               {validationErrors.username && (
-                <ThemedText style={styles.errorText}>{validationErrors.username}</ThemedText>
+                <ThemedText style={[styles.errorText, { color: colors.error }]}>
+                  {validationErrors.username}
+                </ThemedText>
               )}
             </View>
 
-            {/* Phone */}
+            {/* Phone Input */}
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.label, { color: labelColor }]}>
-                Telefonszám *
+              <ThemedText style={[styles.label, { color: colors.text }]}>
+                {t('auth.profile.phoneLabel')} *
               </ThemedText>
               <View style={[
                 styles.inputContainer, 
                 { 
-                  backgroundColor: inputBg, 
-                  borderColor: validationErrors.phone ? errorBorderColor : borderColor 
+                  backgroundColor: colors.inputBackground, 
+                  borderColor: validationErrors.phone ? colors.error : colors.border 
                 }
-              ]}> 
-                <View style={styles.phoneIconContainer}>
-                  {country ? (
-                    <CountryFlag isoCode={country} size={20} />
-                  ) : (
-                    <Ionicons 
-                      name="call-outline" 
-                      size={20} 
-                      color={placeholderColor} 
-                    />
-                  )}
-                </View>
+              ]}>
+                <Ionicons 
+                  name="call-outline" 
+                  size={20} 
+                  color={colors.placeholder} 
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   ref={phoneRef}
-                  style={[styles.input, { color: textColor }]}
-                  placeholder="+36 20 123 4567"
-                  placeholderTextColor={placeholderColor}
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder={t('auth.profile.phonePlaceholder')}
+                  placeholderTextColor={colors.placeholder}
                   keyboardType="phone-pad"
                   autoComplete="tel"
-                  textContentType="telephoneNumber"
-                  returnKeyType="next"
+                  returnKeyType="done"
                   value={phone}
                   onChangeText={(text) => {
                     setPhone(text);
                     clearValidationError('phone');
                   }}
-                  onSubmitEditing={() => setShowDatePicker(true)}
+                  onSubmitEditing={handleCompleteProfile}
                   editable={!loading}
                 />
               </View>
               {validationErrors.phone && (
-                <ThemedText style={styles.errorText}>{validationErrors.phone}</ThemedText>
+                <ThemedText style={[styles.errorText, { color: colors.error }]}>
+                  {validationErrors.phone}
+                </ThemedText>
               )}
             </View>
 
-            {/* Date of Birth */}
-            <View style={styles.inputGroup}>
-              <ThemedText style={[styles.label, { color: labelColor }]}>
-                Születési dátum *
-              </ThemedText>
-              <Pressable 
-                onPress={() => setShowDatePicker(true)}
-                style={[
-                  styles.inputContainer,
-                  {
-                    backgroundColor: inputBg,
-                    borderColor: validationErrors.dob ? errorBorderColor : borderColor 
-                  }
-                ]}
-                disabled={loading}
-              >
-                <Ionicons 
-                  name="calendar-outline" 
-                  size={20} 
-                  color={placeholderColor} 
-                  style={styles.inputIcon}
-                />
-                <ThemedText style={{ color: dob ? textColor : placeholderColor, flex: 1 }}>
-                  {dob ? dob : 'YYYY-MM-DD'}
-                </ThemedText>
-              </Pressable>
-              {validationErrors.dob && (
-                <ThemedText style={styles.errorText}>{validationErrors.dob}</ThemedText>
-              )}
-              {showDatePicker && (
-                <>
-                  <DateTimePicker
-                    value={getDateForPicker()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={handleDateChange}
-                    maximumDate={new Date()}
-                    minimumDate={new Date(new Date().getFullYear() - 120, 0, 1)}
-                  />
-                  {Platform.OS === 'ios' && (
-                    <TouchableOpacity
-                      style={styles.dateConfirmButton}
-                      onPress={handleDateConfirm}
-                    >
-                      <ThemedText style={styles.dateConfirmText}>Megerősítés</ThemedText>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-            </View>
-            
+            {/* Complete Button */}
             <TouchableOpacity 
-              style={[styles.button, loading && styles.buttonDisabled]} 
+              style={[
+                styles.button, 
+                { backgroundColor: colors.tint }, 
+                loading && styles.buttonDisabled
+              ]} 
               onPress={handleCompleteProfile} 
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <ThemedText style={styles.buttonText}>Profil kiegészítése</ThemedText>
+                <ThemedText style={styles.buttonText}>
+                  {t('auth.profile.completeButton')}
+                </ThemedText>
               )}
+            </TouchableOpacity>
+
+            {/* Skip Option */}
+            <TouchableOpacity 
+              style={styles.skipButton}
+              onPress={() => {
+                Alert.alert(
+                  t('auth.profile.skipTitle'),
+                  t('auth.profile.skipMessage'),
+                  [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    { 
+                      text: t('auth.profile.skipConfirm'), 
+                      onPress: () => router.replace('/(tabs)')
+                    }
+                  ]
+                );
+              }}
+              disabled={loading}
+            >
+              <ThemedText style={[styles.skipText, { color: colors.placeholder }]}>
+                {t('auth.profile.skipButton')}
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -394,10 +280,16 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   form: {
-    gap: 20,
+    gap: 24,
   },
   header: {
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     marginBottom: 16,
   },
   title: {
@@ -431,23 +323,16 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: 12,
   },
-  phoneIconContainer: {
-    marginRight: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   input: {
     flex: 1,
     fontSize: 16,
     padding: 0,
   },
   errorText: {
-    color: '#EF4444',
     fontSize: 14,
     marginTop: 4,
   },
   button: {
-    backgroundColor: '#34aa56',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -463,16 +348,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  dateConfirmButton: {
-    backgroundColor: '#34aa56',
-    borderRadius: 8,
-    paddingVertical: 12,
+  skipButton: {
     alignItems: 'center',
-    marginTop: 12,
+    paddingVertical: 12,
   },
-  dateConfirmText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+  skipText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

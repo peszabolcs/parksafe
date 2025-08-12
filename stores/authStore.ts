@@ -104,19 +104,24 @@ export const useAuthStore = create<AuthState>((set, get) => {
             });
 
             // Load profile data when user signs in
-            if (newSession?.user && event === 'SIGNED_IN') {
-              useProfileStore.getState().loadProfile(newSession.user.id);
+            if (newSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+              // Use a small delay to ensure database is ready
+              setTimeout(() => {
+                useProfileStore.getState().loadProfile(newSession.user.id);
+              }, 100);
               
               // Set user-specific onboarding flag if global onboarding was completed
-              try {
-                const globalOnboarding = await AsyncStorage.getItem('hasSeenOnboarding_global');
-                if (globalOnboarding === 'true') {
-                  const userOnboardingKey = `hasSeenOnboarding_${newSession.user.id}`;
-                  await AsyncStorage.setItem(userOnboardingKey, 'true');
+              if (event === 'SIGNED_IN') {
+                try {
+                  const globalOnboarding = await AsyncStorage.getItem('hasSeenOnboarding_global');
+                  if (globalOnboarding === 'true') {
+                    const userOnboardingKey = `hasSeenOnboarding_${newSession.user.id}`;
+                    await AsyncStorage.setItem(userOnboardingKey, 'true');
+                  }
+                } catch (error) {
+                  const errorResult = handleError(error);
+                  console.error('Error setting user onboarding flag:', errorResult.userMessage);
                 }
-              } catch (error) {
-                const errorResult = handleError(error);
-                console.error('Error setting user onboarding flag:', errorResult.userMessage);
               }
             }
             
