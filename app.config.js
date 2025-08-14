@@ -62,6 +62,12 @@ export default ({ config }) => ({
       {
         "mapboxPublicKey": process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_KEY,
       }
+    ],
+    [
+      "@react-native-google-signin/google-signin",
+      {
+        "iosUrlScheme": "com.googleusercontent.apps.819419674713-a1chg2i4d5jl3n49tvjvm3vq4abkfj5b"
+      }
     ]
   ]
 }); 

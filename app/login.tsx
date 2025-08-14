@@ -114,7 +114,30 @@ export default function LoginScreen() {
       const result = await GoogleAuth.authenticate();
       
       if (result.success) {
-        // Let the auth callback handler take over - don't navigate here
+        // Wait a bit for auth state to update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Get the current session to check user
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session?.user) {
+          const errorResult = handleError('Bejelentkezés sikertelen');
+          handleAuthError(errorResult.userMessage);
+          return;
+        }
+        
+        // Check if profile is complete
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('username, phone')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (!profileData?.username || !profileData?.phone) {
+          router.replace('/complete-profile');
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
         const errorResult = handleError(result.error || t('auth.login.googleError'));
         handleAuthError(errorResult.userMessage);

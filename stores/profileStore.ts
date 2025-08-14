@@ -9,7 +9,6 @@ export interface UserProfile {
   full_name: string | null;
   avatar_url: string | null;
   phone: string | null;
-  website: string | null;
   location: string | null;
   dob: string | null;
   created_at: string;
@@ -49,24 +48,37 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     
     try {
       // First check if profile exists, if not create it
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking profile existence:', checkError);
+        set({ error: checkError.message, loading: false });
+        return;
+      }
 
       if (!existingProfile) {
         // Create profile if it doesn't exist
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
-          await supabase
+          const fullName = userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || null;
+          const { error: insertError } = await supabase
             .from('profiles')
             .insert({
               id: userId,
-              username: userData.user.user_metadata?.username || null,
-              full_name: userData.user.user_metadata?.full_name || null,
-              avatar_url: userData.user.user_metadata?.avatar_url || null,
+              username: fullName, // Set username same as full_name
+              full_name: fullName,
+              avatar_url: userData.user.user_metadata?.avatar_url || userData.user.user_metadata?.picture || null,
             });
+          
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+            set({ error: insertError.message, loading: false });
+            return;
+          }
         }
       }
 
@@ -98,7 +110,6 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
           full_name: profileData.full_name,
           avatar_url: profileData.avatar_url,
           phone: profileData.phone,
-          website: profileData.website,
           location: profileData.location,
           dob: profileData.dob,
           created_at: profileData.created_at,
@@ -131,7 +142,6 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
           full_name: updates.full_name,
           avatar_url: updates.avatar_url,
           phone: updates.phone,
-          website: updates.website,
           location: updates.location,
           updated_at: new Date().toISOString()
         })
@@ -377,11 +387,10 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     
     try {
       const profileUpdate = {
+        username: googleData.name, // Set username same as full_name
         full_name: googleData.name,
         avatar_url: googleData.picture,
-        email: googleData.email,
         updated_at: new Date().toISOString(),
-        ...(googleData.locale && { locale: googleData.locale }),
       };
 
       const { error } = await supabase

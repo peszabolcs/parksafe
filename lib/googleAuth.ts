@@ -1,9 +1,7 @@
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, GoogleSigninButton, statusCodes } from '@react-native-google-signin/google-signin';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileStore } from '@/stores/profileStore';
-
-WebBrowser.maybeCompleteAuthSession();
 
 interface GoogleAuthResult {
   success: boolean;
@@ -21,130 +19,142 @@ interface GoogleUserData {
   locale: string;
 }
 
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  offlineAccess: true, // Essential for refresh tokens
+  forceCodeForRefreshToken: true, // Force refresh token on Android
+  scopes: ['openid', 'email', 'profile'], // Standard scopes
+});
+
 export class GoogleAuth {
   static async authenticate(): Promise<GoogleAuthResult> {
     try {
-      const redirectTo = 'parksafe://auth/callback';
+      console.log('Starting Google Sign-In...');
+      console.log('Configuration check:', {
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ? 'Set' : 'Missing',
+        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ? 'Set' : 'Missing',
+        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ? 'Set' : 'Missing'
+      });
       
-      console.log('Starting Google OAuth...');
+      // Check if your device supports Google Play
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      // Get the users ID token
+      const userInfo = await GoogleSignin.signIn();
+      
+      if (!userInfo.data?.idToken) {
+        console.error('No ID token received from Google Sign-In');
+        return { success: false, error: 'Google bejelentkezés sikertelen - hiányzó token' };
+      }
+
+      console.log('Google Sign-In successful, signing in with Supabase...');
+      console.log('ID Token present:', !!userInfo.data.idToken);
+      console.log('Access Token present:', !!userInfo.data.accessToken);
+      console.log('Server Auth Code present:', !!userInfo.data.serverAuthCode);
+      
+      // Sign in with Supabase using the ID token and access token for proper session persistence
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        options: {
-          redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          skipBrowserRedirect: false,
-        },
+        token: userInfo.data.idToken,
+        access_token: userInfo.data.accessToken,
+        refresh_token: userInfo.data.serverAuthCode, // Server auth code can be used as refresh token
       });
 
       if (error) {
-        console.error('Supabase OAuth error:', error);
+        console.error('Supabase auth error:', error);
         return { success: false, error: error.message };
       }
 
-      if (data.url) {
-        console.log('Opening Google OAuth URL:', data.url);
-        
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url, 
-          redirectTo,
-          {
-            dismissButtonStyle: 'cancel',
-            preferEphemeralSession: false, // Allow session persistence for faster subsequent logins
-            createTask: false,
-          }
-        );
-        
-        console.log('WebBrowser result:', result);
-        
-        if (result.type === 'success' && result.url) {
-          return await this.handleAuthSuccess(result.url);
-        } else if (result.type === 'cancel') {
-          return { success: false, error: 'Bejelentkezés megszakítva' };
-        } else {
-          return { success: false, error: 'Google bejelentkezés sikertelen' };
-        }
-      } else {
-        return { success: false, error: 'OAuth URL nem érhető el' };
+      if (!data.user || !data.session) {
+        console.error('No user/session data received from Supabase');
+        return { success: false, error: 'Felhasználói adatok hiányoznak' };
       }
-    } catch (error) {
-      console.error('Google auth error:', error);
-      return { success: false, error: 'Váratlan hiba történt' };
-    }
-  }
 
-  private static async handleAuthSuccess(callbackUrl: string): Promise<GoogleAuthResult> {
-    try {
-      // Parse the callback URL to extract tokens
-      const url = new URL(callbackUrl);
-      const accessToken = url.hash.match(/access_token=([^&]+)/)?.[1];
-      const refreshToken = url.hash.match(/refresh_token=([^&]+)/)?.[1];
-      
-      console.log('Extracted tokens:', { 
-        accessToken: accessToken ? 'present' : 'missing',
-        refreshToken: refreshToken ? 'present' : 'missing'
+      console.log('User authenticated:', data.user.email);
+      console.log('Session details:', {
+        access_token: !!data.session.access_token,
+        refresh_token: !!data.session.refresh_token,
+        expires_at: data.session.expires_at,
+        expires_in: data.session.expires_in
       });
-      
-      if (accessToken && refreshToken) {
-        // Set the session with tokens
-        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
+
+      // Ensure session is properly stored
+      if (data.session) {
+        console.log('Manually setting session to ensure persistence...');
+        const { error: setError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
         });
         
-        if (sessionError || !sessionData.session) {
-          console.error('Session creation error:', sessionError);
-          return { success: false, error: 'Session létrehozása sikertelen' };
+        if (setError) {
+          console.warn('Warning: Could not set session manually:', setError);
+        } else {
+          console.log('Session set successfully');
         }
-
-        const user = sessionData.session.user;
-        console.log('User authenticated:', user.email);
-        
-        // Fetch user data from Google using the access token
-        let googleUserData: GoogleUserData | null = null;
-        try {
-          googleUserData = await this.fetchGoogleUserData(accessToken);
-        } catch (error) {
-          console.warn('Failed to fetch Google user data:', error);
-        }
-        
-        // Update profile with Google data (don't check completeness here)
-        if (googleUserData) {
-          const profileStore = useProfileStore.getState();
-          await profileStore.upsertGoogleProfile(user.id, googleUserData);
-        }
-        
-        // Force auth store update
-        await useAuthStore.getState().forceSessionUpdate();
-        
-        return {
-          success: true,
-          // Let the callback handler determine profile completeness
-        };
-      } else {
-        return { success: false, error: 'Hiányzó tokenek az OAuth válaszban' };
       }
-    } catch (error) {
-      console.error('Auth success handling error:', error);
-      return { success: false, error: 'Profil adatok feldolgozása sikertelen' };
+      
+      // Create Google user data from the userInfo
+      const googleUserData: GoogleUserData = {
+        id: userInfo.data.user.id,
+        email: userInfo.data.user.email,
+        verified_email: userInfo.data.user.emailVerified ?? true,
+        name: userInfo.data.user.name,
+        given_name: userInfo.data.user.givenName ?? '',
+        family_name: userInfo.data.user.familyName ?? '',
+        picture: userInfo.data.user.photo ?? '',
+        locale: 'hu' // Default locale
+      };
+      
+      // Update profile with Google data
+      const profileStore = useProfileStore.getState();
+      await profileStore.upsertGoogleProfile(data.user.id, googleUserData);
+      
+      // Force auth store update asynchronously to avoid useInsertionEffect warning
+      setTimeout(async () => {
+        await useAuthStore.getState().forceSessionUpdate();
+      }, 0);
+      
+      return { success: true };
+      
+    } catch (error: any) {
+      console.error('Google auth error:', error);
+      
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        return { success: false, error: 'Bejelentkezés megszakítva' };
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        return { success: false, error: 'Bejelentkezés folyamatban...' };
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        return { success: false, error: 'Google Play Services nem elérhető' };
+      } else {
+        return { success: false, error: 'Váratlan hiba történt' };
+      }
     }
   }
 
-  private static async fetchGoogleUserData(accessToken: string): Promise<GoogleUserData> {
-    const response = await fetch(
-      `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`
-    );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch Google user data');
+  static async signOut(): Promise<void> {
+    try {
+      await GoogleSignin.signOut();
+      console.log('Google Sign-In signed out successfully');
+    } catch (error) {
+      console.error('Error signing out from Google:', error);
     }
+  }
 
-    return response.json();
+  static async isSignedIn(): Promise<boolean> {
+    return await GoogleSignin.isSignedIn();
+  }
+
+  static async getCurrentUser() {
+    try {
+      return await GoogleSignin.getCurrentUser();
+    } catch (error) {
+      console.error('Error getting current Google user:', error);
+      return null;
+    }
   }
 
 }
 
-// No auto-initialization needed with the simplified approach
+export { GoogleSigninButton };

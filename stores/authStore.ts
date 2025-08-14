@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useProfileStore } from '@/stores/profileStore';
 import { ErrorHandler, handleError } from '@/lib/errorHandler';
+import { GoogleAuth } from '@/lib/googleAuth';
 
 interface AuthState {
   session: Session | null;
@@ -202,6 +203,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
         // Clear profile data
         useProfileStore.getState().clearProfile();
         
+        // Sign out from Google as well
+        await GoogleAuth.signOut();
+        
         await supabase.auth.signOut();
         
         // Reset state immediately
@@ -263,8 +267,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
             error: null
           });
 
-          // Load profile data
-          useProfileStore.getState().loadProfile(currentSession.user.id);
+          // Load profile data asynchronously to avoid useInsertionEffect warning
+          setTimeout(() => {
+            useProfileStore.getState().loadProfile(currentSession.user.id);
+          }, 0);
         } else {
           console.log('Force update: No session found');
           set({ 
