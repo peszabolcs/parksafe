@@ -28,6 +28,10 @@ export default ({ config }) => ({
   android: {
     ...config.android,
     package: "com.parksafe.app",
+    adaptiveIcon: {
+      foregroundImage: "./assets/images/logo.png",
+      backgroundColor: "#4CAF50"
+    },
     config: {
       ...config.android?.config,
       // Mapbox configuration for Android
